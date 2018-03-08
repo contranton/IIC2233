@@ -23,7 +23,7 @@ class Circle (Shape):
         return self.radius*pi*2
 
     def __str__(self):
-        return "Circle of radius %d at position (%d, %d)" %\
+        return "Circle of radius %d at position (%d, %d)\n" %\
             (self.radius, *self.position)
 
 class Rectangle (Shape):
@@ -42,6 +42,15 @@ class Rectangle (Shape):
         return self.width == self.height
 
     def __str__(self):
-        return "Square with width %d and height %d" %\
-            (self.width, self.height)
+        return "Square with width %d and height %d located at (%i, %i)\n" %\
+            (self.width, self.height, *self.position)
+
+if __name__ == '__main__':
+    c1 = Circle(position=(0, 0), radius=5)
+    c2 = Circle(position=(4, 6), radius=10)
+
+    r1 = Rectangle(position=(2, -4), width=5, height=5)
+    r2 = Rectangle(position=(-3, 5), width=10, height=7)
+
+    print(c1, c2, r1, r2)
         
