@@ -53,4 +53,6 @@ if __name__ == '__main__':
     r2 = Rectangle(position=(-3, 5), width=10, height=7)
 
     print(c1, c2, r1, r2)
+
+    # Added a comment here
         
