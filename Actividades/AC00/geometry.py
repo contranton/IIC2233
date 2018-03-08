@@ -10,6 +10,7 @@ class Shape:
     def get_perimeter(self):
         raise NotImplementedError()
 
+    # Added another comment
     
 class Circle (Shape):
     def __init__(self, position, radius):
