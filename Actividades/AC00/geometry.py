@@ -24,7 +24,7 @@ class Circle (Shape):
         return self.radius*pi*2
 
     def __str__(self):
-        return "Circle of radius %d at position (%d, %d)" %\
+        return "Circle of radius %d at position (%d, %d)\n" %\
             (self.radius, *self.position)
 
 class Rectangle (Shape):
@@ -43,8 +43,6 @@ class Rectangle (Shape):
         return self.width == self.height
 
     def __str__(self):
-<<<<<<< HEAD
-<<<<<<< HEAD
         return "Square with width %d and height %d located at (%i, %i)\n" %\
             (self.width, self.height, *self.position)
 
@@ -58,12 +56,4 @@ if __name__ == '__main__':
     print(c1, c2, r1, r2)
 
     # Added a comment here
-=======
-        return "Square with width %d and height %d" %\
-            (self.width, self.height)
->>>>>>> parent of 354d6de... Added __main__ block
-=======
-        return "Square with width %d and height %d" %\
-            (self.width, self.height)
->>>>>>> parent of 354d6de... Added __main__ block
         
