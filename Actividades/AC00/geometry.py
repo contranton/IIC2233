@@ -21,4 +21,19 @@ class Circle (Shape):
 
     def get_perimeter (self):
         return self.radius*pi*2
+
+class Square (Shape):
+    def __init__ (self, position, width, height):
+        super (self).init (position)
+        self.width = width
+        self.height = height
+
+    def get_area (self):
+        return self.width*self.height
+
+    def get_perimeter (self):
+        return 2*self.width + 2*self.height
+
+    def is_square (self):
+        return self.width == self.height
         
