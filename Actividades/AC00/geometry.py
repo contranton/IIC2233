@@ -13,7 +13,7 @@ class Shape:
     
 class Circle (Shape):
     def __init__(self, position, radius):
-        super(self).init(position)
+        super().__init__(position)
         self.radius = radius
 
     def get_area(self):
@@ -22,9 +22,10 @@ class Circle (Shape):
     def get_perimeter (self):
         return self.radius*pi*2
 
+
 class Square (Shape):
     def __init__ (self, position, width, height):
-        super (self).init (position)
+        super ().__init__(position)
         self.width = width
         self.height = height
 
