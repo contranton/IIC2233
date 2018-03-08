@@ -45,7 +45,6 @@ class Rectangle (Shape):
     def __str__(self):
 <<<<<<< HEAD
 <<<<<<< HEAD
-<<<<<<< HEAD
         return "Square with width %d and height %d located at (%i, %i)\n" %\
             (self.width, self.height, *self.position)
 
@@ -59,10 +58,6 @@ if __name__ == '__main__':
     print(c1, c2, r1, r2)
 
     # Added a comment here
-=======
-        return "Square with width %d and height %d" %\
-            (self.width, self.height)
->>>>>>> parent of 354d6de... Added __main__ block
 =======
         return "Square with width %d and height %d" %\
             (self.width, self.height)
