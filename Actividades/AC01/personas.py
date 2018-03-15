@@ -5,7 +5,7 @@ class Persona(object):
     """Una persona con atributos propios
 
     """
-    def __init__(self, nombre, nacimiento, rut):
+    def __init__(self, nombre, nacimiento, rut, **kwargs):
         self.nombre = nombre
         self.nacimiento = nacimiento
         self.rut = rut
@@ -53,9 +53,10 @@ class Alumno(Persona):
 
     """
     def __init__(self, conocimiento=10, ramos=[], **kwargs):
-        super(Alumno, self).__init__(**kwargs)
         self.conocimiento = conocimiento
         self.ramos = ramos
+        super(Alumno, self).__init__(**kwargs)
+        
 
     def estudiar(self):
         self.conocimiento += randrange(5, 10)
