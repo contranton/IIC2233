@@ -32,8 +32,8 @@ class Ayudante{
       int conocimiento
 
 }
-Persona --> Alumno
-Persona --> Profesor
-Ensenador --> Ayudante
-Ensenador --> Profesor
-Alumno --> Ayudante
+Persona <-- Alumno
+Persona <-- Profesor
+Ensenador <-- Ayudante
+Ensenador <-- Profesor
+Alumno <-- Ayudante
