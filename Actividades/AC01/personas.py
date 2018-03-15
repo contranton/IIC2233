@@ -95,7 +95,7 @@ class Ayudante(Alumno, Ensenador):
 
     """
     def __init__(self, seccion, **kwargs):
-        super().__init__(min_val=5, max_val=15, **kwargs)
+        super().__init__(conocimiento=75, min_val=5, max_val=15, **kwargs)
         self.seccion = seccion
 
     def __str__(self):
