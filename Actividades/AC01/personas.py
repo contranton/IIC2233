@@ -67,13 +67,18 @@ class Alumno(Persona):
     @conocimiento.setter
     def conocimiento(self, new):
         self._conocimiento = min(max(100, new), 1)
+        if self._conocimiento <= 60:
+            print("Si sigo asi, me voy a echar el ramo D:")
+        else:
+            print("Que chevere Python! Voy a postular a TPD para aprender mas.")
 
 
 class Ayudante(Alumno, Ensenador):
     """Ayudante del curso
 
     """
-    def __init__(self, **kwargs):
+    def __init__(self, seccion, **kwargs):
         super().__init__(**kwargs)
+        self.seccion = seccion
 
 

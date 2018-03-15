@@ -36,3 +36,14 @@ if __name__ == '__main__':
     print(profesores)
 
     print(alumnos[0])
+
+    ayudantes[0].ensenar(alumnos[0])
+    profesores[1].ensenar(alumnos[0])
+
+    print("Luego de ensenar:")
+    
+    print(alumnos)
+    print(ayudantes)
+    print(profesores)
+
+    print(alumnos[0])
