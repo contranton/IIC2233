@@ -299,3 +299,10 @@ $RECYCLE.BIN/
 
 # Visio autosave temporary files
 *.~vsd*
+
+
+# --------------------------------------------
+# More: emacs memes
+# --------------------------------------------
+# Emacs autosave file
+*\#*
