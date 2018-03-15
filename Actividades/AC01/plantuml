@@ -7,7 +7,10 @@ class Persona{
 }
 
 class Ensenador{
-      void ensenar()
+      int min_val
+      int max_val
+
+      void ensenar(Alumno alumno)
 }
 
 class Alumno{
