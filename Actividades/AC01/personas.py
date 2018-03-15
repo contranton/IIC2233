@@ -40,7 +40,7 @@ class Profesor(Persona, Ensenador):
 
     """
     def __init__(self, seccion, **kwargs):
-        super().__init__(**kwargs)
+        super(Profesor, self).__init__(**kwargs)
         self.seccion = seccion
 
     def __str__(self):
@@ -53,7 +53,7 @@ class Alumno(Persona):
 
     """
     def __init__(self, conocimiento=10, ramos=[], **kwargs):
-        super().__init__(**kwargs)
+        super(Alumno, self).__init__(**kwargs)
         self.conocimiento = conocimiento
         self.ramos = ramos
 
@@ -78,7 +78,7 @@ class Ayudante(Alumno, Ensenador):
 
     """
     def __init__(self, seccion, **kwargs):
-        super().__init__(**kwargs)
+        super(Ayudante, self).__init__(**kwargs)
         self.seccion = seccion
 
 
