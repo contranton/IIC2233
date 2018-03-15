@@ -1,0 +1,36 @@
+scale 2
+
+class Persona{
+      str nombre
+      str nacimiento
+      int rut
+}
+
+class Ensenable{
+      void ensenar()
+}
+
+class Alumno{
+
+      int conocimiento
+      str[] ramos
+
+      void estudiar()
+}
+
+'extends ensenable, persona
+class Profesor{
+      int seccion
+}
+
+'extends ensenable, persona
+class Ayudante{
+      int seccion
+      int conocimiento
+
+}
+Persona --> Alumno
+Persona --> Ayudante
+Persona --> Profesor
+Ensenable --> Ayudante
+Ensenable --> Profesor
