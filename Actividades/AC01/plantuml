@@ -10,6 +10,8 @@ class Ensenador{
       int min_val
       int max_val
 
+      int seccion
+
       void ensenar(Alumno alumno)
 }
 
@@ -23,13 +25,10 @@ class Alumno{
 
 'extends Ensenador, persona
 class Profesor{
-      int seccion
 }
 
-'extends Ensenador, persona
+'extends Ensenador, alumno
 class Ayudante{
-      int seccion
-      int conocimiento
 
 }
 Persona <-- Alumno

@@ -33,10 +33,11 @@ class Ensenador(object):
     """Objeto capaz de ensenar
 
     """
-    def __init__(self, min_val, max_val):
-        super().__init__()
+    def __init__(self, seccion, min_val, max_val, **kwargs):
+        super().__init__(**kwargs)
         self.min_val = min_val
         self.max_val = max_val
+        self.seccion = seccion
 
     def ensenar(self, alumno):
         alumno.conocimiento += randrange(self.min_val, self.max_val)
@@ -45,9 +46,8 @@ class Profesor(Persona, Ensenador):
     """Profesor del curso
 
     """
-    def __init__(self, seccion, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(min_val=10, max_val=25, **kwargs)
-        self.seccion = seccion
 
     def __str__(self):
         s = super().__str__()
@@ -94,9 +94,8 @@ class Ayudante(Alumno, Ensenador):
     """Ayudante del curso
 
     """
-    def __init__(self, seccion, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(conocimiento=75, min_val=5, max_val=15, **kwargs)
-        self.seccion = seccion
 
     def __str__(self):
         s = super().__str__()
