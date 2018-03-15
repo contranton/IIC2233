@@ -73,7 +73,7 @@ class Alumno(Persona):
 
     @conocimiento.setter
     def conocimiento(self, new):
-        self._conocimiento = min(max(100, new), 1)
+        self._conocimiento = max(min(100, new), 1)
         if self._conocimiento <= 60:
             print("Si sigo asi, me voy a echar el ramo D:")
         else:
