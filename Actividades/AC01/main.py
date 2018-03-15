@@ -21,15 +21,11 @@ if __name__ == '__main__':
         profesores.append(Profesor(nombre="Nebil %i" % i,
                                    nacimiento=date(sample(range_year, 1)[0]-30, 5, 3),
                                    rut=sample(range_rut, 1)[0] - 6*10**6,
-                                   seccion=1,
-                                   min_val=10,
-                                   max_val=25))
+                                   seccion=1))
         ayudantes.append(Ayudante(nombre="Diego %i" % i,
                                   nacimiento=date(sample(range_year, 1)[0]-5, 5, 3),
                                   rut=sample(range_rut, 1)[0],
-                                  seccion=1,
-                                  min_val=5,
-                                  max_val=15))
+                                  seccion=1))
 
     print(alumnos)
     print(ayudantes)
