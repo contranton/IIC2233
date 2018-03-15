@@ -6,7 +6,7 @@ class Persona{
       int rut
 }
 
-class Ensenable{
+class Ensenador{
       void ensenar()
 }
 
@@ -18,12 +18,12 @@ class Alumno{
       void estudiar()
 }
 
-'extends ensenable, persona
+'extends Ensenador, persona
 class Profesor{
       int seccion
 }
 
-'extends ensenable, persona
+'extends Ensenador, persona
 class Ayudante{
       int seccion
       int conocimiento
@@ -32,5 +32,5 @@ class Ayudante{
 Persona --> Alumno
 Persona --> Ayudante
 Persona --> Profesor
-Ensenable --> Ayudante
-Ensenable --> Profesor
+Ensenador --> Ayudante
+Ensenador --> Profesor
