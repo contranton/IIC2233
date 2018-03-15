@@ -1,4 +1,5 @@
 from random import randrange, sample
+from dateutil.relativedelta import relativedelta
 import datetime
 
 class Persona(object):
@@ -6,17 +7,21 @@ class Persona(object):
 
     """
     def __init__(self, nombre, nacimiento, rut, **kwargs):
+        super(Persona, self).__init__(**kwargs)
         self.nombre = nombre
         self.nacimiento = nacimiento
         self.rut = rut
 
     @property
     def edad(self):
+        # Based on stackoverflow code from @mhawke
         t_now = datetime.datetime.now()
-        return (t_now.date() - self.nacimiento)
+        diff = relativedelta(t_now, self.nacimiento)
+
+        return diff.years
 
     def __str__(self):
-        s = " ".join([self.nombre, str(self.edad)])
+        s = "\n" + " ".join([self.nombre, str(self.edad)])
         return s
 
     def __repr__(self):
@@ -29,6 +34,7 @@ class Ensenador(object):
 
     """
     def __init__(self, min_val, max_val):
+        super().__init__()
         self.min_val = min_val
         self.max_val = max_val
 
@@ -45,7 +51,7 @@ class Profesor(Persona, Ensenador):
 
     def __str__(self):
         s = super().__str__()
-        s += "\nNumero Seccion: %i" % self.seccion
+        s += "\nNumero Seccion: %i\n" % self.seccion
         return s
 
 class Alumno(Persona):
@@ -53,6 +59,7 @@ class Alumno(Persona):
 
     """
     def __init__(self, conocimiento=10, ramos=[], **kwargs):
+        self._iniciado = False  # To avoid setter messages on init
         self.conocimiento = conocimiento
         self.ramos = ramos
         super(Alumno, self).__init__(**kwargs)
@@ -74,10 +81,13 @@ class Alumno(Persona):
     @conocimiento.setter
     def conocimiento(self, new):
         self._conocimiento = max(min(100, new), 1)
-        if self._conocimiento <= 60:
-            print("Si sigo asi, me voy a echar el ramo D:")
+        if self._iniciado:
+            if self._conocimiento <= 60:
+                print("Si sigo asi, me voy a echar el ramo D:")
+            else:
+                print("Que chevere Python! Voy a postular a TPD para aprender mas.")
         else:
-            print("Que chevere Python! Voy a postular a TPD para aprender mas.")
+            self._iniciado = True
 
 
 class Ayudante(Alumno, Ensenador):
