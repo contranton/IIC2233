@@ -33,7 +33,6 @@ class Ayudante{
 
 }
 Persona --> Alumno
-Persona --> Ayudante
 Persona --> Profesor
 Ensenador --> Ayudante
 Ensenador --> Profesor

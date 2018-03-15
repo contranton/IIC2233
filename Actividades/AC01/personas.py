@@ -57,6 +57,9 @@ class Alumno(Persona):
         self.conocimiento = conocimiento
         self.ramos = ramos
 
+    def estudiar(self):
+        self.conocimiento += randrange(5, 10)
+
     @property
     def conocimiento(self):
         return self._conocimiento
@@ -66,8 +69,7 @@ class Alumno(Persona):
         self._conocimiento = min(max(100, new), 1)
 
 
-    
-class Ayudante(Persona, Ensenador, Alumno):
+class Ayudante(Alumno, Ensenador):
     """Ayudante del curso
 
     """
