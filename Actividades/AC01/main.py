@@ -1,5 +1,6 @@
 from personas import Alumno, Profesor, Ayudante
-
+from datetime import date
+from random import sample
 
 if __name__ == '__main__':
 
@@ -30,4 +31,8 @@ if __name__ == '__main__':
                                   min_val=5,
                                   max_val=15))
 
-    
+    print(alumnos)
+    print(ayudantes)
+    print(profesores)
+
+    print(alumnos[0])

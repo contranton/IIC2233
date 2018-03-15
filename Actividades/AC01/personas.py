@@ -1,9 +1,6 @@
 from random import randrange, sample
 import datetime
 
-date = datetime.date
-now = datetime.datetime.now
-
 class Persona(object):
     """Una persona con atributos propios
 
@@ -15,7 +12,7 @@ class Persona(object):
 
     @property
     def edad(self):
-        t_now = now()
+        t_now = datetime.datetime.now()
         return (t_now() - self.nacimiento).year
 
     def __str__(self):
@@ -51,14 +48,6 @@ class Profesor(Persona, Ensenador):
         s += "\nNumero Seccion: %i" % self.seccion
         return s
 
-class Ayudante(Persona, Ensenador):
-    """Ayudante del curso
-
-    """
-    def __init__(self, conocimiento=75, **kwargs):
-        super().__init__(**kwargs)
-        self.conocimiento = conocimiento
-
 class Alumno(Persona):
     """Alumno, capaz de ser ensenado
 
@@ -67,5 +56,22 @@ class Alumno(Persona):
         super().__init__(**kwargs)
         self.conocimiento = conocimiento
         self.ramos = ramos
-        
+
+    @property
+    def conocimiento(self):
+        return self._conocimiento
+
+    @conocimiento.setter
+    def conocimiento(self, new):
+        self._conocimiento = min(max(100, new), 1)
+
+
+    
+class Ayudante(Persona, Ensenador, Alumno):
+    """Ayudante del curso
+
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
 

@@ -37,3 +37,4 @@ Persona --> Ayudante
 Persona --> Profesor
 Ensenador --> Ayudante
 Ensenador --> Profesor
+Alumno --> Ayudante
