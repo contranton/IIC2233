@@ -98,4 +98,8 @@ class Ayudante(Alumno, Ensenador):
         super().__init__(min_val=5, max_val=15, **kwargs)
         self.seccion = seccion
 
+    def __str__(self):
+        s = super().__str__()
+        s += "\nNumero de Seccion: %i" % self.seccion
+        return s
 

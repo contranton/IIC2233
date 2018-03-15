@@ -1,6 +1,6 @@
 from personas import Alumno, Profesor, Ayudante
 from datetime import date
-from random import sample
+from random import sample, randrange
 
 if __name__ == '__main__':
 
@@ -16,15 +16,15 @@ if __name__ == '__main__':
     for i in range(2):
         alumnos.append(Alumno(nombre="Juan_%i" % (i+1),
                               nacimiento=date(sample(range_year, 1)[0], 5, 3),
-                              rut=sample(range_rut, 1)[0],
+                              rut=randrange(*range_rut),
                               ramos=lista_ramos))
         profesores.append(Profesor(nombre="Nebil_%i" % (i+1),
                                    nacimiento=date(sample(range_year, 1)[0]-30, 5, 3),
-                                   rut=sample(range_rut, 1)[0] - 6*10**6,
+                                   rut=randrange(*range_rut) - 6*10**6,
                                    seccion=1))
         ayudantes.append(Ayudante(nombre="Diego_%i" % (i+1),
                                   nacimiento=date(sample(range_year, 1)[0]-5, 5, 3),
-                                  rut=sample(range_rut, 1)[0],
+                                  rut=randrange(*range_rut),
                                   seccion=1))
 
     print("Alumnos", alumnos)
