@@ -40,10 +40,13 @@ class Menu(ABC):
         - 2 is a yes/no menu, in which either 'y', 'n', 'c' are valid
 
     """
-    def __init__(self, title, menu_type=0, options=[], functions=[]):
+    def __init__(self, title, prompt, options=[], functions=[]):
 
         # Printed at the top in a special color
         self.title = title
+
+        # Tells the user what to do!
+        self.prompt
 
         # Main text body of the menu. Can use termcolor's colored function to
         # include particular coloration
@@ -66,11 +69,10 @@ class Menu(ABC):
         self.items.appendleft(MenuItem(option=_option, function=_function))
 
     @abstractmethod
-    def _validate_input(self):
+    def _validate_input(self) -> tuple(bool, str, callable):
         """Ensures the input is valid for the specified menu type"""
         pass
 
-    @abstractmethod
     def _interact(self):
         """ Allow the user to pick an option and execute its associated function
 
@@ -78,7 +80,15 @@ class Menu(ABC):
         message is displayed only when input has failed
         """
 
-        pass
+        print(self)
+        choice = input(prompt)
+        success, msg, function = self._validate_input(choice)
+        if not success:
+            return self._interact(message="Input inválido. " + msg)
+        else:
+            # All menus must effectively return callables, using lambdas
+            # in case the menus are simply used for data entry.
+            return function()
 
 
 class NumericalChoiceMenu(Menu):
@@ -86,13 +96,17 @@ class NumericalChoiceMenu(Menu):
 
     """
     def __init__(self, **kwargs):
-        super(NumericalChoiceMenu, self).__init__(kwargs)
+        super(NumericalChoiceMenu, self).__init__(prompt="Elige una opción",
+                                                  **kwargs)
 
-    def _validate_input(self, value, choices) -> tuple[bool, str]:
+    def _validate_input(self, value, choices) -> tuple[bool, str, callable]:
         try:
             value = int(value)
             if value in choices:
-                return (True, "")
+                fun = self.items[value-1].function
+
+                # This line effectively EXECUTES the function!
+                return (True, "", function)
             else:
                 return (False,
                         "El valor escogido no está dentro del rango válido")
