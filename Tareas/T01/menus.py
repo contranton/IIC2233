@@ -79,3 +79,34 @@ class Menu(ABC):
         """
 
         pass
+
+
+class NumericalChoiceMenu(Menu):
+    """Menu for selecting items from an item list
+
+    """
+    def __init__(self, **kwargs):
+        super(NumericalChoiceMenu, self).__init__(kwargs)
+
+    def _validate_input(self, value, choices) -> tuple[bool, str]:
+        try:
+            value = int(value)
+            if value in choices:
+                return (True, "")
+            else:
+                return (False,
+                        "El valor escogido no está dentro del rango válido")
+        except TypeError:
+            return (False,
+                    "El valor ingresado no es un número")
+
+    def _interact(self, prompt="Elige una opción: ", message="") -> bool:
+        print(self)
+        choice = input(prompt)
+        success, msg = self._validate_input(choice)
+        if not success:
+            return self._interact(message="Input inválido. " + msg)
+        else:
+            return self.items[int(choice)-1].function()
+
+
