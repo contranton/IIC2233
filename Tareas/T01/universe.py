@@ -19,11 +19,11 @@ def _planet_defaults():
     now = datetime.now()
     
     return {"nombre": "UNSET",
-            "raza": "UNSET",
+            "raza": "Asesino",  # Only for defaulting -- is changed anyways
             "galaxia": "UNSET",
             "ultima_recoleccion": now,
-            "soldados": 0,
             "magos": 0,
+            "soldados": 0,  # There's an ordering here which is NOT guaranteed!
             "conquistado": False,
             "nivel_ataque": 0,
             "nivel_economia": 0,
@@ -39,7 +39,11 @@ class Planet(object):
     """
     def __init__(self, **kwargs):
         super(Planet, self).__init__()
-        for key, value in kwargs.items():
+        if not kwargs:
+            attrs = _planet_defaults()
+        else:
+            attrs = kwargs
+        for key, value in attrs.items():
             setattr(self, key, value)
 
     def __repr__(self):
@@ -99,7 +103,11 @@ class Galaxy(object):
     """
     def __init__(self, **kwargs):
         super(Galaxy, self).__init__()
-        for key, val in kwargs.items():
+        if not kwargs:
+            attrs = {"nombre": "UNSET"}
+        else:
+            attrs = kwargs
+        for key, val in attrs.items():
             setattr(self, key, val)
 
         self.planets = []
