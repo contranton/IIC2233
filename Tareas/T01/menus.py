@@ -1,12 +1,14 @@
-from menus_base import NumericalChoiceMenu, TextInputMenu, YesNoMenu, wrap_init
-from termcolor import colored
+from menus_base import NumericalChoiceMenu, TextInputMenu, YesNoMenu
+from termcolor import colored, cprint
 
 
 class MainMenu(NumericalChoiceMenu):
     """Initial welcome and action selection menu"""
 
-    @wrap_init
     def __init__(self):
+        super().__init__()
+        self.is_main = True
+
         self.title = colored("Bienevenido a ChauCraft!",
                              'green',
                              attrs=('bold',))
@@ -19,12 +21,14 @@ class MainMenu(NumericalChoiceMenu):
         self.options = ["Crear Galaxia",
                         "Modificar Galaxia",
                         "Consultar Galaxia",
-                        "Jugar con Galaxia"]
+                        "Jugar con Galaxia",
+                        "Salir del programa"]
 
         self.functions = [CreateGalaxyMenu().run,
                           ModifyGalaxyMenu().run,
                           QueryGalaxyMenu().run,
-                          PlayGalaxyMenu().run]
+                          PlayGalaxyMenu().run,
+                          lambda: False]
 
 
 class CreateGalaxyMenu(TextInputMenu):
@@ -43,6 +47,8 @@ class CreateGalaxyMenu(TextInputMenu):
         choose_planet_menu = YesNoMenu()
         choose_planet_menu.title = "Editando galaxia %s" %\
                                    colored(galaxy_name, 'red', attrs=('bold',))
+        choose_planet_menu.content = colored("Planetas creados:", 'green')
+                                             #TODO: + GALAXY PLANETS)
         choose_planet_menu.prompt = "Crear Planeta? (si/no): "
         
         while choose_planet_menu.run():
@@ -51,6 +57,12 @@ class CreateGalaxyMenu(TextInputMenu):
         choose_conquered_planet_menu = NumericalChoiceMenu()
         choose_conquered_planet_menu.title = "Elige el planeta a"\
                                              "comenzar conquistado"
+        # TODO:
+        # choose_conquered_planet_menu.options = Universe.GALAXY.planets
+        # conquered_planet = choose_conquered_planet_menu.run()
+
+        # TODO: WRITE TO FILE
+        return True
 
     def make_planet_dialog(self):
 
@@ -63,6 +75,11 @@ class CreateGalaxyMenu(TextInputMenu):
         planet_name_menu.forbidden_input = []
         
         planet_name = planet_name_menu.run()
+        while len(planet_name) < 6:
+            cprint("El nombre es demasiado corto (minimo 6 caracteres)."
+                   "Intenta de nuevo", 'red')
+            input("\nPulsa para continuar...")
+            planet_name = planet_name_menu.run()
 
         # Choose planet race
         planet_race_menu = NumericalChoiceMenu()
@@ -75,9 +92,6 @@ class CreateGalaxyMenu(TextInputMenu):
         planet_race = planet_race_menu.run()
 
         # TODO: Assign acquired data to a planet in Universe class
-
-        print(planet_name, planet_race)
-        input("Happy?")
 
 
 class ModifyGalaxyMenu(NumericalChoiceMenu):

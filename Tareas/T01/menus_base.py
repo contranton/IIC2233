@@ -1,4 +1,3 @@
-from collections import deque, namedtuple
 from termcolor import colored
 from abc import ABC, abstractmethod
 
@@ -8,29 +7,13 @@ from typing import Tuple
 
 """
 Defines menu systems to be used for user interaction and info display
+
+From the Abstract class Menu are defined:
+    - NumericalChoiceMenu: Menu where any choice consists of a number in a list
+    - TextInputMenu: Menu where expected input is some text
+    - YesNoMenu: Menu where a boolean reply is expected
+
 """
-
-
-def _validate_num_range(self, n_input):
-    pass
-
-
-MenuItem = namedtuple("MenuItem", "option function")
-
-
-def wrap_init(init):
-    """
-    Wraps init in super's pre and post initialization
-
-    This allows a menu subclass to comfortably define options and
-    functions in its own init while allowing default behavior from
-    the super classes
-    """
-    def _(cls, *args, **kwargs):
-        super(cls.__class__, cls).__init__(*args, **kwargs)
-        init(cls)
-        super(cls.__class__, cls)._set_items()
-    return _
 
 
 class Menu(ABC):
@@ -40,14 +23,6 @@ class Menu(ABC):
     message at the bottom stating the output of some previous
     operation and a user prompt.
 
-    items consists in a deque whose entries are a MenuItem namedtuple,
-    with fields 'option' and 'function', where 'option' is the message
-    display in the menu list and 'function' is a callable executed on
-    selecting said option.
-
-    Item addition is performed through _add_item, which ensures that
-    the default option to quit the current menu is always available as
-    the last one in the list.
     """
     def __init__(self):
 
@@ -67,7 +42,7 @@ class Menu(ABC):
         """
         CLS calls the ansi code to clear the terminal screen, keeping the
         title consistently at the top of the console and other items
-        consistently placed
+        placed predictably
         """
         s = CLS()
         s += colored("--"*10 + "\n", 'cyan', attrs=('bold',))
@@ -101,37 +76,46 @@ class Menu(ABC):
             return function()
 
     def run(self):
-        """Main execution method, best if called only from main menu
-        
+        """Main execution method for a menu which return a subfunction or value
+
         Submenus must be defined within each subfunction, such that menus
         are recursively entered until they return False and the previous
         menu becomes active
         """
 
         # Will behave as a loop recursively until the last menu is exited
-        return self._interact()
+        while self._interact():
+            continue
+        return
 
 
 class NumericalChoiceMenu(Menu):
     """Menu for selecting items from an item list
 
     Only menu type with options[] and functions[]
+
+    'items' consists of a deque whose entries are a MenuItem namedtuple,
+    with fields 'option' and 'function', where 'option' is the message
+    display in the menu list and 'function' is a callable executed on
+    selecting said option.
+
+    Item addition is performed through _add_item, which ensures that
+    the default option to quit the current menu is always available as
+    the last one in the list.
     """
     def __init__(self, **kwargs):
         super(NumericalChoiceMenu, self).__init__(**kwargs)
 
+        # Specifies whether one can return to this menu
+        self.is_main = False
+
         self.content = "Las " + colored("opciones", 'yellow') + " son:"
-        
-        # NamedTuple is wrapped in another tuple to
-        # fit as a complete unit in deque
-        self.items = deque((MenuItem(option="Volver al menu anterior",
-                                     function=lambda: False),))
-    
+
     def _set_items(self):
-        # Add the options and functions defined in the init to the items list
-        for option, function in zip(self.options, self.functions):
-            self._add_item(option, function)
+        # DEPRECATED: Was once used to add items to deque, no longer used
+        # Remove the decorator as well, bruh
         self.options.append("Volver al menu anterior")
+        self.functions.append(lambda: False)
 
     def __str__(self):
         s = super().__str__()
@@ -139,15 +123,12 @@ class NumericalChoiceMenu(Menu):
                         for i, text in enumerate(self.options)])
         return s
 
-    def _add_item(self, _option, _function):
-        self.items.appendleft(MenuItem(option=_option, function=_function))
-
     def _validate_input(self, value):
         choices = range(len(self.options))
         try:
             value = int(value) - 1
             if value in choices:
-                function = self.items[value].function
+                function = self.functions[value]
 
                 return (True, "", function)
             else:
@@ -158,6 +139,12 @@ class NumericalChoiceMenu(Menu):
             return (False,
                     "El valor ingresado no es un número",
                     0)
+
+    def run(self):
+        if self.is_main:
+            return super().run()
+        else:
+            return self._interact()
 
 
 class TextInputMenu(Menu):
@@ -176,6 +163,9 @@ class TextInputMenu(Menu):
                 "Nombre no disponible",
                 0)
 
+    def run(self):
+        return self._interact()
+
 
 class YesNoMenu(Menu):
     """Menu for 'yes' or 'no' boolean selection"""
@@ -189,3 +179,5 @@ class YesNoMenu(Menu):
             value = {"si": True, "no": False}[text.strip().lower()]
             return (True, "", lambda: value)
         
+    def run(self):
+        return self._interact()
