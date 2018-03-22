@@ -3,11 +3,6 @@ class PAWControl:
     MAX_PASSENGERS = 5
 
     def __init__(self):
-        """
-        :param clients: path del archivo con datos de clientes
-        :param booking: path de las reservas
-        :param flights: path de los vuelos
-        """
         self.clients = None
         self.bookings = None
         self.rejected = None
