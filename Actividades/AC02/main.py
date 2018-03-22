@@ -92,8 +92,10 @@ class PAWControl:
             booking_attempt = self.bookings.pop()
             flight = self.flights[booking_attempt.fid]
             seat = booking_attempt.seat
+            if int(seat) > self.MAX_PASSENGERS:
+                self.rejected.append(booking_attempt)
             if seat not in flight.passengers:
-                    flight.passengers[seat] = booking_attempt.passport
+                flight.passengers[seat] = booking_attempt.passport
             else:
                 # Seat has been occupied
                 self.rejected.append(booking_attempt)
