@@ -1,126 +1,100 @@
-from collections import deque, namedtuple
+from menus_base import NumericalChoiceMenu, TextInputMenu, YesNoMenu, wrap_init
 from termcolor import colored
-from abc import ABC
-
-"""
-Defines menu systems to be used for user interaction and info display
-"""
 
 
-def _validate_num_range(self, n_input):
+class MainMenu(NumericalChoiceMenu):
+    """Initial welcome and action selection menu"""
+
+    @wrap_init
+    def __init__(self):
+        self.title = colored("Bienevenido a ChauCraft!",
+                             'green',
+                             attrs=('bold',))
+
+        self.content = colored("Bienvenido, usuario, a tu universo",
+                               'cyan')
+
+        self.prompt = colored(self.prompt, 'yellow')
+
+        self.options = ["Crear Galaxia",
+                        "Modificar Galaxia",
+                        "Consultar Galaxia",
+                        "Jugar con Galaxia"]
+
+        self.functions = [CreateGalaxyMenu().run,
+                          ModifyGalaxyMenu().run,
+                          QueryGalaxyMenu().run,
+                          PlayGalaxyMenu().run]
+
+
+class CreateGalaxyMenu(TextInputMenu):
+
+    def __init__(self):
+        super().__init__()
+        self.title = "Creando una nueva galaxia"
+
+        self.prompt = "Ingresa un nombre para la galaxia: "
+
+    def run(self):
+
+        # TODO: Make galaxy
+        galaxy_name = self._interact()
+        
+        choose_planet_menu = YesNoMenu()
+        choose_planet_menu.title = "Editando galaxia %s" %\
+                                   colored(galaxy_name, 'red', attrs=('bold',))
+        choose_planet_menu.prompt = "Crear Planeta? (si/no): "
+        
+        while choose_planet_menu.run():
+            self.make_planet_dialog()
+
+        choose_conquered_planet_menu = NumericalChoiceMenu()
+        choose_conquered_planet_menu.title = "Elige el planeta a"\
+                                             "comenzar conquistado"
+
+    def make_planet_dialog(self):
+
+        # Choose planet name
+        planet_name_menu = TextInputMenu()
+        planet_name_menu.title = "Creando nuevo planeta"
+        planet_name_menu.prompt = "Elige el nombre del planeta: "
+
+        # TODO: Acquire all planet names in galaxy
+        planet_name_menu.forbidden_input = []
+        
+        planet_name = planet_name_menu.run()
+
+        # Choose planet race
+        planet_race_menu = NumericalChoiceMenu()
+        planet_race_menu.title = "Creando nuevo planeta"
+        planet_race_menu.content = "Elige la raza del planeta"
+        planet_race_menu.options = ["Maestro", "Aprendiz", "Asesino"]
+        planet_race_menu.functions = [lambda: i
+                                      for i in planet_race_menu.options]
+
+        planet_race = planet_race_menu.run()
+
+        # TODO: Assign acquired data to a planet in Universe class
+
+        print(planet_name, planet_race)
+        input("Happy?")
+
+
+class ModifyGalaxyMenu(NumericalChoiceMenu):
     pass
 
 
-MenuItem = namedtuple("MenuItem", "option function")
+class QueryGalaxyMenu(NumericalChoiceMenu):
+    pass
 
 
-class Menu(ABC):
-    """Main class for menu display and navigation
-
-    A menu consists of a title, a list of choosable items, and a
-    message at the bottom stating the output of some previous
-    operation and a user prompt.
-
-    items consists in a deque whose entries are a MenuItem namedtuple,
-    with fields 'option' and 'function', where 'option' is the message
-    display in the menu list and 'function' is a callable executed on
-    selecting said option.
-
-    Item addition is performed through _add_item, which ensures that
-    the default option to quit the current menu is always available as
-    the last one in the list.
-
-    Menu types are 0, 1, or 2:
-
-        - 0 is a numerical choice menu, in which menu items
-        are enumerated and the only valid input is one such number.
-
-        - 1 is a text input menu, in which any valid text string works
-
-        - 2 is a yes/no menu, in which either 'y', 'n', 'c' are valid
-
-    """
-    def __init__(self, title, prompt, options=[], functions=[]):
-
-        # Printed at the top in a special color
-        self.title = title
-
-        # Tells the user what to do!
-        self.prompt
-
-        # Main text body of the menu. Can use termcolor's colored function to
-        # include particular coloration
-        self.content = "The " + colored("options", 'yellow') + " are:"
-
-        # NamedTuple is wrapped in another tuple to
-        # fit as a complete unit in deque
-        self.items = deque((MenuItem(option="Volver al menu anterior",
-                                     function=lambda: False),))
-
-        # Add the options and functions passed in as constructor arguments
-        for option, function in zip(options, functions):
-            self._add_item(option, function)
-
-    def __str__(self):
-        s = "\n".join([self.title, self.content])
-        return s
-
-    def _add_item(self, _option, _function):
-        self.items.appendleft(MenuItem(option=_option, function=_function))
-
-    @abstractmethod
-    def _validate_input(self) -> tuple(bool, str, callable):
-        """Ensures the input is valid for the specified menu type"""
-        pass
-
-    def _interact(self):
-        """ Allow the user to pick an option and execute its associated function
-
-        prompt is displayed always in the user input line, and
-        message is displayed only when input has failed
-        """
-
-        print(self)
-        choice = input(prompt)
-        success, msg, function = self._validate_input(choice)
-        if not success:
-            return self._interact(message="Input inválido. " + msg)
-        else:
-            # All menus must effectively return callables, using lambdas
-            # in case the menus are simply used for data entry.
-            return function()
+class PlayGalaxyMenu(NumericalChoiceMenu):
+    pass
 
 
-class NumericalChoiceMenu(Menu):
-    """Menu for selecting items from an item list
-
-    """
-    def __init__(self, **kwargs):
-        super(NumericalChoiceMenu, self).__init__(prompt="Elige una opción",
-                                                  **kwargs)
-
-    def _validate_input(self, value, choices) -> tuple[bool, str, callable]:
-        try:
-            value = int(value)
-            if value in choices:
-                fun = self.items[value-1].function
-
-                # This line effectively EXECUTES the function!
-                return (True, "", function)
-            else:
-                return (False,
-                        "El valor escogido no está dentro del rango válido")
-        except TypeError:
-            return (False,
-                    "El valor ingresado no es un número")
-
-    def _interact(self, prompt="Elige una opción: ", message="") -> bool:
-        print(self)
-        choice = input(prompt)
-        success, msg = self._validate_input(choice)
-        if not success:
-            return self._interact(message="Input inválido. " + msg)
-        else:
-            return self.items[int(choice)-1].function()
-
-
+if __name__ == '__main__':
+    import colorama;
+    colorama.init()
+    print(colorama.Style.BRIGHT)
+    m = MainMenu()
+    m.run()
