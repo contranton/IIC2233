@@ -127,6 +127,7 @@ class PAWControl:
         for flight in self.flights.values():
             if flight.destination == destination:
                 passengers = passengers.union({*flight.passengers.values()})
+
         return list(passengers)
 
     def rejected_bookings(self):
