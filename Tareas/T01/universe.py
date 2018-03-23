@@ -9,7 +9,7 @@ Defines Planet, Galaxy, and Universe classes
 """
 
 
-def _planet_defaults():
+def _planet_defaults(nombre, raza):
     """
     Returns the default values for a planet other than
     its name, race, and parent galaxy, which are user-specified.
@@ -18,8 +18,8 @@ def _planet_defaults():
     deut_rate = randint(5, 15)
     now = datetime.now()
     
-    return {"nombre": "UNSET",
-            "raza": "Asesino",  # Only for defaulting -- is changed anyways
+    return {"nombre": nombre,
+            "raza": raza,
             "galaxia": "UNSET",
             "ultima_recoleccion": now,
             "magos": 0,
@@ -37,12 +37,13 @@ class Planet(object):
     """Documentation for Planeta
 
     """
-    def __init__(self, **kwargs):
+    def __init__(self, nombre="UNSET", raza="Asesino", **kwargs):
         super(Planet, self).__init__()
         if not kwargs:
-            attrs = _planet_defaults()
+            attrs = _planet_defaults(nombre, raza)
         else:
-            attrs = kwargs
+            attrs = {"nombre": nombre, "raza": raza}
+            attrs.update(kwargs)
         for key, value in attrs.items():
             setattr(self, key, value)
 
@@ -67,7 +68,10 @@ class Planet(object):
 
     @soldados.setter
     def soldados(self, value):
-        max_soldados = self.raza.max_pop - self.magos
+        try:
+            max_soldados = self.raza.max_pop - self.magos
+        except AttributeError:
+            raise Exception("Planet has not been properly initialized!")
         self._soldados = min(max(value, 0), max_soldados)
 
     @property
@@ -98,19 +102,19 @@ class Planet(object):
 
 
 class Galaxy(object):
-    """Documentation for Galaxia
+    """Documentation for Galaxy
 
     """
     def __init__(self, **kwargs):
         super(Galaxy, self).__init__()
+        self.planets = []
+        
         if not kwargs:
             attrs = {"nombre": "UNSET"}
         else:
             attrs = kwargs
         for key, val in attrs.items():
             setattr(self, key, val)
-
-        self.planets = []
 
     def __repr__(self):
         s = "%s (%i planets)" % (self.nombre, len(self.planets))

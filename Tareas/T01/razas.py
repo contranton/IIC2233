@@ -15,6 +15,8 @@ class Raza(metaclass=ABCMeta):
 
     """
 
+    name = ""
+    
     Cost = namedtuple("Cost", "mins deut")
 
     has_mago = False
@@ -27,6 +29,8 @@ class Raza(metaclass=ABCMeta):
 
 
 class MaestroRaza(Raza):
+
+    name = "Maestro"
 
     max_pop = 100
 
@@ -49,6 +53,8 @@ class MaestroRaza(Raza):
 
 class AprendizRaza(Raza):
 
+    name = "Aprendiz"
+    
     max_pop = 100
 
     costo_soldado = Raza.Cost(mins=300, deut=400)
@@ -66,6 +72,8 @@ class AprendizRaza(Raza):
 
 class AsesinoRaza(Raza):
 
+    name = "Asesino"
+    
     max_pop = 400
 
     costo_soldado = Raza.Cost(mins=100, deut=200)
