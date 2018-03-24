@@ -1,9 +1,8 @@
 from termcolor import colored
 from abc import ABC, abstractmethod
+from collections import namedtuple
 
 from colorama.ansi import clear_screen as CLS
-
-from typing import Tuple
 
 """
 Defines menu systems to be used for user interaction and info display
@@ -15,6 +14,7 @@ From the Abstract class Menu are defined:
 
 """
 
+menu_item = namedtuple("Item", "option function opt_data")
 
 class Menu(ABC):
     """Main class for menu display and navigation
@@ -27,7 +27,7 @@ class Menu(ABC):
     def __init__(self):
 
         super().__init__()
-        
+
         # Printed at the top in a special color
         self.title = "Un Menú"
 
@@ -45,14 +45,18 @@ class Menu(ABC):
         placed predictably
         """
         s = CLS()
+        # s += colored(self.__class__.__name__, 'red')
         s += colored("--"*20 + "\n", 'cyan', attrs=('bold',))
-        s += self.title + "\n"
+        s += colored(self.title, 'cyan', attrs=('bold',)) + "\n"
         s += self.content + "\n" if self.content != "" else ""
         return s
 
     @abstractmethod
-    def _validate_input(self) -> Tuple[bool, str, callable]:
-        """Ensures the input is valid for the specified menu type"""
+    def _validate_input(self):
+        """Ensures the input is valid for the specified menu type
+
+        Returns a tuple(bool success, str error_message, callable function)
+        """
         pass
 
     def _interact(self, message=""):
@@ -85,7 +89,7 @@ class Menu(ABC):
         # Will behave as a loop recursively until the last menu is exited
         while self._interact():
             continue
-        return
+        return True
 
 
 class NumericalChoiceMenu(Menu):
@@ -109,21 +113,82 @@ class NumericalChoiceMenu(Menu):
         self.is_main = False
 
         self.content = "Las " + colored("opciones", 'yellow') + " son:"
+        self.prompt = "Elige una opción"
+
+        self.items = (list(), list())
+
+    @property
+    def options(self):
+        return [item.option for item in self.items.values()]
+
+    @property
+    def functions(self):
+        return [item.function for item in self.items.values()]
+
+    @property
+    def items(self):
+        return self._items
+
+    @items.setter
+    def items(self, item_info):
+        """
+        item_info is a 3-tuple containing lists of equal length that describe
+        the menu options
+
+        Options: Strings that describe a function
+        Functions: function objects executed upon selection
+                   If a function is None, it will return the option name
+        Opt_data: For when options must display additional information
+                   that mustn't be returned with a None function
+        """
+
+        # Unpack item info tuple
+        try:
+
+            options, functions, *opt_data = item_info
+
+            # For some reason the optionals get wrapped in another list
+            if opt_data:
+                opt_data = opt_data[0]
+        except ValueError:
+            raise ValueError("Menu 'items' setter received "
+                             "incorrect info tuple")
+
+        # opt_data is Optional, and default values are empty strings
+        if len(opt_data) == 0:
+            opt_data = [""] * len(options)
+
+        # By default, empty functions maps to None
+        if len(functions) == 0:
+            functions = [None] * len(options)
+
+        # All lists must have the same length
+        if len(options) != len(functions) or len(functions) != len(opt_data):
+            raise ValueError("Menu 'item' lists have different lenghts")
+
+        # A function left as None returns the name of the chosen option
+        for i, f in enumerate(functions):
+            if f is None:
+                functions[i] = lambda: options[i]
+
+        self._items = {i: menu_item(option=opt, function=func, opt_data=dat)
+                       for i, (opt, func, dat)
+                       in enumerate(zip(options, functions, opt_data))}
 
     def __str__(self):
         s = super().__str__() + "\n"
-        s += "\n".join(["%i) %s" % (i+1, text)
-                        for i, text in enumerate(self.options)])
+        s += "\n".join(["%i) %s %s" % (i+1, item.option, item.opt_data)
+                        for i, item in self.items.items()])
         return s
 
     def _validate_input(self, value):
         choices = range(len(self.options))
         try:
             value = int(value) - 1
-            if value in choices:
-                function = self.functions[value]
 
-                return (True, "", function)
+            # If number is in range
+            if value in choices:
+                return (True, "", self.items[value].function)
             else:
                 return (False,
                         "El valor escogido no está dentro del rango válido",
@@ -134,9 +199,14 @@ class NumericalChoiceMenu(Menu):
                     0)
 
     def run(self):
+
         if self.is_main:
-            return super().run()
+            # Continues a main loop
+            # input("Attempting to return to previous menu")
+            super().run()
         else:
+            # Returns a value and quits
+            input("Returning value and bypassing menu")
             return self._interact()
 
 
@@ -149,7 +219,7 @@ class TextInputMenu(Menu):
         super(TextInputMenu, self).__init__(**kwargs)
         self.forbidden_input = []
 
-    def _validate_input(self, text) -> Tuple[bool, str, callable]:
+    def _validate_input(self, text):
         if text not in self.forbidden_input:
             return (True, "", lambda: text)
         return (False,
@@ -174,3 +244,39 @@ class YesNoMenu(Menu):
 
     def run(self):
         return self._interact()
+
+
+class AreYouSureMenu(YesNoMenu):
+    def __init__(self, title):
+        super().__init__()
+        self.title = title
+        self.prompt = "Seguro? (si/no): "
+
+    def run(self):
+        return self._interact()
+
+
+class InfoMenu(Menu):
+    def __init__(self, title="Informacion"):
+        """Menu for info display with a unique input option for returning"""
+        self.title = title
+        self.content = "LLENAME CON INFORMACION"
+        self.prompt = "Pulsa para continuar..."
+
+    def _validate_input(self, _):
+        return (True, "", lambda: False)
+
+if __name__ == '__main__':
+    M = NumericalChoiceMenu()
+
+    options = "Op1 Op2 Op3".split()
+    functions = "Foo1 FOo2 FOo3".split()
+    opt_data = "? ! Wow".split()
+
+    M.items = (options, functions)
+
+    print(M.items)
+
+    M.items = (options, functions, opt_data)
+
+    print(M.items)

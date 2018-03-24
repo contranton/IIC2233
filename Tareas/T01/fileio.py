@@ -7,7 +7,7 @@ def parse_entry_type(datum, type_):
     elif type_ == "int":
         return int(datum)
     elif type_ == "bool":
-        return bool(datum)
+        return True if datum == "True" else False
     else:
         return datetime.strptime(datum, "%Y-%m-%d %H:%M:%S")
 

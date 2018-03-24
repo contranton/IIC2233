@@ -6,7 +6,6 @@ Since a race encodes the properties of the actions of multiple planets, it
 makes no sense to instatiate them. Thus, they remain abstract classes!
 """
 
-
 class Raza(metaclass=ABCMeta):
     """Defines a race's properties, to be used in individual planets
 

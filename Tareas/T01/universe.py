@@ -18,7 +18,7 @@ def _planet_defaults(nombre, raza, galaxia):
     mins_rate = randint(1, 10)
     deut_rate = randint(5, 15)
     now = datetime.now()
-    
+
     return {"nombre": nombre,
             "raza": raza,
             "galaxia": galaxia,
@@ -48,6 +48,9 @@ class Planet(object):
             attrs.update(kwargs)
         for key, value in attrs.items():
             setattr(self, key, value)
+
+    def __str__(self):
+        return str(self.__dict__)
 
     def __repr__(self):
         s = "Planet(\"%s\" Raza:(%s) Evo:[%f])" %\
@@ -84,7 +87,7 @@ class Planet(object):
 
     @tasa_minerales.setter
     def tasa_minerales(self, valor):
-        self._tasa_minerales = valor
+        self._tasa_minerales = min(max(valor, 1), 10)
 
     @property
     def tasa_deuterio(self):
@@ -94,13 +97,19 @@ class Planet(object):
 
     @tasa_deuterio.setter
     def tasa_deuterio(self, valor):
-        self._tasa_deuterio = valor
+        self._tasa_deuterio = min(max(valor, 5), 15)
 
     @property
     def evolucion(self):
         return self.nivel_economia + self.nivel_ataque\
             + (self.soldados + self.magos)/(self.raza.max_pop)\
             + int(self.torre) + int(self.cuartel)
+
+    def increase_tasa_deuterio(self):
+        self._tasa_deuterio += 1
+
+    def increase_tasa_minerales(self):
+        self._tasa_minerales += 1
 
 
 class Galaxy(object):
@@ -109,8 +118,8 @@ class Galaxy(object):
     """
     def __init__(self, **kwargs):
         super(Galaxy, self).__init__()
-        self.planets = []
-        
+        self.planets = {}
+
         if not kwargs:
             attrs = {"nombre": "UNSET",
                      "minerales": 1000,
@@ -119,7 +128,11 @@ class Galaxy(object):
             attrs = kwargs
         for key, val in attrs.items():
             setattr(self, key, val)
-            
+
+    @property
+    def planets_list(self):
+        return list(self.planets.values())
+
     def __repr__(self):
         s = "%s (%i planets)" % (self.nombre, len(self.planets))
         return s
@@ -129,14 +142,18 @@ class Universe(object):
     """Main data-holding object with galaxies and planets"""
 
     def __init__(self):
-        self.changes = None
+        self.galaxies = {}
         self._acquire_planets_and_galaxies()
-        
+
     def __repr__(self):
         s = "Universe with %i galaxies:\n" % len(self.galaxies)
         s += "\t" + "\n\t".join([str(g) for g in self.galaxies])
         return s
-    
+
+    @property
+    def galaxies_list(self):
+        return list(self.galaxies.values())
+
     def _acquire_planets_and_galaxies(self):
         """
         Initialize planet and galaxy objects based on the written data
@@ -158,34 +175,29 @@ class Universe(object):
         # Set the galaxies' planets and the planets' galaxies
         for p in planets.values():
             galaxy_name = p.galaxia
-            
+
             # Give planet a parent galaxy as an object
             p.galaxia = self.galaxies[galaxy_name]
 
             # Give galaxy its child planet
-            self.galaxies[galaxy_name].planets.append(p)
-
-        # Make galaxies a list for easier access
-        self.galaxies = list(self.galaxies.values())
+            self.galaxies[galaxy_name].planets[p.nombre] = p
 
     def write_content(self):
-        galaxies = [deepcopy(g.__dict__) for g in self.galaxies]
-        
-        planets = [deepcopy(p.__dict__) for g in self.galaxies
-                   for p in g.planets]
-        for i in planets:
-            print(i)
-        input()
+        galaxies = [deepcopy(g.__dict__) for g in self.galaxies.values()]
+
+        planets = [deepcopy(p.__dict__) for g in self.galaxies.values()
+                   for p in g.planets.values()]
+
         # A HACK to get the race names from the uninstantiated race classes
         # And to fix galaxy name
         for p in planets:
             p['_raza'] = str(p['_raza']).split(".")[-1][:-6]  # Awfuuuuuul
             p['galaxia'] = p['galaxia'].nombre
-            
+
         # Remove planets list in galaxy entry
         for g in galaxies:
             g.pop("planets")
-            
+
         write_csv(planets, "archivos\\planetas.csv")
         write_csv(galaxies, "archivos\\galaxias.csv")
 

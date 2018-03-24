@@ -26,3 +26,7 @@
 - Else:
   - Invade the planet (start *battle system*)
   - Purchase the planet (mins=1e6, deut=5e5)
+* Misc considerations
+All planet names must be unique, even if they're in different galaxies!
+* TODO 
+CAN YOU DO =self.items = options, functions= ?????
