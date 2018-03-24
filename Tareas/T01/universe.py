@@ -1,15 +1,16 @@
 from datetime import datetime
 from random import randint
+from copy import deepcopy
 
 from razas import MaestroRaza, AprendizRaza, AsesinoRaza
-from fileio import read_planets, read_galaxies
+from fileio import read_planets, read_galaxies, write_csv
 
 """
 Defines Planet, Galaxy, and Universe classes
 """
 
 
-def _planet_defaults(nombre, raza):
+def _planet_defaults(nombre, raza, galaxia):
     """
     Returns the default values for a planet other than
     its name, race, and parent galaxy, which are user-specified.
@@ -20,7 +21,7 @@ def _planet_defaults(nombre, raza):
     
     return {"nombre": nombre,
             "raza": raza,
-            "galaxia": "UNSET",
+            "galaxia": galaxia,
             "ultima_recoleccion": now,
             "magos": 0,
             "soldados": 0,  # There's an ordering here which is NOT guaranteed!
@@ -37,12 +38,13 @@ class Planet(object):
     """Documentation for Planeta
 
     """
-    def __init__(self, nombre="UNSET", raza="Asesino", **kwargs):
+    def __init__(self, nombre="UNSET", raza="Asesino",
+                 galaxia="UNSET", **kwargs):
         super(Planet, self).__init__()
         if not kwargs:
-            attrs = _planet_defaults(nombre, raza)
+            attrs = _planet_defaults(nombre, raza, galaxia)
         else:
-            attrs = {"nombre": nombre, "raza": raza}
+            attrs = {"nombre": nombre, "raza": raza, "galaxia": galaxia}
             attrs.update(kwargs)
         for key, value in attrs.items():
             setattr(self, key, value)
@@ -110,12 +112,14 @@ class Galaxy(object):
         self.planets = []
         
         if not kwargs:
-            attrs = {"nombre": "UNSET"}
+            attrs = {"nombre": "UNSET",
+                     "minerales": 1000,
+                     "deuterio": 1000}
         else:
             attrs = kwargs
         for key, val in attrs.items():
             setattr(self, key, val)
-
+            
     def __repr__(self):
         s = "%s (%i planets)" % (self.nombre, len(self.planets))
         return s
@@ -163,6 +167,27 @@ class Universe(object):
 
         # Make galaxies a list for easier access
         self.galaxies = list(self.galaxies.values())
+
+    def write_content(self):
+        galaxies = [deepcopy(g.__dict__) for g in self.galaxies]
+        
+        planets = [deepcopy(p.__dict__) for g in self.galaxies
+                   for p in g.planets]
+        for i in planets:
+            print(i)
+        input()
+        # A HACK to get the race names from the uninstantiated race classes
+        # And to fix galaxy name
+        for p in planets:
+            p['_raza'] = str(p['_raza']).split(".")[-1][:-6]  # Awfuuuuuul
+            p['galaxia'] = p['galaxia'].nombre
+            
+        # Remove planets list in galaxy entry
+        for g in galaxies:
+            g.pop("planets")
+            
+        write_csv(planets, "archivos\\planetas.csv")
+        write_csv(galaxies, "archivos\\galaxias.csv")
 
 
 if __name__ == '__main__':

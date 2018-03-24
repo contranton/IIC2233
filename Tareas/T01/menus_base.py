@@ -45,10 +45,9 @@ class Menu(ABC):
         placed predictably
         """
         s = CLS()
-        s += colored("--"*10 + "\n", 'cyan', attrs=('bold',))
-        s += "\n".join([self.title,
-                        self.content,
-                        "\n"])
+        s += colored("--"*20 + "\n", 'cyan', attrs=('bold',))
+        s += self.title + "\n"
+        s += self.content + "\n" if self.content != "" else ""
         return s
 
     @abstractmethod
@@ -111,14 +110,8 @@ class NumericalChoiceMenu(Menu):
 
         self.content = "Las " + colored("opciones", 'yellow') + " son:"
 
-    def _set_items(self):
-        # DEPRECATED: Was once used to add items to deque, no longer used
-        # Remove the decorator as well, bruh
-        self.options.append("Volver al menu anterior")
-        self.functions.append(lambda: False)
-
     def __str__(self):
-        s = super().__str__()
+        s = super().__str__() + "\n"
         s += "\n".join(["%i) %s" % (i+1, text)
                         for i, text in enumerate(self.options)])
         return s
@@ -178,6 +171,6 @@ class YesNoMenu(Menu):
         else:
             value = {"si": True, "no": False}[text.strip().lower()]
             return (True, "", lambda: value)
-        
+
     def run(self):
         return self._interact()

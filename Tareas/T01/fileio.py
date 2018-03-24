@@ -12,7 +12,7 @@ def parse_entry_type(datum, type_):
         return datetime.strptime(datum, "%Y-%m-%d %H:%M:%S")
 
 
-def _read_csv(filename):
+def read_csv(filename):
 
     # Turns ..\blah\blah2\galaxias.csv into "Galaxia"
     # content_name = filename.split("\\")[-1].split(".")[-2][:-1].title()
@@ -34,7 +34,7 @@ def _read_csv(filename):
     return kwargs
 
 
-def _write_csv(dict_list, filename):
+def write_csv(dict_list, filename):
     """Automatically writes variable name and type on header before data
 
     This method expects all dicts inside the list to have the exact same keys
@@ -64,30 +64,11 @@ def _write_csv(dict_list, filename):
 
 
 def read_galaxies():
-    return _read_csv("archivos\\galaxias2.csv")
+    return read_csv("archivos\\galaxias.csv")
 
 
 def read_planets():
-    return _read_csv("archivos\\planetas2.csv")
-
-
-def write_content(universe):
-    galaxies = [g.__dict__ for g in universe.galaxies]
-    
-    planets = [p.__dict__ for g in universe.galaxies for p in g.planets]
-
-    # A HACK to get the race names from the uninstantiated race classes
-    # And to fix galaxy name
-    for p in planets:
-        p['_raza'] = str(p['_raza']).split(".")[-1][:-6]  # Awfuuuuuul
-        p['galaxia'] = p['galaxia'].nombre
-
-    # Remove planets list in galaxy entry
-    for g in galaxies:
-        g.pop('planets')
-
-    _write_csv(planets, "archivos\\planetas2.csv")
-    _write_csv(galaxies, "archivos\\galaxias2.csv")
+    return read_csv("archivos\\planetas.csv")
 
 
 if __name__ == '__main__':
