@@ -5,6 +5,8 @@ from copy import deepcopy
 from razas import MaestroRaza, AprendizRaza, AsesinoRaza
 from fileio import read_planets, read_galaxies, write_csv
 
+from termcolor import colored
+
 """
 Defines Planet, Galaxy, and Universe classes
 """
@@ -17,7 +19,7 @@ def _planet_defaults(nombre, raza, galaxia):
     """
     mins_rate = randint(1, 10)
     deut_rate = randint(5, 15)
-    now = datetime.now()
+    now = datetime.now().replace(microsecond=0)
 
     return {"nombre": nombre,
             "raza": raza,
@@ -50,7 +52,10 @@ class Planet(object):
             setattr(self, key, value)
 
     def __str__(self):
-        return str(self.__dict__)
+        temp = colored("{0:^20}", 'red', 'on_blue') +\
+               colored("\t{1:30}", 'magenta', 'on_blue')
+        return "\n".join([temp.format(str(attr).strip("_").title(), str(val))
+                          for attr, val in self.__dict__.items()])
 
     def __repr__(self):
         s = "Planet(\"%s\" Raza:(%s) Evo:[%f])" %\
@@ -136,6 +141,9 @@ class Galaxy(object):
     def __repr__(self):
         s = "%s (%i planets)" % (self.nombre, len(self.planets))
         return s
+
+    def __str__(self):
+        return self.nombre
 
 
 class Universe(object):

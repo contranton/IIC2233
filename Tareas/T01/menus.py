@@ -9,6 +9,41 @@ from time import sleep
 from universe import Planet, Galaxy
 
 
+def make_planet_dialog(universe, parent_galaxy):
+
+        # Choose planet name
+        planet_name_menu = TextInputMenu()
+        planet_name_menu.title = "Creando nuevo planeta"
+        planet_name_menu.prompt = "Elige el nombre del planeta: "
+
+        forbidden_input = {p.nombre for g in universe.galaxies_list
+                           for p in g.planets_list}
+
+        planet_name = planet_name_menu.run()
+        while len(planet_name) < 6:
+            cprint("El nombre es demasiado corto (minimo 6 caracteres)."
+                   "Intenta de nuevo", 'red')
+            input("\nPulsa para continuar...")
+            planet_name = planet_name_menu.run()
+        while planet_name in forbidden_input:
+            cprint("El nombre %s ya está utilizado. Elige otro." % planet_name,
+                   'red')
+            input("\nPulsa para continuar...")
+            planet_name = planet_name_menu.run()
+
+        # Choose planet race
+        planet_race_menu = NumericalChoiceMenu()
+        planet_race_menu.title = "Creando nuevo planeta"
+        planet_race_menu.content = "Elige la raza del planeta"
+        planet_race_menu.items = (["Maestro", "Aprendiz", "Asesino"], [])
+
+        planet_race = planet_race_menu.run()
+
+        return Planet(nombre=planet_name,
+                      raza=planet_race,
+                      galaxia=parent_galaxy)
+
+
 class MainMenu(NumericalChoiceMenu):
     """Initial welcome and action selection menu"""
 
@@ -90,7 +125,8 @@ class CreateGalaxyMenu(TextInputMenu):
         while create_planet_menu.run():
 
             # TODO: Maybe an issue here with new_galaxy setting?
-            self.new_planets.append(self.make_planet_dialog(self.new_galaxy))
+            self.new_planets.append(make_planet_dialog(self.universe,
+                                                       parent_galaxy=None))
             # Update the created planet list for printing
             create_planet_menu.content = self.str_created_planets
 
@@ -102,7 +138,7 @@ class CreateGalaxyMenu(TextInputMenu):
         # Initialize planets as a dict to easily choose conquered one later
         self.new_galaxy.planets = {}
 
-        # Add created planets
+        # Add created planets and set their parent galaxy
         for p in self.new_planets:
             self.new_galaxy.planets[p.nombre] = p
             p.galaxia = self.new_galaxy
@@ -138,40 +174,6 @@ class CreateGalaxyMenu(TextInputMenu):
         self.universe.write_content()
         
         return True
-
-    def make_planet_dialog(self, parent_galaxy):
-
-        # Choose planet name
-        planet_name_menu = TextInputMenu()
-        planet_name_menu.title = "Creando nuevo planeta"
-        planet_name_menu.prompt = "Elige el nombre del planeta: "
-
-        forbidden_input = {p.nombre for g in self.universe.galaxies_list
-                           for p in g.planets_list}
-
-        planet_name = planet_name_menu.run()
-        while len(planet_name) < 6:
-            cprint("El nombre es demasiado corto (minimo 6 caracteres)."
-                   "Intenta de nuevo", 'red')
-            input("\nPulsa para continuar...")
-            planet_name = planet_name_menu.run()
-        while planet_name in forbidden_input:
-            cprint("El nombre %s ya está utilizado. Elige otro." % planet_name,
-                   'red')
-            input("\nPulsa para continuar...")
-            planet_name = planet_name_menu.run()
-
-        # Choose planet race
-        planet_race_menu = NumericalChoiceMenu()
-        planet_race_menu.title = "Creando nuevo planeta"
-        planet_race_menu.content = "Elige la raza del planeta"
-        planet_race_menu.items = (["Maestro", "Aprendiz", "Asesino"], [])
-
-        planet_race = planet_race_menu.run()
-
-        return Planet(nombre=planet_name,
-                      raza=planet_race,
-                      galaxia=parent_galaxy)
 
 
 class ModifyGalaxyMenu(NumericalChoiceMenu):
@@ -214,10 +216,17 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
         self.title = "Modificando galaxia "
         self.title += colored(galaxy_name, 'cyan')
 
-        return super().run()
+        result = super().run()
+
+        # Always write changes on this menu
+        self.universe.write_content()
+        return result
 
     def add_planet(self):
-        pass
+        planet = make_planet_dialog(self.universe, self.galaxy)
+        self.galaxy.planets[planet.nombre] = planet
+
+        return True
 
     def eliminate_conquered(self):
         menu = NumericalChoiceMenu()
@@ -339,7 +348,36 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         return True
 
     def planet_info(self):
-        pass
+        planet_choose_menu = NumericalChoiceMenu()
+        planet_choose_menu.title = "Elige un planeta para ver su información"
+        planet_choose_menu.content += "\n\n" +\
+                                     "Planeta\t\t" +\
+                                     colored("Evolucion\t", 'red') +\
+                                     colored("Galaxia\t", 'cyan')
+        
+        # Make menu options
+        planets_list = [(p, p.galaxia.nombre)
+                        for g in self.universe.galaxies_list
+                        for p in g.planets_list]
+
+        planets_list.sort(key=lambda t: (t[1], -t[0].evolucion))
+
+        options = [p.nombre for p, g in planets_list]
+        functions = [lambda: p for p, g in planets_list]
+        opt_data = [colored("\t%0.2f" % p.evolucion, 'red') +
+                    colored("\t(%s)" % g, 'cyan')
+                    for p, g in planets_list]
+
+        planet_choose_menu.items = (options, functions, opt_data)
+
+        # Run menu to select planet
+        planet = planet_choose_menu.run()
+
+        info_menu = InfoMenu(title="Información acerca de %s\n" % planet.nombre)
+        info_menu.content = str(planet)
+        info_menu.run()
+
+        return True
 
     def best_galaxy(self):
         pass
