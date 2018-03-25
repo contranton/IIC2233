@@ -150,7 +150,7 @@ class CreateGalaxyMenu(TextInputMenu):
 
         options = list(map(lambda x: x.nombre,
                            self.new_galaxy.planets.values()))
-        functions = [lambda: x for x in self.new_galaxy.planets.values()]
+        functions = [lambda x=x: x for x in self.new_galaxy.planets.values()]
         choose_conquered_planet_menu.items = (options, functions)
 
         conquered_planet = choose_conquered_planet_menu.run()
@@ -363,7 +363,7 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         planets_list.sort(key=lambda t: (t[1], -t[0].evolucion))
 
         options = [p.nombre for p, g in planets_list]
-        functions = [lambda: p for p, g in planets_list]
+        functions = [lambda p=p: p for p, g in planets_list]
         opt_data = [colored("\t%0.2f" % p.evolucion, 'red') +
                     colored("\t(%s)" % g, 'cyan')
                     for p, g in planets_list]
