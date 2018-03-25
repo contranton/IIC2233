@@ -1,0 +1,214 @@
+scale 2
+skinparam Linetype ortho
+
+skinparam class{
+	  BackgroundColor<< MainProgramExecution>> Lime
+}
+
+class Universe{
+      dict[str: Galaxy] galaxies
+      <get> Galaxy[] galaxies_list
+
+      void _acquire_planets_and_galaxies()
+}
+
+class Galaxy{
+      str nombre
+      int minerales
+      int deuterio
+
+      dict[str: Planet] planets
+      <get> Planet[] planets_list
+
+      Planet[] planets
+}
+
+Class Planet{
+      str nombre
+      Raza raza
+
+      datetime ult_recoleccion
+
+      bool conquistado
+      bool torre
+      bool cuartel
+
+      int num_soldados = 0
+      int num_magos = 0
+
+      int nivel_ataque = 0
+      int nivel_economia = 0
+
+      -- Properties --
+      # To enforce pop limit
+      <get/set> int num_soldados 
+      <get/set> int num_magos 
+
+      # Effective rates are affected by current economy level
+      <get/set> int tasa_minerales
+      <get/set> int tasa_deuterio
+      
+      <get> int evolucion
+
+      # Total Attack and Life are aggregated over all soldiers/mages
+      <get> int ataque_efectivo
+      <get> int vida_efectiva
+
+      __ Methods __
+      void increase_nivel_ataque()
+      void increase_nivel_economia()
+      
+      void increase_tasa_deuterio()
+      void increase_tasa_minerales()
+}
+
+Planet --* Galaxy
+Galaxy --* Universe
+
+' Soldiers and mages will inherit from these:
+
+abstract Class Raza{
+
+	 int max_pop
+
+	 NamedTuple costo_soldado
+	 int[] rango_atq_soldado
+	 int[] rango_vid_soldado
+
+	 str warcry
+
+	 void habilidad()
+}
+
+abstract Class Maestro{
+       max_pop = 100
+      
+      {field} costo_soldado = (mins=200, deut=300)
+      {field} rango_atq_soldado = (60, 80)
+      {field} rango_vid_soldado = (200, 250)
+
+      {field} NamedTuple costo_mago = (mins=300, deut=400)
+      {field} int[] rango_atq_mago = (80, 120)
+      {field} int[] rango_vid_mago = (150, 200)
+
+      warcry = "¡Nuestro conocimiento nos ha\notrogado una victoria más!"
+
+}
+
+abstract Class Aprendiz{
+
+      max_pop = 150
+
+      {field} costo_soldado = (mins=300, deut=400)
+      {field} rango_atq_soldado = (30, 60)
+      {field} rango_vid_soldado = (600, 700)
+
+      warcry = "¡Con una gran defensa y medicinas,\nnuestros soldados son invencibles!!"
+}
+
+abstract Class Asesino{
+      max_pop = 400
+
+      {field} costo_soldado = (mins=100, deut=200)
+      {field} rango_atq_soldado = (40, 45)
+      {field} rango_vid_soldado = (250, 270)
+
+      warcry = "¡El poder de las sombras es lo\núnico necesario para ganar estas batallas!"
+}	
+
+Maestro --^ Raza
+Aprendiz --^ Raza
+Asesino --^ Raza
+
+Raza --o Planet
+
+
+' Menu system
+
+abstract class Menu{
+	 str title
+	 str content
+	 str prompt
+
+	 {abstract} bool _validate_input()
+	 bool _interact()
+
+	 bool run()
+}
+
+ class NumericalChoiceMenu{
+	 bool is_main
+
+	 <get/set> items
+	 <get> options
+	 <get> functions
+}
+
+ class TextInputMenu
+
+ class YesNoMenu
+
+ class AreYouSureMenu
+
+ class InfoMenu
+
+Menu ^-- NumericalChoiceMenu
+Menu ^-- TextInputMenu
+Menu ^-- YesNoMenu
+Menu ^-- InfoMenu
+
+YesNoMenu ^-- AreYouSureMenu
+
+class MainMenu << MainProgramExecution >>{
+      Universe universe
+}
+
+class CreateGalaxyMenu #gold{
+      Universe universe
+
+      Galaxy new_galaxy
+      Planet[] new_planets
+}
+
+note bottom of MainMenu
+     For simplicity, Menus created during a method execution
+     of one of the four main menus have been omitted
+end note
+
+class ModifyGalaxyMenu #gold{
+      Universe universe
+      
+}
+
+class QueryGalaxyMenu #gold{
+      Universe universe
+
+      void add_planet()
+      void eliminate_conquered()
+      void increase_mins_rate()
+      void increase_deut_rate()
+      void add_soldiers()
+      void add_wizards()
+}
+
+class PlayGalaxyMenu #gold{
+      Universe universe
+}
+
+Menu ^-left- MainMenu
+
+MainMenu --o Universe
+
+' CreateGalaxyMenu --o Universe
+' ModifyGalaxyMenu --o Universe
+' QueryGalaxyMenu --o Universe
+' PlayGalaxyMenu --o Universe
+
+CreateGalaxyMenu --* MainMenu
+ModifyGalaxyMenu --* MainMenu
+QueryGalaxyMenu --* MainMenu
+PlayGalaxyMenu --* MainMenu
+
+
+
+

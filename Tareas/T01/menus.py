@@ -60,12 +60,16 @@ class CreateGalaxyMenu(TextInputMenu):
         self.prompt = "Ingresa un nombre para la galaxia: "
 
         self.new_galaxy = None
+        self.new_planets = []
 
     @property
     def str_created_planets(self):
+        if not self.new_planets:
+            return "Ningún planeta creado hasta ahora"
+
         s = colored("Planetas creados: \n", 'green', attrs=('bold',))
         s += colored("\n".join(["\t%s (%s)" % (p.nombre, p.raza.name)
-                                for p in self.new_galaxy.planets.values()]),
+                                for p in self.new_planets]),
                      'green')
         return s
 
@@ -83,22 +87,25 @@ class CreateGalaxyMenu(TextInputMenu):
         create_planet_menu.prompt = "Crear Planeta? (si/no):"
 
         # Planet creation loop
-        planets = []
         while create_planet_menu.run():
+
             # TODO: Maybe an issue here with new_galaxy setting?
-            planets.append(self.make_planet_dialog(self.new_galaxy))
+            self.new_planets.append(self.make_planet_dialog(self.new_galaxy))
             # Update the created planet list for printing
             create_planet_menu.content = self.str_created_planets
 
         # Only create galaxy once at least one planet has been created
         self.new_galaxy = Galaxy(nombre=galaxy_name)
+        self.new_galaxy.minerales = 1000
+        self.new_galaxy.deuterio = 1000
 
         # Initialize planets as a dict to easily choose conquered one later
         self.new_galaxy.planets = {}
 
         # Add created planets
-        for p in planets:
-            self.new_galaxy.planets[p.name] = p
+        for p in self.new_planets:
+            self.new_galaxy.planets[p.nombre] = p
+            p.galaxia = self.new_galaxy
 
         # Choose conquered planet
         choose_conquered_planet_menu = NumericalChoiceMenu()
@@ -108,28 +115,26 @@ class CreateGalaxyMenu(TextInputMenu):
         options = list(map(lambda x: x.nombre,
                            self.new_galaxy.planets.values()))
         functions = [lambda: x for x in self.new_galaxy.planets.values()]
-        choose_conquered_planet_menu.options = options
-        choose_conquered_planet_menu.functions = functions
-        
+        choose_conquered_planet_menu.items = (options, functions)
+
         conquered_planet = choose_conquered_planet_menu.run()
         conquered_planet.conquistado = True
 
-        # Turn planets back into a list
-        self.new_galaxy.planets = list(self.new_galaxy.planets.values())
-
         # Populate unconquered planets
         # TODO: Do conquered planets have an initial population??
-        for p in self.new_galaxy.planets:
+        for p in self.new_galaxy.planets_list:
             if not p.conquistado:
-                ms = int(p.raza.max_selfoldados * 0.75)
-                mw = int(p.raza.max_magos * 0.75)
+                # Together, these add to 75% of the total population
+                ms = int(p.raza.max_pop * 0.45)
+                mw = int(p.raza.max_pop * 0.3)
                 
                 p.soldados = ms
                 p.magos = mw
 
         # Add new galaxy to universe and write changes
-        self.universe.galaxies.append(self.new_galaxy)
+        self.universe.galaxies[galaxy_name] = self.new_galaxy
         self.new_galaxy = None
+        self.new_planets = []
         self.universe.write_content()
         
         return True
@@ -141,8 +146,8 @@ class CreateGalaxyMenu(TextInputMenu):
         planet_name_menu.title = "Creando nuevo planeta"
         planet_name_menu.prompt = "Elige el nombre del planeta: "
 
-        forbidden_input = {p.nombre for g in self.universe.galaxies
-                           for p in g.planets}
+        forbidden_input = {p.nombre for g in self.universe.galaxies_list
+                           for p in g.planets_list}
 
         planet_name = planet_name_menu.run()
         while len(planet_name) < 6:
@@ -160,7 +165,7 @@ class CreateGalaxyMenu(TextInputMenu):
         planet_race_menu = NumericalChoiceMenu()
         planet_race_menu.title = "Creando nuevo planeta"
         planet_race_menu.content = "Elige la raza del planeta"
-        planet_race_menu.items = (["Maestro", "Aprendiz", "Asesino"],)
+        planet_race_menu.items = (["Maestro", "Aprendiz", "Asesino"], [])
 
         planet_race = planet_race_menu.run()
 
@@ -218,7 +223,7 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
         menu = NumericalChoiceMenu()
         menu.title = "Elige un planeta conquistado a eliminar: "
         menu.items = ([n for n, p in self.galaxy.planets.items()
-                        if p.conquistado],)
+                       if p.conquistado],)
 
         planet_name = menu.run()
 

@@ -9,7 +9,9 @@ def parse_entry_type(datum, type_):
     elif type_ == "bool":
         return True if datum == "True" else False
     else:
-        return datetime.strptime(datum, "%Y-%m-%d %H:%M:%S")
+        d = datetime.strptime(datum, "%Y-%m-%d %H:%M:%S")
+        d.replace(microsecond=0)
+        return d
 
 
 def read_csv(filename):
@@ -44,18 +46,20 @@ def write_csv(dict_list, filename):
     # Get variable names and types
     variables = [(str(k).strip("_"), type(v).__name__)
                  for k, v in sorted(dict_list[0].items(),
-                                    key=lambda x: x[0].strip("_")[0])]
+                                    key=lambda x: x[0].strip("_"))]
 
+    # Header line to be written
     vars_str = (", ".join([": ".join([var, typ]) for var, typ in variables]))
 
     data = []
 
     # Turn dict lists into lists of all values
     for entry in dict_list:
-        data.append([str(value) for key, value in
+        data.append([str(value).strip(".") for key, value in
                      sorted(list(entry.items()),
-                            key=lambda x: x[0].strip("_")[0])])
+                            key=lambda x: x[0].strip("_"))])
 
+    # Join all data lines
     data_str = "\n".join([", ".join(entry) for entry in data])
 
     with open(filename, 'w') as f:

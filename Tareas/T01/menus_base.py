@@ -169,7 +169,11 @@ class NumericalChoiceMenu(Menu):
         # A function left as None returns the name of the chosen option
         for i, f in enumerate(functions):
             if f is None:
-                functions[i] = lambda: options[i]
+                # It's necessary to add a default value to the lambda, as it stores
+                # references to the value and not the value itself. For example,
+                # [x() for x in [lambda: m for m in [1,2,3]]]
+                # >>> [3, 3, 3]
+                functions[i] = lambda x=options[i]: x
 
         self._items = {i: menu_item(option=opt, function=func, opt_data=dat)
                        for i, (opt, func, dat)
@@ -202,11 +206,9 @@ class NumericalChoiceMenu(Menu):
 
         if self.is_main:
             # Continues a main loop
-            # input("Attempting to return to previous menu")
             super().run()
         else:
             # Returns a value and quits
-            input("Returning value and bypassing menu")
             return self._interact()
 
 

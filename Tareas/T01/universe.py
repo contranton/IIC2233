@@ -183,10 +183,10 @@ class Universe(object):
             self.galaxies[galaxy_name].planets[p.nombre] = p
 
     def write_content(self):
-        galaxies = [deepcopy(g.__dict__) for g in self.galaxies.values()]
+        galaxies = [deepcopy(g.__dict__) for g in self.galaxies_list]
 
-        planets = [deepcopy(p.__dict__) for g in self.galaxies.values()
-                   for p in g.planets.values()]
+        planets = [deepcopy(p.__dict__) for g in self.galaxies_list
+                   for p in g.planets_list]
 
         # A HACK to get the race names from the uninstantiated race classes
         # And to fix galaxy name
