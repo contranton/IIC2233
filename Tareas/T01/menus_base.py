@@ -28,6 +28,9 @@ class Menu(ABC):
 
         super().__init__()
 
+        # Specifies whether or not this menu can be come back to
+        self.is_main = False
+        
         # Printed at the top in a special color
         self.title = "Un Menú"
 
@@ -206,7 +209,7 @@ class NumericalChoiceMenu(Menu):
 
         if self.is_main:
             # Continues a main loop
-            super().run()
+            return super().run()
         else:
             # Returns a value and quits
             return self._interact()
@@ -227,6 +230,46 @@ class TextInputMenu(Menu):
         return (False,
                 "Nombre no disponible",
                 0)
+
+    def run(self):
+        return self._interact()
+
+
+class NumericalInputMenu(Menu):
+    """
+    Menu for inputting a number between specified maximum ranges
+    """
+    def __init__(self, num_range, accept_floats=False):
+        super().__init__()
+        self.accept_floats = accept_floats
+        self.num_range = num_range
+
+        self.title = "Ingresa un valor%s dentro del rango especificado: " %\
+                     {False: colored(" entero", 'red'),
+                      True: " cualquiera"}[accept_floats]
+        self.content = "Minimo: %s\n" % colored(str(num_range[0]), 'green') +\
+                       "Maximo: %s" % colored(str(num_range[1]), 'green')
+
+    def _validate_input(self, text):
+        text = text.replace(",", ".")
+        try:
+            val = float(text)
+            if not self.accept_floats:
+                if val != int(val):
+                    return (False,
+                            "Este menú no acepta decimales."
+                            "Ingresa un número entero",
+                            0)
+                else:
+                    return (True, "", lambda x=int(val): x)
+
+            else:
+                return (True, "", lambda x=val: x)
+
+        except ValueError:
+            return (False,
+                    "El valor ingresado no es un número",
+                    0)
 
     def run(self):
         return self._interact()

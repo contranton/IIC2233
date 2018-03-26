@@ -40,9 +40,15 @@ class Planet(object):
     """Documentation for Planeta
 
     """
+    # TODO: Clean this up
     def __init__(self, nombre="UNSET", raza="Asesino",
                  galaxia="UNSET", **kwargs):
         super(Planet, self).__init__()
+
+        # This avoids a weird recursion with properties
+        self._soldados = 0
+        self._magos = 0
+        
         if not kwargs:
             attrs = _planet_defaults(nombre, raza, galaxia)
         else:
@@ -52,8 +58,8 @@ class Planet(object):
             setattr(self, key, value)
 
     def __str__(self):
-        temp = colored("{0:^20}", 'red', 'on_blue') +\
-               colored("\t{1:30}", 'magenta', 'on_blue')
+        temp = colored("{0:^20}", 'red', attrs=("bold",)) +\
+               colored("\t{1:30}", 'green', attrs=("bold",))
         return "\n".join([temp.format(str(attr).strip("_").title(), str(val))
                           for attr, val in self.__dict__.items()])
 
@@ -64,7 +70,11 @@ class Planet(object):
 
     @property
     def raza(self):
-        return self._raza
+        try:
+            return self._raza
+        except AttributeError:
+            raise Exception("Planet has not been properly initialized!"
+                            "Check for the order of kwargs")
 
     @raza.setter
     def raza(self, raza_str):
@@ -72,49 +82,72 @@ class Planet(object):
                       "Aprendiz": AprendizRaza,
                       "Asesino": AsesinoRaza}[raza_str]
 
+    # Soldiers
+        
+    @property
+    def max_soldados(self):
+        return self.raza.max_pop - self.magos
+        
     @property
     def soldados(self):
         return self._soldados
 
     @soldados.setter
     def soldados(self, value):
-        try:
-            max_soldados = self.raza.max_pop - self.magos
-        except AttributeError:
-            raise Exception("Planet has not been properly initialized!")
-        self._soldados = min(max(value, 0), max_soldados)
+        self._soldados = min(max(value, 0), self.max_soldados)
+
+    # Mages
+        
+    @property
+    def max_magos(self):
+        if not self.raza.has_mago:
+            return 0
+        else:
+            return self.raza.max_pop - self.soldados
+        
+    @property
+    def magos(self):
+        return self._magos
+
+    @magos.setter
+    def magos(self, value):
+        self._magos = max(min(value, self.max_magos), 0)
+
+    # Economy
 
     @property
     def tasa_minerales(self):
-        lvl = self.nivel_economia
-        multiplier = {0: 1, 1: 1.2, 2: 1.5, 3: 2}  # Level: Multiplier
-        return self._tasa_minerales * multiplier[lvl]
+        return self._tasa_minerales
 
     @tasa_minerales.setter
     def tasa_minerales(self, valor):
         self._tasa_minerales = min(max(valor, 1), 10)
 
     @property
-    def tasa_deuterio(self):
+    def effective_tasa_minerales(self):
         lvl = self.nivel_economia
         multiplier = {0: 1, 1: 1.2, 2: 1.5, 3: 2}  # Level: Multiplier
-        return self._tasa_deuterio * multiplier[lvl]
+        return self._tasa_minerales * multiplier[lvl]
+
+    @property
+    def tasa_deuterio(self):
+        return self._tasa_deuterio
 
     @tasa_deuterio.setter
     def tasa_deuterio(self, valor):
         self._tasa_deuterio = min(max(valor, 5), 15)
 
     @property
+    def effective_tasa_deuterio(self):
+        lvl = self.nivel_economia
+        multiplier = {0: 1, 1: 1.2, 2: 1.5, 3: 2}  # Level: Multiplier
+        return self._tasa_deuterio * multiplier[lvl]
+
+    @property
     def evolucion(self):
         return self.nivel_economia + self.nivel_ataque\
             + (self.soldados + self.magos)/(self.raza.max_pop)\
             + int(self.torre) + int(self.cuartel)
-
-    def increase_tasa_deuterio(self):
-        self._tasa_deuterio += 1
-
-    def increase_tasa_minerales(self):
-        self._tasa_minerales += 1
 
 
 class Galaxy(object):
