@@ -635,7 +635,41 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         return InfoMenu(title="Insuficientes recursos").run()
 
     def create_units(self):
-        pass
+        p = self.planet
+
+        if not p.cuartel:
+            return InfoMenu("Necesitas un cuartel antes"
+                            " de crear unidades").run()
+
+        if p.raza.has_mago:
+            menu = NumericalChoiceMenu()
+            menu.title = "Elije la unidad a agregar"
+            options = ["Soldado", "Mago"]
+            menu.items = (options, [])
+            unit = menu.run()
+        else:
+            unit = "Soldado"
+
+        unit_range = (0, self.purchasable_soldiers) if unit == "Soldado"\
+                     else (0, self.purchasable_wizards)
+
+        menu = NumericalInputMenu(unit_range)
+        menu.title = "Elige el número de %s a comprar" % unit.lower()
+
+        num = menu.run()
+        if not num:
+            return True
+
+        if unit == "Soldado":
+            p.soldados += num
+            p.galaxia.minerales -= p.raza.costo_soldados.mins
+            p.galaxia.deuterio -= p.raza.costo_soldados.deut
+        else:
+            p.magos += num
+            p.galaxia.minerales -= p.raza.costo_magos.mins
+            p.galaxia.deuterio -= p.raza.costo_magos.deut
+
+        return True
 
     def get_resources(self):
         pass
