@@ -728,7 +728,43 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         return True
 
     def make_improvements(self):
-        pass
+        p = self.planet
+        
+        menu = NumericalChoiceMenu()
+        menu.title = "Comprando mejoras"
+
+        options = ["Aumentar nivel de economía",
+                   "Aumentar nivel de ataque"]
+
+        labels = [green("\tNivel Actual: %i\tCosto: 2000M, 4000D" %
+                        p.nivel_economia),
+                  green("\tNivel Actual: %i\tCosto: 1000M, 2000D" %
+                        p.nivel_ataque)]
+
+        functions = [lambda: "ECON", lambda: "ATTK"]
+
+        menu.items = (options, functions, labels)
+        menu._add_return_option()
+
+        attr = menu.run()
+        if not attr:
+            return True
+        elif attr == "ECON":
+            if p.nivel_economia == 3:
+                InfoMenu(title="Nivel de economía ya está maximizado").run()
+            else:
+                p.nivel_economia += 1
+                p.galaxia.minerales -= 2000
+                p.galaxia.deuterio -= 4000
+        elif attr == "ATTK":
+            if p.nivel_ataque == 3:
+                InfoMenu(title="Nivel de deuterio ya está maximizado").run()
+            else:
+                p.nivel_ataque += 1
+                p.galaxia.minerales -= 1000
+                p.galaxia.deuterio -= 2000
+
+        return True
 
 
 class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
