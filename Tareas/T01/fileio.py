@@ -19,7 +19,7 @@ def read_csv(filename):
     # Turns ..\blah\blah2\galaxias.csv into "Galaxia"
     # content_name = filename.split("\\")[-1].split(".")[-2][:-1].title()
 
-    with open(filename, 'r') as f:
+    with open(filename, 'r', encoding="utf-8") as f:
         lines = [line.strip().split(", ") for line in list(f)]
         header = lines[0]
 
@@ -62,7 +62,7 @@ def write_csv(dict_list, filename):
     # Join all data lines
     data_str = "\n".join([", ".join(entry) for entry in data])
 
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding="utf-8") as f:
         f.write(vars_str + "\n")
         f.write(data_str + "\n")
 

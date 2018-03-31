@@ -799,7 +799,7 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
                             " recursos de otros planetas!" % (mins, deut))
             menu.run()
 
-        return True
+        return False
 
 
     def invade(self):

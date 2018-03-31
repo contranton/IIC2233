@@ -174,8 +174,10 @@ class NumericalChoiceMenu(Menu):
         # A function left as None returns the name of the chosen option
         for i, f in enumerate(functions):
             if f is None:
-                # It's necessary to add a default value to the lambda, as it stores
-                # references to the value and not the value itself. For example,
+                # It's necessary to add a default value to the lambda,
+                # as it stores references to the value and not the
+                # value itself. For example,
+                #
                 # [x() for x in [lambda: m for m in [1,2,3]]]
                 # >>> [3, 3, 3]
                 functions[i] = lambda x=options[i]: x
