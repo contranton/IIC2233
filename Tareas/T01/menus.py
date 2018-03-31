@@ -634,8 +634,70 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
     def _insufficient(self):
         return InfoMenu(title="Insuficientes recursos").run()
 
+    @property
+    def purchasable_soldiers(self):
+        """Returns the maximum amount of soldiers that can be
+        purchased with the current resources, unless it exceeds
+        the maximum number of soldiers by population
+        """
+        mins, deut = (self.planet.galaxia.minerales,
+                      self.planet.galaxia.deuterio)
+
+        max_soldados = self.planet.max_soldados - self.planet.soldados
+        c_mins, c_deut = self.planet.raza.costo_soldado
+
+        return min(min(mins//c_deut, deut//c_deut), max_soldados)
+
+    @property
+    def purchasable_wizards(self):
+        """Returns the maximum amount of wizards that can be
+        purchased with the current resources, unless it exceeds
+        the maximum number of wizards by population
+        """
+        mins, deut = (self.planet.galaxia.minerales,
+                      self.planet.galaxia.deuterio)
+
+        max_magos = self.planet.max_magos - self.planet.magos
+        c_mins, c_deut = self.planet.raza.costo_mago
+
+        return min(min(mins//c_deut, deut//c_deut), max_magos)
+
     def create_units(self):
-        pass
+        p = self.planet
+
+        if not p.cuartel:
+            return InfoMenu("Necesitas un cuartel antes"
+                            " de crear unidades").run()
+
+        if p.raza.has_mago:
+            menu = NumericalChoiceMenu()
+            menu.title = "Elije la unidad a agregar"
+            options = ["Soldado", "Mago"]
+            menu.items = (options, [])
+            unit = menu.run()
+        else:
+            unit = "Soldado"
+
+        unit_range = (0, self.purchasable_soldiers) if unit == "Soldado"\
+                     else (0, self.purchasable_wizards)
+
+        menu = NumericalInputMenu(unit_range)
+        menu.title = "Elige el número de %s a comprar" % unit.lower()
+
+        num = menu.run()
+        if not num:
+            return True
+
+        if unit == "Soldado":
+            p.soldados += num
+            p.galaxia.minerales -= p.raza.costo_soldados.mins
+            p.galaxia.deuterio -= p.raza.costo_soldados.deut
+        else:
+            p.magos += num
+            p.galaxia.minerales -= p.raza.costo_magos.mins
+            p.galaxia.deuterio -= p.raza.costo_magos.deut
+
+        return True
 
     def get_resources(self):
         pass
