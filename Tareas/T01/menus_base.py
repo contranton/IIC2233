@@ -1,8 +1,8 @@
-from termcolor import colored
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from colorama.ansi import clear_screen as CLS
+from colors import red, green, cyan, yellow
 
 """
 Defines menu systems to be used for user interaction and info display
@@ -49,9 +49,8 @@ class Menu(ABC):
         placed predictably
         """
         s = CLS()
-        # s += colored(self.__class__.__name__, 'red')
-        s += colored("--"*20 + "\n", 'cyan', attrs=('bold',))
-        s += colored(self.title, 'cyan', attrs=('bold',)) + "\n"
+        s += cyan("--"*20 + "\n")
+        s += self.title + "\n"
         s += self.content + "\n" if self.content != "" else ""
         return s
 
@@ -72,7 +71,7 @@ class Menu(ABC):
 
         print(self)
         print("\n" + message if message != "" else "")
-        print(colored(self.prompt, 'yellow', attrs=('bold',)))
+        print(yellow(self.prompt))
         choice = input()
         success, msg, function = self._validate_input(choice)
         if not success:
@@ -111,7 +110,7 @@ class NumericalChoiceMenu(Menu):
     the last one in the list.
     """
     def __init__(self, **kwargs):
-        self.content = "Las " + colored("opciones", 'yellow') + " son:"
+        self.content = "Las opciones son:"
         self.prompt = "Elige una opción"
 
         self.items = (list(), list())
@@ -248,10 +247,10 @@ class NumericalInputMenu(Menu):
         self.num_range = num_range
 
         self.title = "Ingresa un valor%s dentro del rango especificado: " %\
-                     {False: colored(" entero", 'red'),
+                     {False: red(" entero"),
                       True: " cualquiera"}[accept_floats]
-        self.content = "Minimo: %s\n" % colored(str(num_range[0]), 'green') +\
-                       "Maximo: %s" % colored(str(num_range[1]), 'green')
+        self.content = "Minimo: %s\n" % green(str(num_range[0])) +\
+                       "Maximo: %s" % green(str(num_range[1]))
 
     def _validate_input(self, text):
         text = text.replace(",", ".")

@@ -5,8 +5,7 @@ from collections import namedtuple
 
 from razas import MaestroRaza, AprendizRaza, AsesinoRaza
 from fileio import read_planets, read_galaxies, write_csv
-
-from termcolor import colored
+from colors import red, green
 
 """
 Defines Planet, Galaxy, and Universe classes
@@ -69,8 +68,8 @@ class Planet(object):
             setattr(self, key, value)
 
     def __str__(self):
-        temp = colored("{0:^20}", 'red', attrs=("bold",)) +\
-               colored("\t{1:30}", 'green', attrs=("bold",))
+        temp = red("{0:^20}") +\
+               green("\t{1:30}")
         return "\n".join([temp.format(str(attr).strip("_").title(), str(val))
                           for attr, val in self.__dict__.items()])
 

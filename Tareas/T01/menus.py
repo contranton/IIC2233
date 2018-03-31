@@ -1,13 +1,14 @@
+from time import sleep
+
 from menus_base import (NumericalChoiceMenu,
                         NumericalInputMenu,
                         TextInputMenu,
                         YesNoMenu,
                         AreYouSureMenu,
                         InfoMenu)
-from termcolor import colored, cprint
-from time import sleep
 
 from universe import Planet, Galaxy, COSTO_CUARTEL, COSTO_TORRE
+from colors import red, green, yellow, cyan
 
 
 def make_planet_dialog(universe, parent_galaxy):
@@ -22,13 +23,13 @@ def make_planet_dialog(universe, parent_galaxy):
 
         planet_name = planet_name_menu.run()
         while len(planet_name) < 6:
-            cprint("El nombre es demasiado corto (minimo 6 caracteres)."
-                   "Intenta de nuevo", 'red')
+            print(red("El nombre es demasiado corto (minimo 6 caracteres)."
+                      "Intenta de nuevo"))
             input("\nPulsa para continuar...")
             planet_name = planet_name_menu.run()
         while planet_name in forbidden_input:
-            cprint("El nombre %s ya está utilizado. Elige otro." % planet_name,
-                   'red')
+            print(red("El nombre %s ya está utilizado. Elige otro." %
+                      planet_name))
             input("\nPulsa para continuar...")
             planet_name = planet_name_menu.run()
 
@@ -53,21 +54,18 @@ class MainMenu(NumericalChoiceMenu):
         self.is_main = True
         self.universe = universe
 
-        self.title = colored("Bienevenido a ChauCraft!",
-                             'green',
-                             attrs=('bold',))
+        self.title = green("Bienevenido a ChauCraft!")
 
-        self.content = colored("Bienvenido, usuario, a tu universo",
-                               'cyan')
+        self.content = cyan("Bienvenido, usuario, a tu universo")
 
-        self.prompt = colored(self.prompt, 'yellow')
+        self.prompt = yellow(self.prompt)
 
         options = ["Crear Galaxia",
                    "Modificar Galaxia",
                    "Consultar Galaxia",
                    "Jugar con Galaxia",
                    "Salir del programa"]
-        
+
         functions = [self.create_galaxy,
                      self.modify_galaxy,
                      self.query_galaxy,
@@ -87,7 +85,7 @@ class MainMenu(NumericalChoiceMenu):
 
     def play_galaxy(self):
         return PlayGalaxyMenu(self.universe).run()
-        
+
     def quit_(self):
         if AreYouSureMenu(title="Saliendo del programa").run():
             print("Bye!")
@@ -115,10 +113,9 @@ class CreateGalaxyMenu(TextInputMenu):
         if not self.new_planets:
             return "Ningún planeta creado hasta ahora"
 
-        s = colored("Planetas creados: \n", 'green', attrs=('bold',))
-        s += colored("\n".join(["\t%s (%s)" % (p.nombre, p.raza.name)
-                                for p in self.new_planets]),
-                     'green')
+        s = red("Planetas creados: \n")
+        s += green("\n".join(["\t%s (%s)" % (p.nombre, p.raza.name)
+                              for p in self.new_planets]))
         return s
 
     def run(self):
@@ -129,7 +126,7 @@ class CreateGalaxyMenu(TextInputMenu):
         # Menu for querying planet creation
         create_planet_menu = YesNoMenu()
         create_planet_menu.title = "Editando galaxia %s" %\
-                                   colored(galaxy_name, 'red', attrs=('bold',))
+                                   red(galaxy_name)
         create_planet_menu.content = self.str_created_planets
 
         create_planet_menu.prompt = "Crear Planeta? (si/no):"
@@ -227,7 +224,7 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
         self.galaxy = self.universe.galaxies[galaxy_name]
 
         self.title = "Modificando galaxia "
-        self.title += colored(galaxy_name, 'cyan')
+        self.title += cyan(galaxy_name)
 
         result = super().run()
 
@@ -250,7 +247,7 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
         planet_name = menu.run()
 
         sure = AreYouSureMenu(title="Eliminando planeta " +
-                              colored(planet_name, 'red') +
+                              red(planet_name) +
                               ". ¿Proceder?")
         if sure.run():
             self.galaxy.planets.pop(planet_name)
@@ -406,10 +403,8 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         planet_choose_menu.title = "Elige un planeta para ver su información"
         planet_choose_menu.content += "\n\n" +\
                                       "Planeta\t\t" +\
-                                      colored("Evolucion\t", 'red',
-                                              attrs=('bold',)) +\
-                                      colored("Galaxia\t", 'cyan',
-                                              attrs=("bold",))
+                                      red("Evolucion\t") +\
+                                      cyan("Galaxia\t")
 
         # Make menu options
         planets_list = [(p, p.galaxia.nombre)
@@ -420,10 +415,8 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
 
         options = [p.nombre for p, g in planets_list]
         functions = [lambda p=p: p for p, g in planets_list]
-        opt_data = [colored("\t%0.2f" % p.evolucion, 'red',
-                            attrs=('bold',)) +
-                    colored("\t(%s)" % g, 'cyan',
-                            attrs=('bold',))
+        opt_data = [red("\t%0.2f" % p.evolucion) +
+                    cyan("\t(%s)" % g)
                     for p, g in planets_list]
 
         planet_choose_menu.items = (options, functions, opt_data)
@@ -466,10 +459,10 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         planets.sort(key=lambda p: p.evolucion, reverse=True)
 
         s = []
-        template = "{0}) " + colored("{1:12}", 'green', attrs=('bold',)) +\
+        template = "{0}) " + green("{1:12}") +\
                    "{2:10}  en " +\
-                   colored("{3:20}", 'cyan', attrs=('bold',)) +\
-                   "Evolucion: " + colored("{4:.2f}", 'red', attrs=('bold',))
+                   cyan("{3:20}") +\
+                   "Evolucion: " + red("{4:.2f}")
         for i, p in enumerate(planets[:min(5, len(planets))]):
             s.append(template.format(i + 1, p.nombre, "(%s)" % p.raza.name,
                                      p.galaxia.nombre, p.evolucion))
@@ -499,16 +492,16 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
         self.galaxy = self.universe.galaxies[galaxy_name]
 
         self.title = "Jugando con la galaxia %s" % galaxy_name
-        
+
         options = ["Visitar planeta", "Escribir cambios"]
         functions = [self.visit_planet, self.write_changes]
 
         self.items = (options, functions)
         self._add_return_option()
-        
+
     def visit_planet(self):
         menu = NumericalChoiceMenu()
-        
+
         menu.title = "Elije un planeta a visitar"
 
         options = [p.nombre for p in self.galaxy.planets_list]
@@ -524,13 +517,13 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
     def run(self):
         if not self.galaxy:
             self.choose_galaxy()
-        
+
         planet = self.visit_planet()
 
         if not planet:
             # If user has chosen to go back without selecting a planet
             return True
-        
+
         if planet.conquistado:
             _ = VisitConqueredPlanetMenu(planet).run()
         else:
@@ -539,7 +532,7 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
             return self.run()
         else:
             return True
-        
+
 
     def write_changes(self):
         pass
@@ -551,7 +544,7 @@ class VisitPlanetMenu(NumericalChoiceMenu):
         self.is_main = True
 
         self.planet = planet
-        
+
     @property
     def title(self):
         return (self._title + "\nRecursos disponibles:"
@@ -561,7 +554,7 @@ class VisitPlanetMenu(NumericalChoiceMenu):
     @title.setter
     def title(self, value):
         self._title = value
-        
+
     def run(self):
         # IMPLEMENT ARCHMAGE AND ASTEROID EVENTS
         return super().run()
@@ -684,7 +677,7 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
             menu.run()
 
         return True
-                
+
 
     def invade(self):
         menu = AreYouSureMenu("A punto de invadir planeta %s" %
