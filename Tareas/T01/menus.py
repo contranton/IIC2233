@@ -1,4 +1,5 @@
 from time import sleep
+import datetime
 
 from menus_base import (NumericalChoiceMenu,
                         NumericalInputMenu,
@@ -9,6 +10,8 @@ from menus_base import (NumericalChoiceMenu,
 
 from universe import Planet, Galaxy, COSTO_CUARTEL, COSTO_TORRE
 from colors import red, green, yellow, cyan
+
+now = datetime.datetime.now
 
 
 def make_planet_dialog(universe, parent_galaxy):
@@ -700,7 +703,29 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         return True
 
     def get_resources(self):
-        pass
+        p = self.planet
+        
+        last_collect = p.ultima_recoleccion
+        current_t = now()
+        delta = current_t - last_collect
+
+        deuterio = p.effective_tasa_deuterio * delta.seconds
+        minerales = p.effective_tasa_minerales * delta.seconds
+
+        menu = AreYouSureMenu(title="Recolectando recursos")
+        menu.content = green("{:,} segundos".format(delta.seconds))
+        menu.content += (" han transcurrido desde la última recolleción."
+                         "\nSi cosechas ahora, obtendrás:\n")
+        menu.content += red("{:,} minerales".format(minerales)) + " y "
+        menu.content += cyan("{:,} deuterio\n".format(deuterio))
+
+        if menu.run():
+            p.galaxia.minerales += minerales
+            p.galaxia.deuterio += deuterio
+
+            p.ultima_recoleccion = current_t
+
+        return True
 
     def make_improvements(self):
         pass
