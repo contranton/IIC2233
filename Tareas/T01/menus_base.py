@@ -16,6 +16,7 @@ From the Abstract class Menu are defined:
 
 menu_item = namedtuple("Item", "option function opt_data")
 
+
 class Menu(ABC):
     """Main class for menu display and navigation
 
@@ -27,6 +28,9 @@ class Menu(ABC):
     def __init__(self):
 
         super().__init__()
+
+        # Allows a menu to be returned to
+        self.is_main = False
 
         # Printed at the top in a special color
         self.title = "Un Menú"
@@ -107,15 +111,17 @@ class NumericalChoiceMenu(Menu):
     the last one in the list.
     """
     def __init__(self, **kwargs):
-        super(NumericalChoiceMenu, self).__init__(**kwargs)
-
-        # Specifies whether one can return to this menu
-        self.is_main = False
-
         self.content = "Las " + colored("opciones", 'yellow') + " son:"
         self.prompt = "Elige una opción"
 
         self.items = (list(), list())
+
+        super(NumericalChoiceMenu, self).__init__(**kwargs)
+
+    def _add_return_option(self):
+        self.items[len(self.items)] = menu_item(option="Volver",
+                                                function=lambda: False,
+                                                opt_data="")
 
     @property
     def options(self):

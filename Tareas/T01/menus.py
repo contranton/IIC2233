@@ -6,7 +6,7 @@ from menus_base import (NumericalChoiceMenu,
 from termcolor import colored, cprint
 from time import sleep
 
-from universe import Planet, Galaxy
+from universe import Planet, Galaxy, COSTO_CUARTEL, COSTO_TORRE
 
 
 def make_planet_dialog(universe, parent_galaxy):
@@ -67,13 +67,25 @@ class MainMenu(NumericalChoiceMenu):
                    "Jugar con Galaxia",
                    "Salir del programa"]
         
-        functions = [CreateGalaxyMenu(universe).run,
-                     ModifyGalaxyMenu(universe).run,
-                     QueryGalaxyMenu(universe).run,
-                     PlayGalaxyMenu(universe).run,
+        functions = [self.create_galaxy,
+                     self.modify_galaxy,
+                     self.query_galaxy,
+                     self.play_galaxy,
                      self.quit_]
 
         self.items = options, functions
+
+    def create_galaxy(self):
+        return CreateGalaxyMenu(self.universe).run()
+
+    def modify_galaxy(self):
+        return ModifyGalaxyMenu(self.universe).run()
+
+    def query_galaxy(self):
+        return QueryGalaxyMenu(self.universe).run()
+
+    def play_galaxy(self):
+        return PlayGalaxyMenu(self.universe).run()
         
     def quit_(self):
         if AreYouSureMenu(title="Saliendo del programa").run():
@@ -388,7 +400,214 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
 
 class PlayGalaxyMenu(NumericalChoiceMenu):
     def __init__(self, universe):
+        super().__init__()
         self.universe = universe
+        self.is_main = True
+        self.galaxy = None
+
+    def choose_galaxy(self):
+        choose_galaxy_menu = NumericalChoiceMenu()
+        choose_galaxy_menu.title = "Escoge una galaxia para jugar"
+        choose_galaxy_menu.items = ([g.nombre
+                                     for g in self.universe.galaxies_list], [])
+
+        galaxy_name = choose_galaxy_menu.run()
+
+        self.galaxy = self.universe.galaxies[galaxy_name]
+
+        self.title = "Jugando con la galaxia %s" % galaxy_name
+        
+        options = ["Visitar planeta", "Escribir cambios"]
+        functions = [self.visit_planet, self.write_changes]
+
+        self.items = (options, functions)
+        self._add_return_option()
+        
+    def visit_planet(self):
+        menu = NumericalChoiceMenu()
+        
+        menu.title = "Elije un planeta a visitar"
+        options = [p.nombre for p in self.galaxy.planets_list]
+        functions = [lambda x=p: x for p in self.galaxy.planets_list]
+        opt_data = [{True: "Conquistado", False: "Sin conquistar"}
+                    [p.conquistado] for p in self.galaxy.planets_list]
+        menu.items = (options, functions, opt_data)
+        menu._add_return_option()
+
+        planet = menu.run()
+        return planet
+
+    def run(self):
+        if not self.galaxy:
+            self.choose_galaxy()
+        
+        planet = self.visit_planet()
+
+        if not planet:
+            # If user has chosen to go back without selecting a planet
+            return True
+        
+        if planet.conquistado:
+            _ = VisitConqueredPlanetMenu(planet).run()
+        else:
+            _ = VisitUnconqueredPlanetMenu(planet).run()
+        if _:
+            return self.run()
+        else:
+            return True
+        
+
+    def write_changes(self):
+        pass
+
+
+class VisitPlanetMenu(NumericalChoiceMenu):
+    def __init__(self, planet):
+        super().__init__()
+
+        self.planet = planet
+        
+    @property
+    def title(self):
+        return (self._title + "\nRecursos disponibles:"
+                "Minerales: %i\tDeuterio: %i" % (self.planet.galaxia.minerales,
+                                                 self.planet.galaxia.deuterio))
+
+    @title.setter
+    def title(self, value):
+        self._title = value
+        
+    def run(self):
+        # IMPLEMENT ARCHMAGE AND ASTEROID EVENTS
+        return super().run()
+
+
+class VisitConqueredPlanetMenu(VisitPlanetMenu):
+
+    def __init__(self, planet):
+        super().__init__(planet)
+
+        self.title = "Visitando planeta conqusitado %s" % self.planet.nombre
+
+        options = ["Construir edificios",
+                   "Generar unidades",
+                   "Recolectar recursos",
+                   "Implementar mejoras"]
+
+        functions = [self.build,
+                     self.create_units,
+                     self.get_resources,
+                     self.make_improvements]
+
+        self.items = (options, functions)
+        self._add_return_option()
+
+    def build(self):
+        menu = NumericalChoiceMenu()
+        menu.title = super().title + "\nConstruyendo nuevos edificios"
+        has_c, has_t = self.planet.cuartel, self.planet.torre
+        mins, deut = (self.planet.galaxia.minerales,
+                      self.planet.galaxia.deuterio)
+        options = ["Cuartel", "Torre"]
+        functions, labels = [[], []]
+        if has_c:
+            labels.append("\tConstruido")
+            functions.append(self._already_purchased)
+        elif mins < COSTO_CUARTEL.mins or deut < COSTO_CUARTEL.deut:
+            labels.append("\tInsuficientes Recursos")
+            functions.append(self._insufficient)
+        else:
+            labels.append("\tConstruir")
+            functions.append(self._buy_cuartel)
+
+        if has_t:
+            labels.append("\tConstruido")
+            functions.append(self._already_purchased)
+        elif mins < COSTO_TORRE.mins or deut < COSTO_TORRE.deut:
+            labels.append("\tInsuficientes Recursos")
+            functions.append(self._insufficient)
+        else:
+            labels.append("\tConstruir")
+            functions.append(self._buy_torre)
+
+        menu.items = (options, functions, labels)
+        return menu.run()
+
+    def _already_purchased(self):
+        menu = InfoMenu(title="Edificio ya está construido")
+        return menu.run()
+
+    def _buy_cuartel(self):
+        if AreYouSureMenu(title="Comprando Cuartel").run():
+            self.planet.cuartel = True
+            self.planet.galaxia.minerales -= COSTO_CUARTEL.mins
+            self.planet.galaxia.deuterio -= COSTO_CUARTEL.deut
+
+        return True
+
+    def _buy_torre(self):
+        if AreYouSureMenu(title="Comprando Torre").run():
+            self.planet.torre = True
+            self.planet.galaxia.minerales -= COSTO_TORRE.mins
+            self.planet.galaxia.deuterio -= COSTO_TORRE.deut
+
+        return True
+
+    def _insufficient(self):
+        return InfoMenu(title="Insuficientes recursos").run()
+
+    def create_units(self):
+        pass
+
+    def get_resources(self):
+        pass
+
+    def make_improvements(self):
+        pass
+
+
+class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
+
+    def __init__(self, planet):
+        super().__init__(planet)
+
+        self.title = "Visitando planeta no conquistado %s" % self.planet.nombre
+
+        options = ["Comprar planeta",
+                   "Invadir planeta"]
+
+        functions = [self.purchase,
+                     self.invade]
+
+        self.items = (options, functions)
+        self._add_return_option()
+
+    def purchase(self):
+        mins, deut = (self.planet.galaxia.minerales,
+                      self.planet.galaxia.deuterio)
+        if mins > 1000000 and deut > 500000:
+            menu = AreYouSureMenu("Comprando planeta %s" % self.planet.nombre)
+            if menu.run():
+                self.planet.conquistado = True
+        else:
+            menu = InfoMenu()
+            menu.title = "Insuficientes recursos"
+            menu.content = ("Necesitas 1.000.000 minerales y 500.000 deuterio"
+                            " para comprar el planeta.\n\nActualmente tienes"
+                            " %i minerales y %i deuterio. Intenta colectar"
+                            " recursos de otros planetas!" % (mins, deut))
+            menu.run()
+
+        return True
+                
+
+    def invade(self):
+        menu = AreYouSureMenu("A punto de invadir planeta %s" %
+                              self.planet.nombre)
+        if menu.run():
+            input("WAAAAAR")
+
+        return True
 
 
 if __name__ == '__main__':

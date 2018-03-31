@@ -1,6 +1,7 @@
 from datetime import datetime
 from random import randint
 from copy import deepcopy
+from collections import namedtuple
 
 from razas import MaestroRaza, AprendizRaza, AsesinoRaza
 from fileio import read_planets, read_galaxies, write_csv
@@ -10,6 +11,10 @@ from termcolor import colored
 """
 Defines Planet, Galaxy, and Universe classes
 """
+cost = namedtuple("Costo", "mins deut")
+
+COSTO_CUARTEL = cost(200, 500)
+COSTO_TORRE = cost(150, 300)
 
 
 def _planet_defaults(nombre, raza, galaxia):
