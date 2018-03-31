@@ -1,23 +1,25 @@
-scale 2
+'scale 2
 skinparam Linetype ortho
 
 skinparam class{
 	  BackgroundColor<< MainProgramExecution>> Lime
 }
 
+title Diagrama de Clases Preliminario -- Tarea 1: CHAUCRAFT\nJavier Contreras (@contranton)\nIIC2233, 2018-1\n\nDiagram made with <i>plantuml</i>
+
 class Universe{
-      dict[str: Galaxy] galaxies
+      
       <get> Galaxy[] galaxies_list
 
       void _acquire_planets_and_galaxies()
+      void write_content()
 }
 
 class Galaxy{
       str nombre
       int minerales
       int deuterio
-
-      dict[str: Planet] planets
+      
       <get> Planet[] planets_list
 
       Planet[] planets
@@ -25,7 +27,6 @@ class Galaxy{
 
 Class Planet{
       str nombre
-      Raza raza
 
       datetime ult_recoleccion
 
@@ -40,26 +41,23 @@ Class Planet{
       int nivel_economia = 0
 
       -- Properties --
-      # To enforce pop limit
-      <get/set> int num_soldados 
-      <get/set> int num_magos 
+      <get> Raza raza
 
-      # Effective rates are affected by current economy level
+      <get/set> int num_soldados 
+      <get/set> int num_magos
+      <get> int max_soldados
+      <get> int max_magos
+      
+      <get> int effective_tasa_minerales
+      <get> int tasa_minerales
       <get/set> int tasa_minerales
       <get/set> int tasa_deuterio
       
       <get> int evolucion
-
-      # Total Attack and Life are aggregated over all soldiers/mages
+      
       <get> int ataque_efectivo
       <get> int vida_efectiva
 
-      __ Methods __
-      void increase_nivel_ataque()
-      void increase_nivel_economia()
-      
-      void increase_tasa_deuterio()
-      void increase_tasa_minerales()
 }
 
 Planet --* Galaxy
@@ -67,54 +65,30 @@ Galaxy --* Universe
 
 ' Soldiers and mages will inherit from these:
 
-abstract Class Raza{
+abstract Class Raza<< Singleton >> #lightskyblue{
 
+	 str nombre
+	 bool has_mago
 	 int max_pop
 
-	 NamedTuple costo_soldado
+	 int[] costo_soldado
 	 int[] rango_atq_soldado
 	 int[] rango_vid_soldado
+
+	 int[] costo_mago
+	 int[] rango_atq_mago
+	 int[] rango_vid_mago
 
 	 str warcry
 
 	 void habilidad()
 }
 
-abstract Class Maestro{
-       max_pop = 100
-      
-      {field} costo_soldado = (mins=200, deut=300)
-      {field} rango_atq_soldado = (60, 80)
-      {field} rango_vid_soldado = (200, 250)
+abstract Class Maestro #powderblue
 
-      {field} NamedTuple costo_mago = (mins=300, deut=400)
-      {field} int[] rango_atq_mago = (80, 120)
-      {field} int[] rango_vid_mago = (150, 200)
+abstract Class Aprendiz #powderblue
 
-      warcry = "¡Nuestro conocimiento nos ha\notrogado una victoria más!"
-
-}
-
-abstract Class Aprendiz{
-
-      max_pop = 150
-
-      {field} costo_soldado = (mins=300, deut=400)
-      {field} rango_atq_soldado = (30, 60)
-      {field} rango_vid_soldado = (600, 700)
-
-      warcry = "¡Con una gran defensa y medicinas,\nnuestros soldados son invencibles!!"
-}
-
-abstract Class Asesino{
-      max_pop = 400
-
-      {field} costo_soldado = (mins=100, deut=200)
-      {field} rango_atq_soldado = (40, 45)
-      {field} rango_vid_soldado = (250, 270)
-
-      warcry = "¡El poder de las sombras es lo\núnico necesario para ganar estas batallas!"
-}	
+abstract Class Asesino #powderblue
 
 Maestro --^ Raza
 Aprendiz --^ Raza
@@ -125,7 +99,7 @@ Raza --o Planet
 
 ' Menu system
 
-abstract class Menu{
+abstract class Menu #lightcyan{
 	 str title
 	 str content
 	 str prompt
@@ -136,7 +110,7 @@ abstract class Menu{
 	 bool run()
 }
 
- class NumericalChoiceMenu{
+ class NumericalChoiceMenu #lightcyan{
 	 bool is_main
 
 	 <get/set> items
@@ -144,18 +118,21 @@ abstract class Menu{
 	 <get> functions
 }
 
- class TextInputMenu
+ class TextInputMenu #lightcyan
 
- class YesNoMenu
+ class YesNoMenu #lightcyan
 
- class AreYouSureMenu
+ class AreYouSureMenu #lightcyan
 
- class InfoMenu
+ class InfoMenu #lightcyan
+
+ class NumericalInputMenu #lightcyan
 
 Menu ^-- NumericalChoiceMenu
 Menu ^-- TextInputMenu
 Menu ^-- YesNoMenu
 Menu ^-- InfoMenu
+Menu ^-- NumericalInputMenu
 
 YesNoMenu ^-- AreYouSureMenu
 
@@ -170,17 +147,22 @@ class CreateGalaxyMenu #gold{
       Planet[] new_planets
 }
 
-note bottom of MainMenu
-     For simplicity, Menus created during a method execution
-     of one of the four main menus have been omitted
+note left of MainMenu
+     Different menus are created through program execution. Detailed relationships
+     concerning which main-like menus inherit which menu types have been obviated to
+     avoid unnecessary clutter.
 end note
 
-class ModifyGalaxyMenu #gold{
+class QueryGalaxyMenu #gold{
       Universe universe
-      
+
+      void general_info()
+      void planet_info()
+      void best_galaxy()
+      void planet_ranking()
 }
 
-class QueryGalaxyMenu #gold{
+class ModifyGalaxyMenu #gold{
       Universe universe
 
       void add_planet()
@@ -193,11 +175,41 @@ class QueryGalaxyMenu #gold{
 
 class PlayGalaxyMenu #gold{
       Universe universe
+
+      void visit_planet()
+      void save_changes()
 }
 
-Menu ^-left- MainMenu
+class VisitConqueredPlanetMenu #moccasin {
+      Planet planet
 
-MainMenu --o Universe
+      void build_building()
+      void create_units()
+      void collect_resources()
+      void make_improvements()
+}
+
+class VisitUnconqueredPlanetMenu #moccasin {
+      Planet planet
+      
+      void invade_planet()
+      void purchase_planet()
+}
+
+class BattleInfoMenu #moccasin{
+      Planet planet
+}
+
+PlayGalaxyMenu -right-* VisitConqueredPlanetMenu
+PlayGalaxyMenu -right-* VisitUnconqueredPlanetMenu
+
+BattleInfoMenu --* PlayGalaxyMenu
+
+
+Menu ^-left- MainMenu
+MainMenu *-- Menu
+
+MainMenu --* Universe
 
 ' CreateGalaxyMenu --o Universe
 ' ModifyGalaxyMenu --o Universe
@@ -209,6 +221,11 @@ ModifyGalaxyMenu --* MainMenu
 QueryGalaxyMenu --* MainMenu
 PlayGalaxyMenu --* MainMenu
 
+note top of PlayGalaxyMenu
+     This menu manages, <i>all by itself</i> the interactions concerning battles,
+     the archmage, asteroids, etc, as these are not intrinsic parts of a planet
+     or galaxy but rather actions performed <i><b>on</b></i> them
+end note
 
 
 

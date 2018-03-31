@@ -1,4 +1,5 @@
 from menus_base import (NumericalChoiceMenu,
+                        NumericalInputMenu,
                         TextInputMenu,
                         YesNoMenu,
                         AreYouSureMenu,
@@ -66,15 +67,24 @@ class MainMenu(NumericalChoiceMenu):
                    "Consultar Galaxia",
                    "Jugar con Galaxia",
                    "Salir del programa"]
+<<<<<<< HEAD
         
         functions = [self.create_galaxy,
                      self.modify_galaxy,
                      self.query_galaxy,
                      self.play_galaxy,
+=======
+
+        functions = [CreateGalaxyMenu(universe).run,
+                     ModifyGalaxyMenu(universe).run,
+                     QueryGalaxyMenu(universe).run,
+                     PlayGalaxyMenu(universe).run,
+>>>>>>> 1123fc312da2d927524e6581fbcbb2a469160455
                      self.quit_]
 
         self.items = options, functions
 
+<<<<<<< HEAD
     def create_galaxy(self):
         return CreateGalaxyMenu(self.universe).run()
 
@@ -87,6 +97,8 @@ class MainMenu(NumericalChoiceMenu):
     def play_galaxy(self):
         return PlayGalaxyMenu(self.universe).run()
         
+=======
+>>>>>>> 1123fc312da2d927524e6581fbcbb2a469160455
     def quit_(self):
         if AreYouSureMenu(title="Saliendo del programa").run():
             print("Bye!")
@@ -162,7 +174,7 @@ class CreateGalaxyMenu(TextInputMenu):
 
         options = list(map(lambda x: x.nombre,
                            self.new_galaxy.planets.values()))
-        functions = [lambda: x for x in self.new_galaxy.planets.values()]
+        functions = [lambda x=x: x for x in self.new_galaxy.planets.values()]
         choose_conquered_planet_menu.items = (options, functions)
 
         conquered_planet = choose_conquered_planet_menu.run()
@@ -175,7 +187,7 @@ class CreateGalaxyMenu(TextInputMenu):
                 # Together, these add to 75% of the total population
                 ms = int(p.raza.max_pop * 0.45)
                 mw = int(p.raza.max_pop * 0.3)
-                
+
                 p.soldados = ms
                 p.magos = mw
 
@@ -184,7 +196,7 @@ class CreateGalaxyMenu(TextInputMenu):
         self.new_galaxy = None
         self.new_planets = []
         self.universe.write_content()
-        
+
         return True
 
 
@@ -257,14 +269,26 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
 
         return True
 
-    def increase_mins_rate(self):
+    def _choose_unconquered_planet(self, menu_title, data_attr=None):
+        """
+        Prompts selection of an unconquered planet for editing
+
+        Menu_title displays the selection prompt, and data_attr is a field
+        name belonging to the Planet class, e.g. "soldados", "_tasa_deuterio",
+        "tasa_deuterio" (affected by economy level), "evolucion", etc
+        """
         menu = NumericalChoiceMenu()
-        menu.title = "Elige un planeta para incrementar su tasa de minerales: "
+        menu.title = menu_title
         options = [n for n, p in self.galaxy.planets.items()
                    if not p.conquistado]
-        opt_data = [": %i" % p._tasa_minerales
-                    for p in self.galaxy.planets.values()
-                    if not p.conquistado]
+        if data_attr:
+                # We use getattr to be able to access class properties
+                opt_data = [": %i" % getattr(p, data_attr)
+                            for p in self.galaxy.planets.values()
+                            if not p.conquistado]
+        else:
+                opt_data = []
+
         functions = [None]*len(options)
 
         menu.items = (options, functions, opt_data)
@@ -272,44 +296,72 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
         if len(menu.options) == 0:
             print("Esta galaxia no posee planetas sin conquistar")
             input("Pulsa para continuar...")
-            return True
+            return None
 
         planet = menu.run()
+        return self.galaxy.planets[planet]
 
-        # TODO: Numerical entry menu
-        self.galaxy.planets[planet].increase_tasa_minerales()
+    def increase_mins_rate(self):
+
+        title = "Elige un planeta para incrementar su tasa de minerales"
+        planet = self._choose_unconquered_planet(title, "tasa_minerales")
+        if not planet:
+            # Returned only if galaxy doesn't have valid planets
+            return True
+
+        num_range = (0, 10 - planet.tasa_minerales)
+        num_entry_menu = NumericalInputMenu(num_range)
+
+        planet.tasa_minerales += num_entry_menu.run()
 
         return True
 
     def increase_deut_rate(self):
-        menu = NumericalChoiceMenu()
-        menu.title = "Elige un planeta para incrementar su tasa de deuterio: "
-        options = [n for n, p in self.galaxy.planets.items()
-                   if not p.conquistado]
-        opt_data = [": %i" % p._tasa_deuterio
-                    for p in self.galaxy.planets.values()
-                    if not p.conquistado]
-        functions = [None]*len(options)
 
-        menu.items = (options, functions, opt_data)
-        
-        if len(menu.items) == 0:
-            print("Esta galaxia no posee planetas sin conquistar")
-            input("Pulsa para continuar...")
+        title = "Elige un planeta para incrementar su tasa de deuterio"
+        planet = self._choose_unconquered_planet(title, "tasa_deuterio")
+        if not planet:
+            # Returned only if galaxy doesn't have valid planets
             return True
 
-        planet = menu.run()
+        num_range = (0, 15 - planet.tasa_deuterio)
+        num_entry_menu = NumericalInputMenu(num_range)
 
-        # TODO: Numerical entry menu
-        self.galaxy.planets[planet].increase_tasa_deuterio()
+        planet.tasa_deuterio += num_entry_menu.run()
 
         return True
 
     def add_soldiers(self):
-        pass
+        title = "Elige un planeta para añadir soldados"
+        planet = self._choose_unconquered_planet(title, "soldados")
+        if not planet:
+            return True
+
+        num_range = (0, planet.max_soldados - planet.soldados)
+        num_entry_menu = NumericalInputMenu(num_range)
+
+        planet.soldados += num_entry_menu.run()
+
+        return True
 
     def add_wizards(self):
-        pass
+        title = "Elige un planeta para añadir magos"
+        planet = self._choose_unconquered_planet(title, "soldados")
+        if not planet:
+            return True
+
+        if not planet.raza.has_mago:
+            print("Este planeta no es capaz de tener magos (Raza %s)" %
+                  planet.raza.name)
+            input("Pulsa para continuar...")
+            return True
+
+        num_range = (0, planet.max_magos - planet.magos)
+        num_entry_menu = NumericalInputMenu(num_range)
+
+        planet.magos += num_entry_menu.run()
+
+        return True
 
 
 class QueryGalaxyMenu(NumericalChoiceMenu):
@@ -319,7 +371,7 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         self.is_main = True
 
         self.title = "Consultando Galaxias"
-        
+
         options = ["Informacion general",
                    "Informacion de planetas",
                    "Mejor galaxia",
@@ -342,11 +394,12 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
             s_g = [g.nombre]
             s_g.append("Deuterio: %i" % g.deuterio)
             s_g.append("Minerales: %i" % g.minerales)
-            
+
             # s_pc: string_planets_conquered
             s_pc = []
             for p in filter(lambda x: x.conquistado, g.planets_list):
-                s_pc.append("\t%s (Evolucion: %0.2f)" % (p.nombre, p.evolucion))
+                s_pc.append("\t%s (Evolucion: %0.2f)" % (p.nombre,
+                                                         p.evolucion))
             # Append if conquered planets exist, else say there aren't any
             if s_pc:
                 s_g.append("Planetas Conquistados:")
@@ -363,10 +416,12 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         planet_choose_menu = NumericalChoiceMenu()
         planet_choose_menu.title = "Elige un planeta para ver su información"
         planet_choose_menu.content += "\n\n" +\
-                                     "Planeta\t\t" +\
-                                     colored("Evolucion\t", 'red') +\
-                                     colored("Galaxia\t", 'cyan')
-        
+                                      "Planeta\t\t" +\
+                                      colored("Evolucion\t", 'red',
+                                              attrs=('bold',)) +\
+                                      colored("Galaxia\t", 'cyan',
+                                              attrs=("bold",))
+
         # Make menu options
         planets_list = [(p, p.galaxia.nombre)
                         for g in self.universe.galaxies_list
@@ -375,9 +430,11 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         planets_list.sort(key=lambda t: (t[1], -t[0].evolucion))
 
         options = [p.nombre for p, g in planets_list]
-        functions = [lambda: p for p, g in planets_list]
-        opt_data = [colored("\t%0.2f" % p.evolucion, 'red') +
-                    colored("\t(%s)" % g, 'cyan')
+        functions = [lambda p=p: p for p, g in planets_list]
+        opt_data = [colored("\t%0.2f" % p.evolucion, 'red',
+                            attrs=('bold',)) +
+                    colored("\t(%s)" % g, 'cyan',
+                            attrs=('bold',))
                     for p, g in planets_list]
 
         planet_choose_menu.items = (options, functions, opt_data)
@@ -385,18 +442,55 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         # Run menu to select planet
         planet = planet_choose_menu.run()
 
-        info_menu = InfoMenu(title="Información acerca de %s\n" % planet.nombre)
+        info_menu = InfoMenu(title="Información acerca de %s\n" %
+                             planet.nombre)
         info_menu.content = str(planet)
         info_menu.run()
 
         return True
 
     def best_galaxy(self):
-        pass
+        galaxies = list(filter(lambda x: len(x.planets_list) >= 3,
+                               self.universe.galaxies_list))
+
+        if len(galaxies) == 0:
+            input("No hay ninguna galaxia con por lo menos 3 planetas!")
+            return True
+
+        # Is the 80 character limit strictly enforced?
+        best_galaxy =\
+            sorted(galaxies,
+                   key=lambda g:
+                   sum([p.evolucion for p in g.planets_list])
+                   / len(g.planets_list))[0]
+
+        info_menu = InfoMenu(title="La mejor galaxia es:")
+        info_menu.content = str(best_galaxy)
+        info_menu.run()
+
+        return True
 
     def planet_ranking(self):
-        pass
-        
+        planets = [p for g in self.universe.galaxies_list
+                   for p in g.planets_list]
+
+        planets.sort(key=lambda p: p.evolucion, reverse=True)
+
+        s = []
+        template = "{0}) " + colored("{1:12}", 'green', attrs=('bold',)) +\
+                   "{2:10}  en " +\
+                   colored("{3:20}", 'cyan', attrs=('bold',)) +\
+                   "Evolucion: " + colored("{4:.2f}", 'red', attrs=('bold',))
+        for i, p in enumerate(planets[:min(5, len(planets))]):
+            s.append(template.format(i + 1, p.nombre, "(%s)" % p.raza.name,
+                                     p.galaxia.nombre, p.evolucion))
+
+        info_menu = InfoMenu(title="Los mejores planetas:")
+        info_menu.content = "\n".join(s)
+        info_menu.run()
+
+        return True
+
 
 class PlayGalaxyMenu(NumericalChoiceMenu):
     def __init__(self, universe):
