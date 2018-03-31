@@ -1,8 +1,8 @@
 from termcolor import colored
 import colorama
 
-# Ensure colors are nice always
-colorama.init()
+# Ensure colors are nice always instead of ugly ansi codes
+colorama.init(convert=True)
 
 
 def red(text):
@@ -10,7 +10,7 @@ def red(text):
 
 
 def green(text):
-    return colored(text, "green", attrs=('bold',))
+    return colored(text, "green")
 
 
 def cyan(text):
@@ -18,9 +18,8 @@ def cyan(text):
 
 
 def yellow(text):
-    return colored(text, "yellow", attrs=('bold',))
+    return colored(text, "yellow")
 
 
 def magenta(text):
     return colored(text, "magenta", attrs=('bold',))
-
