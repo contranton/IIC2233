@@ -67,24 +67,15 @@ class MainMenu(NumericalChoiceMenu):
                    "Consultar Galaxia",
                    "Jugar con Galaxia",
                    "Salir del programa"]
-<<<<<<< HEAD
         
         functions = [self.create_galaxy,
                      self.modify_galaxy,
                      self.query_galaxy,
                      self.play_galaxy,
-=======
-
-        functions = [CreateGalaxyMenu(universe).run,
-                     ModifyGalaxyMenu(universe).run,
-                     QueryGalaxyMenu(universe).run,
-                     PlayGalaxyMenu(universe).run,
->>>>>>> 1123fc312da2d927524e6581fbcbb2a469160455
                      self.quit_]
 
         self.items = options, functions
 
-<<<<<<< HEAD
     def create_galaxy(self):
         return CreateGalaxyMenu(self.universe).run()
 
@@ -97,8 +88,6 @@ class MainMenu(NumericalChoiceMenu):
     def play_galaxy(self):
         return PlayGalaxyMenu(self.universe).run()
         
-=======
->>>>>>> 1123fc312da2d927524e6581fbcbb2a469160455
     def quit_(self):
         if AreYouSureMenu(title="Saliendo del programa").run():
             print("Bye!")

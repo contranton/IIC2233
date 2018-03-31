@@ -29,15 +29,9 @@ class Menu(ABC):
 
         super().__init__()
 
-<<<<<<< HEAD
-        # Allows a menu to be returned to
-        self.is_main = False
-
-=======
         # Specifies whether or not this menu can be come back to
         self.is_main = False
         
->>>>>>> 1123fc312da2d927524e6581fbcbb2a469160455
         # Printed at the top in a special color
         self.title = "Un Menú"
 

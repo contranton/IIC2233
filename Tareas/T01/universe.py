@@ -16,14 +16,20 @@ cost = namedtuple("Costo", "mins deut")
 COSTO_CUARTEL = cost(200, 500)
 COSTO_TORRE = cost(150, 300)
 
+# Don't worry, these names don't conflict with the keywords
+rate = namedtuple("Tasa", "min max")
+
+TASA_MINS = rate(1, 10)
+TASA_DEUT = rate(5, 15)
+
 
 def _planet_defaults(nombre, raza, galaxia):
     """
     Returns the default values for a planet other than
     its name, race, and parent galaxy, which are user-specified.
     """
-    mins_rate = randint(1, 10)
-    deut_rate = randint(5, 15)
+    mins_rate = randint(TASA_MINS.min, TASA_MINS.max)
+    deut_rate = randint(TASA_MINS.min, TASA_MINS.max)
     now = datetime.now().replace(microsecond=0)
 
     return {"nombre": nombre,
@@ -126,7 +132,7 @@ class Planet(object):
 
     @tasa_minerales.setter
     def tasa_minerales(self, valor):
-        self._tasa_minerales = min(max(valor, 1), 10)
+        self._tasa_minerales = min(max(valor, TASA_MINS.min), TASA_MINS.max)
 
     @property
     def effective_tasa_minerales(self):
@@ -140,7 +146,7 @@ class Planet(object):
 
     @tasa_deuterio.setter
     def tasa_deuterio(self, valor):
-        self._tasa_deuterio = min(max(valor, 5), 15)
+        self._tasa_deuterio = min(max(valor, TASA_DEUT.min), TASA_DEUT.max)
 
     @property
     def effective_tasa_deuterio(self):
