@@ -510,6 +510,7 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
         menu = NumericalChoiceMenu()
         
         menu.title = "Elije un planeta a visitar"
+
         options = [p.nombre for p in self.galaxy.planets_list]
         functions = [lambda x=p: x for p in self.galaxy.planets_list]
         opt_data = [{True: "Conquistado", False: "Sin conquistar"}
@@ -547,6 +548,7 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
 class VisitPlanetMenu(NumericalChoiceMenu):
     def __init__(self, planet):
         super().__init__()
+        self.is_main = True
 
         self.planet = planet
         
