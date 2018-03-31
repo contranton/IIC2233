@@ -245,7 +245,7 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
         menu = NumericalChoiceMenu()
         menu.title = "Elige un planeta conquistado a eliminar: "
         menu.items = ([n for n, p in self.galaxy.planets.items()
-                       if p.conquistado],)
+                       if p.conquistado], [])
 
         planet_name = menu.run()
 
