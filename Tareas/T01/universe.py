@@ -181,6 +181,22 @@ class Galaxy(object):
     def planets_list(self):
         return list(self.planets.values())
 
+    @property
+    def minerales(self):
+        return self._minerales
+
+    @minerales.setter
+    def minerales(self, value):
+        self._minerales = int(value)
+
+    @property
+    def deuterio(self):
+        return self._deuterio
+
+    @deuterio.setter
+    def deuterio(self, value):
+        self._deuterio = int(value)
+
     def __repr__(self):
         s = "%s (%i planets)" % (self.nombre, len(self.planets))
         return s
