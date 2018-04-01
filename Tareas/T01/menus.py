@@ -577,9 +577,12 @@ class VisitPlanetMenu(NumericalChoiceMenu):
     @property
     def title(self):
         s = self._title
-        temp = "\n\nRecursos disponibles:\n\tMinerales: {}\n\tDeuterio: {}"
-        s += temp.format(yellow(str(self.planet.galaxia.minerales)),
-                         yellow(str(self.planet.galaxia.deuterio)))
+        temp = ("\n\nRecursos disponibles:\n"
+                "\tMinerales: " + yellow("{0:,}") +
+                "\n\tDeuterio: " + yellow("{1:,}"))
+        s += temp.format(self.planet.galaxia.minerales,
+                         self.planet.galaxia.deuterio)
+        s += "\n" + cyan("-"*40) + "\n"
         return s
 
     @title.setter
@@ -713,15 +716,15 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         if p.raza.has_mago:
             menu = NumericalChoiceMenu()
             menu.title = "Elije la unidad a agregar"
-            options = ["Soldado", "Mago"]
+            options = ["Soldados", "Magos"]
             menu.items = (options, [])
             unit = menu.run()
             if not unit:
                 return True
         else:
-            unit = "Soldado"
+            unit = "Soldados"
 
-        unit_range = (0, self.purchasable_soldiers) if unit == "Soldado"\
+        unit_range = (0, self.purchasable_soldiers) if unit == "Soldados"\
                      else (0, self.purchasable_wizards)
 
         menu = NumericalInputMenu(unit_range)
@@ -731,14 +734,14 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         if not num:
             return True
 
-        if unit == "Soldado":
+        if unit == "Soldados":
             p.soldados += num
-            p.galaxia.minerales -= p.raza.costo_soldados.mins
-            p.galaxia.deuterio -= p.raza.costo_soldados.deut
+            p.galaxia.minerales -= p.raza.costo_soldado.mins
+            p.galaxia.deuterio -= p.raza.costo_soldado.deut
         else:
             p.magos += num
-            p.galaxia.minerales -= p.raza.costo_magos.mins
-            p.galaxia.deuterio -= p.raza.costo_magos.deut
+            p.galaxia.minerales -= p.raza.costo_mago.mins
+            p.galaxia.deuterio -= p.raza.costo_mago.deut
 
         return True
 
@@ -752,7 +755,9 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         deuterio = int(p.effective_tasa_deuterio * delta.seconds)
         minerales = int(p.effective_tasa_minerales * delta.seconds)
 
-        menu = AreYouSureMenu(title="Recolectando recursos")
+        menu = AreYouSureMenu()
+        menu.title = cyan("Recolectando recursos")
+        
         menu.content = green("{:,} segundos".format(delta.seconds))
         menu.content += (" han transcurrido desde la última recolleción."
                          "\nSi cosechas ahora, obtendrás:\n")
@@ -771,34 +776,36 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         p = self.planet
         
         menu = NumericalChoiceMenu()
-        menu.title = "Comprando mejoras"
+        menu.title = self.title + cyan("Comprando mejoras")
 
         options = ["Aumentar nivel de economía",
                    "Aumentar nivel de ataque"]
 
-        labels = [green("\tNivel Actual: %i\tCosto: 2000M, 4000D" %
-                        p.nivel_economia),
-                  green("\tNivel Actual: %i\tCosto: 1000M, 2000D" %
-                        p.nivel_ataque)]
+        labels = [green("(%i/3)" % p.nivel_economia) +
+                  "\tCosto: 2000M, 4000D",
+                  green("(%i/3)" % p.nivel_ataque) +
+                  "\tCosto: 1000M, 2000D"]
 
         functions = [lambda: "ECON", lambda: "ATTK"]
 
         menu.items = (options, functions, labels)
-        menu._add_return_option()
 
         attr = menu.run()
         if not attr:
             return True
+
         elif attr == "ECON":
             if p.nivel_economia == 3:
-                InfoMenu(title="Nivel de economía ya está maximizado").run()
+                InfoMenu(title=self.title +
+                         "Nivel de economía ya está maximizado").run()
             else:
                 p.nivel_economia += 1
                 p.galaxia.minerales -= 2000
                 p.galaxia.deuterio -= 4000
         elif attr == "ATTK":
             if p.nivel_ataque == 3:
-                InfoMenu(title="Nivel de deuterio ya está maximizado").run()
+                InfoMenu(title=self.title +
+                         "Nivel de deuterio ya está maximizado").run()
             else:
                 p.nivel_ataque += 1
                 p.galaxia.minerales -= 1000

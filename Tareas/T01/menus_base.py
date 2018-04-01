@@ -25,7 +25,7 @@ class Menu(ABC):
     operation and a user prompt.
 
     """
-    def __init__(self):
+    def __init__(self, title="Un Menú", prompt="Elige una opción"):
 
         super().__init__()
 
@@ -33,12 +33,12 @@ class Menu(ABC):
         self.is_main = False
         
         # Printed at the top in a special color
-        self.title = "Un Menú"
+        self.title = title
 
         # Tells the user what to do!
-        self.prompt = "Elige una opción"
+        self.prompt = prompt
 
-        # Main text body of the menu. Can use termcolor's colored function to
+        # Main text body of the menu. Can use color functions to
         # include particular coloration
         self.content = ""
 
@@ -304,9 +304,8 @@ class YesNoMenu(Menu):
 
 
 class AreYouSureMenu(YesNoMenu):
-    def __init__(self, title):
-        super().__init__()
-        self.title = title
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.prompt = "Seguro? (si/no): "
 
     def run(self):
@@ -317,7 +316,6 @@ class InfoMenu(Menu):
     def __init__(self, title="Informacion"):
         """Menu for info display with a unique input option for returning"""
         self.title = title
-        self.content = "LLENAME CON INFORMACION"
         self.prompt = "Pulsa para continuar..."
 
     def _validate_input(self, _):
