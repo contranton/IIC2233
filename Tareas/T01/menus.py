@@ -77,6 +77,8 @@ class MainMenu(NumericalChoiceMenu):
 
         self.items = options, functions
 
+        self._remove_quit_item()
+
     def create_galaxy(self):
         return CreateGalaxyMenu(self.universe).run()
 
@@ -166,7 +168,11 @@ class CreateGalaxyMenu(TextInputMenu):
         functions = [lambda x=x: x for x in self.new_galaxy.planets.values()]
         choose_conquered_planet_menu.items = (options, functions)
 
+        # User already had a chance to think of adding more planets ;)
+        choose_conquered_planet_menu._remove_quit_item()
+
         conquered_planet = choose_conquered_planet_menu.run()
+        
         conquered_planet.conquistado = True
 
         # Populate unconquered planets
@@ -224,6 +230,9 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
                                     [])
 
         galaxy_name = choose_galaxy_menu.run()
+        if not galaxy_name:
+            return True
+
         self.galaxy = self.universe.galaxies[galaxy_name]
 
         self.title = "Modificando galaxia "
@@ -248,6 +257,8 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
                        if p.conquistado], [])
 
         planet_name = menu.run()
+        if not planet_name:
+            return True
 
         sure = AreYouSureMenu(title="Eliminando planeta " +
                               red(planet_name) +
@@ -288,6 +299,9 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
             return None
 
         planet = menu.run()
+        if not planet:
+            return None
+
         return self.galaxy.planets[planet]
 
     def increase_mins_rate(self):
@@ -311,6 +325,7 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
         planet = self._choose_unconquered_planet(title, "tasa_deuterio")
         if not planet:
             # Returned only if galaxy doesn't have valid planets
+            # or if user chooses to cancel selection
             return True
 
         num_range = (0, 15 - planet.tasa_deuterio)
@@ -426,6 +441,8 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
 
         # Run menu to select planet
         planet = planet_choose_menu.run()
+        if not planet:
+            return True
 
         info_menu = InfoMenu(title="Información acerca de %s\n" %
                              planet.nombre)
@@ -491,6 +508,8 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
                                      for g in self.universe.galaxies_list], [])
 
         galaxy_name = choose_galaxy_menu.run()
+        if not galaxy_name:
+            return False
 
         self.galaxy = self.universe.galaxies[galaxy_name]
 
@@ -500,7 +519,8 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
         functions = [self.visit_planet, self.write_changes]
 
         self.items = (options, functions)
-        self._add_return_option()
+
+        return True
 
     def visit_planet(self):
         menu = NumericalChoiceMenu()
@@ -509,17 +529,20 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
 
         options = [p.nombre for p in self.galaxy.planets_list]
         functions = [lambda x=p: x for p in self.galaxy.planets_list]
-        opt_data = [{True: "Conquistado", False: "Sin conquistar"}
+        opt_data = [{True: green("\tConquistado"),
+                     False: red("\tSin conquistar")}
                     [p.conquistado] for p in self.galaxy.planets_list]
         menu.items = (options, functions, opt_data)
-        menu._add_return_option()
 
         planet = menu.run()
         return planet
 
     def run(self):
         if not self.galaxy:
-            self.choose_galaxy()
+            success = self.choose_galaxy()
+            if not success:
+                # If user has cancelled galaxy selection
+                return True
 
         planet = self.visit_planet()
 
@@ -550,9 +573,11 @@ class VisitPlanetMenu(NumericalChoiceMenu):
 
     @property
     def title(self):
-        return (self._title + "\nRecursos disponibles:"
-                "Minerales: %i\tDeuterio: %i" % (self.planet.galaxia.minerales,
-                                                 self.planet.galaxia.deuterio))
+        s = self._title
+        temp = "\n\nRecursos disponibles:\n\tMinerales: {}\n\tDeuterio: {}"
+        s += temp.format(yellow(str(self.planet.galaxia.minerales)),
+                         yellow(str(self.planet.galaxia.deuterio)))
+        return s
 
     @title.setter
     def title(self, value):
@@ -581,38 +606,48 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
                      self.make_improvements]
 
         self.items = (options, functions)
-        self._add_return_option()
 
-    def build(self):
-        menu = NumericalChoiceMenu()
-        menu.title = super().title + "\nConstruyendo nuevos edificios"
+    @property
+    def _build_menu_info(self):
         has_c, has_t = self.planet.cuartel, self.planet.torre
         mins, deut = (self.planet.galaxia.minerales,
                       self.planet.galaxia.deuterio)
         options = ["Cuartel", "Torre"]
-        functions, labels = [[], []]
+        functions = []
+        labels = ["\t{}M, {}D".format(c.mins, c.deut)
+                  for c in (COSTO_CUARTEL, COSTO_TORRE)]
         if has_c:
-            labels.append("\tConstruido")
+            labels[0] += red("\tConstruido")
             functions.append(self._already_purchased)
         elif mins < COSTO_CUARTEL.mins or deut < COSTO_CUARTEL.deut:
-            labels.append("\tInsuficientes Recursos")
+            labels[0] += red("\tInsuficientes Recursos")
             functions.append(self._insufficient)
         else:
-            labels.append("\tConstruir")
+            labels[0] += green("\tConstruir")
             functions.append(self._buy_cuartel)
 
         if has_t:
-            labels.append("\tConstruido")
+            labels[1] += red("\tConstruido")
             functions.append(self._already_purchased)
         elif mins < COSTO_TORRE.mins or deut < COSTO_TORRE.deut:
-            labels.append("\tInsuficientes Recursos")
+            labels[1] += red("\tInsuficientes Recursos")
             functions.append(self._insufficient)
         else:
-            labels.append("\tConstruir")
+            labels[1] += green("\tConstruir")
             functions.append(self._buy_torre)
 
-        menu.items = (options, functions, labels)
-        return menu.run()
+        return options, functions, labels
+
+    def build(self):
+        menu = NumericalChoiceMenu()
+        menu.title = self.title + cyan("Construyendo nuevos edificios")
+        menu.items = self._build_menu_info  # Method returns the tuple
+
+        stay = menu.run()
+        if not stay:
+            return True
+
+        return self.build()
 
     def _already_purchased(self):
         menu = InfoMenu(title="Edificio ya está construido")
@@ -709,8 +744,8 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         current_t = now()
         delta = current_t - last_collect
 
-        deuterio = p.effective_tasa_deuterio * delta.seconds
-        minerales = p.effective_tasa_minerales * delta.seconds
+        deuterio = int(p.effective_tasa_deuterio * delta.seconds)
+        minerales = int(p.effective_tasa_minerales * delta.seconds)
 
         menu = AreYouSureMenu(title="Recolectando recursos")
         menu.content = green("{:,} segundos".format(delta.seconds))
@@ -764,7 +799,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
                 p.galaxia.minerales -= 1000
                 p.galaxia.deuterio -= 2000
 
-        return True
+        return self.make_improvements()
 
 
 class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
@@ -781,7 +816,6 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
                      self.invade]
 
         self.items = (options, functions)
-        self._add_return_option()
 
     def purchase(self):
         mins, deut = (self.planet.galaxia.minerales,

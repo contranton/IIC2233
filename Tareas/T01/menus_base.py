@@ -122,6 +122,12 @@ class NumericalChoiceMenu(Menu):
                                                 function=lambda: False,
                                                 opt_data="")
 
+    def _remove_quit_item(self):
+        """
+        Used only in a Principal Menu where the 'return' option is redundant
+        """
+        self._items.pop(len(self.items)-1)
+
     @property
     def options(self):
         return [item.option for item in self.items.values()]
@@ -185,6 +191,8 @@ class NumericalChoiceMenu(Menu):
         self._items = {i: menu_item(option=opt, function=func, opt_data=dat)
                        for i, (opt, func, dat)
                        in enumerate(zip(options, functions, opt_data))}
+
+        self._add_return_option()
 
     def __str__(self):
         s = super().__str__() + "\n"
