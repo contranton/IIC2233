@@ -716,6 +716,8 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
             options = ["Soldado", "Mago"]
             menu.items = (options, [])
             unit = menu.run()
+            if not unit:
+                return True
         else:
             unit = "Soldado"
 
