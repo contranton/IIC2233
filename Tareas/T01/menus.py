@@ -144,6 +144,9 @@ class CreateGalaxyMenu(TextInputMenu):
                                                        parent_galaxy=None))
             # Update the created planet list for printing
             create_planet_menu.content = self.str_created_planets
+        else:
+            if len(self.new_planets) == 0:
+                return True
 
         # Only create galaxy once at least one planet has been created
         self.new_galaxy = Galaxy(nombre=galaxy_name)
