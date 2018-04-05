@@ -25,17 +25,22 @@ def make_planet_dialog(universe, parent_galaxy):
                            for p in g.planets_list}
 
         planet_name = planet_name_menu.run()
-        while len(planet_name) < 6:
-            print(red("El nombre es demasiado corto (minimo 6 caracteres)."
-                      "Intenta de nuevo"))
-            input("\nPulsa para continuar...")
-            planet_name = planet_name_menu.run()
-        while planet_name in forbidden_input:
-            print(red("El nombre %s ya está utilizado. Elige otro." %
-                      planet_name))
-            input("\nPulsa para continuar...")
-            planet_name = planet_name_menu.run()
 
+        valid = False
+        while not valid:
+            if len(planet_name) < 6:
+                print(red("El nombre es demasiado corto (minimo 6 caracteres)."
+                          "Intenta de nuevo"))
+                input("\nPulsa para continuar...")
+                planet_name = planet_name_menu.run()
+            elif planet_name in forbidden_input:
+                print(red("El nombre %s ya está utilizado. Elige otro." %
+                          planet_name))
+                input("\nPulsa para continuar...")
+                planet_name = planet_name_menu.run()
+            else:
+                valid = True 
+                
         # Choose planet race
         planet_race_menu = NumericalChoiceMenu()
         planet_race_menu.title = "Creando nuevo planeta"
