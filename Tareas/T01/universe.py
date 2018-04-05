@@ -46,6 +46,25 @@ def _planet_defaults(nombre, raza, galaxia):
             "tasa_deuterio": deut_rate}
 
 
+class Edificio():
+    def __init__(self, vida):
+        "docstring"
+        self.vida = vida
+
+        
+class Cuartel(Edificio):
+    def __init__(self, vida):
+        "docstring"
+        super().__init__(vida)
+        
+
+class Torre(Edificio):
+    def __init__(self, vida, ataque):
+        "docstring"
+        super().__init__(vida)
+        self.ataque = ataque
+
+
 class Planet(object):
     """Documentation for Planeta
 

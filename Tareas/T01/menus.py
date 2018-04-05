@@ -39,7 +39,7 @@ def make_planet_dialog(universe, parent_galaxy):
                 input("\nPulsa para continuar...")
                 planet_name = planet_name_menu.run()
             else:
-                valid = True 
+                valid = True
                 
         # Choose planet race
         planet_race_menu = NumericalChoiceMenu()
@@ -856,8 +856,11 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
     def invade(self):
         menu = AreYouSureMenu("A punto de invadir planeta %s" %
                               self.planet.nombre)
-        if menu.run():
-            input("WAAAAAR")
+        if not menu.run():
+            return True
+
+        input("WAAAAAR")
+        
 
         return True
 
