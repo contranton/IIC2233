@@ -13,7 +13,11 @@ Defines Planet, Galaxy, and Universe classes
 cost = namedtuple("Costo", "mins deut")
 
 COSTO_CUARTEL = cost(200, 500)
+VIDA_CUARTEL = 5000
+
 COSTO_TORRE = cost(150, 300)
+ATAQUE_TORRE = 1000
+VIDA_TORRE = 2000
 
 # Don't worry, these names don't conflict with the keywords
 rate = namedtuple("Tasa", "min max")
@@ -50,19 +54,26 @@ class Edificio():
     def __init__(self, vida):
         "docstring"
         self.vida = vida
+        self.built = False
 
         
 class Cuartel(Edificio):
-    def __init__(self, vida):
+    def __init__(self,):
         "docstring"
-        super().__init__(vida)
+        super().__init__(vida=VIDA_CUARTEL)
         
 
 class Torre(Edificio):
-    def __init__(self, vida, ataque):
+    def __init__(self):
         "docstring"
-        super().__init__(vida)
-        self.ataque = ataque
+        super().__init__(vida=VIDA_TORRE)
+
+    @property
+    def ataque(self):
+        if self.built:
+            return ATAQUE_TORRE
+        else:
+            return 0
 
 
 class Planet(object):
@@ -97,6 +108,15 @@ class Planet(object):
             (self.nombre, self.raza.name, self.evolucion)
         return s
 
+    @property
+    def torre(self):
+        return self._torre
+
+    @torre.setter
+    def torre(self, bool_):
+        self._torre = Torre()
+        self._torre.built = bool_
+    
     @property
     def raza(self):
         try:
