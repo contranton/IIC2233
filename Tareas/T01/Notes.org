@@ -29,4 +29,5 @@
 * Misc considerations
 All planet names must be unique, even if they're in different galaxies!
 * TODO 
-CAN YOU DO =self.items = options, functions= ?????
+Write changes to title menu on returning to SelectPlanet/WriteChanges? menu
+
