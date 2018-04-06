@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
+from random import randrange
 
 """
 Since a race encodes the properties of the actions of multiple planets, it
@@ -23,9 +24,21 @@ class Raza(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def habilidad():
+    def habilidad(entity, enemy_entity):
         """Special race ability, used in battles"""
         pass
+
+    @property
+    @classmethod
+    def warcry(cls):
+        s = "Wubba Lubba Dub Dub, hemos logrado conquistar un nuevo planeta"
+        s += cls._warcry
+        return s
+
+    @warcry.setter
+    @classmethod
+    def warcry(cls, value):
+        cls._warcry = value
 
 
 class MaestroRaza(Raza):
@@ -47,8 +60,22 @@ class MaestroRaza(Raza):
 
     @staticmethod
     @abstractmethod
-    def habilidad():
-        pass
+    def habilidad(entity, enemy_entity):
+        if not entity.being_invaded:
+            return
+
+        if not entity.turn_number == 0:
+            return
+
+        # 30% chance
+        if randrange(10) in range(3):
+            s = enemy_entity.soldados
+            s = s[:(len(s)//2)]
+
+            m = enemy_entity.magos
+            m = m[:(len(s)//2)]
+
+            return "Habilidad Maestro ha sido activada"
 
 
 class AprendizRaza(Raza):
@@ -66,8 +93,14 @@ class AprendizRaza(Raza):
 
     @staticmethod
     @abstractmethod
-    def habilidad():
-        pass
+    def habilidad(entity, enemy_entity):
+        if entity.being_invaded:
+            return
+
+        # 70% chance
+        if randrange(10) in range(7):
+            entity.steal_minerals(enemy_entity)
+            return "Aprendiz habilidad ha sido activada"
 
 
 class AsesinoRaza(Raza):
@@ -85,5 +118,11 @@ class AsesinoRaza(Raza):
 
     @staticmethod
     @abstractmethod
-    def habilidad():
-        print("Ugh")
+    def habilidad(entity):
+        if entity.being_invaded:
+            return
+
+        # 40% chance
+        if randrange(10) in range(4):
+            entity.duplicate_attack()
+            return "Aprendiz habilidad ha sido activada"
