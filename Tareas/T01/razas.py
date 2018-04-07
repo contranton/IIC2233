@@ -106,7 +106,7 @@ class MaestroRaza(Raza):
         if not entity.being_invaded:
             return
 
-        if not entity.turn_number == 0:
+        if not entity.turn == 1:
             return
 
         # 30% chance
@@ -141,8 +141,10 @@ class AprendizRaza(Raza):
 
         # 70% chance
         if randrange(10) in range(7):
-            entity.steal_minerals(enemy_entity)
-            return "Aprendiz habilidad ha sido activada"
+            entity.steal_minerals(enemy_entity, 200)
+            s = entity.name + " le roba 200 minerales a "
+            s += enemy_entity.name
+            return s
 
 
 class AsesinoRaza(Raza):
