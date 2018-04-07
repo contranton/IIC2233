@@ -38,8 +38,7 @@ class Raza(metaclass=ABCMeta):
                             ". We're a singleton bruh.")
 
     @staticmethod
-<<<<<<< Updated upstream
-    @abstractmethod
+<<<<<<< HEAD
     def habilidad(entity, enemy_entity):
         """Special race ability, used in battles"""
         pass
@@ -63,16 +62,15 @@ class Raza(metaclass=ABCMeta):
 ======= end
 =======
     @property
-    @classmethod
-    def warcry(cls):
-        s = "Wubba Lubba Dub Dub, hemos logrado conquistar un nuevo planeta"
-        s += cls._warcry
+    def warcry(self):
+        
+        s += self._warcry
         return s
 
     @warcry.setter
-    @classmethod
-    def warcry(cls, value):
-        cls._warcry = value
+    def warcry(self, value):
+        self._warcry = value
+
 
 >>>>>>> Initial implementation of battle system
 
@@ -95,12 +93,15 @@ class MaestroRaza(Raza):
               "otorgado una victoria más!")
 
     @staticmethod
+<<<<<<< HEAD
     @abstractmethod
 <<<<<<< HEAD
     def habilidad():
         pass
 >>>>>>> Stashed changes
 =======
+=======
+>>>>>>> Cherry Pick: Make race objects singletons
     def habilidad(entity, enemy_entity):
         if not entity.being_invaded:
             return
@@ -134,7 +135,6 @@ class AprendizRaza(Raza):
               soldados son invencibles!"
 
     @staticmethod
-    @abstractmethod
     def habilidad(entity, enemy_entity):
         if entity.being_invaded:
             return
@@ -159,7 +159,6 @@ class AsesinoRaza(Raza):
               necesario para ganar estas batallas!"
 
     @staticmethod
-    @abstractmethod
     def habilidad(entity):
         if entity.being_invaded:
             return
