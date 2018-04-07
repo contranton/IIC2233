@@ -7,6 +7,8 @@ Since a race encodes the properties of the actions of multiple planets, it
 makes no sense to instatiate them. Thus, they remain abstract classes!
 """
 
+RACE_INSTANCES = set()
+Cost = namedtuple("Cost", "mins deut")
 
 class Raza(metaclass=ABCMeta):
     """Defines a race's properties, to be used in individual planets
@@ -17,28 +19,39 @@ class Raza(metaclass=ABCMeta):
     """
 
     name = ""
-    
-    Cost = namedtuple("Cost", "mins deut")
 
     has_mago = False
 
+    warcry = "Test"
+
+    def __init__(self):
+        "docstring"
+        if type(self) not in RACE_INSTANCES:
+            RACE_INSTANCES.add(type(self))
+
+            s = ("Wubba Lubba Dub Dub, hemos logrado conquistar un" +
+                 " nuevo planeta\n")
+            self.warcry = s + self.__class__.warcry
+        else:
+            del self
+            raise Exception("Instantiated multiple race classes" +
+                            ". We're a singleton bruh.")
+
     @staticmethod
-    @abstractmethod
     def habilidad(entity, enemy_entity):
         """Special race ability, used in battles"""
         pass
 
     @property
-    @classmethod
-    def warcry(cls):
-        s = "Wubba Lubba Dub Dub, hemos logrado conquistar un nuevo planeta"
-        s += cls._warcry
+    def warcry(self):
+        
+        s += self._warcry
         return s
 
     @warcry.setter
-    @classmethod
-    def warcry(cls, value):
-        cls._warcry = value
+    def warcry(self, value):
+        self._warcry = value
+
 
 
 class MaestroRaza(Raza):
@@ -47,19 +60,19 @@ class MaestroRaza(Raza):
 
     max_pop = 100
 
-    costo_soldado = Raza.Cost(mins=200, deut=300)
+    costo_soldado = Cost(mins=200, deut=300)
     rango_atq_soldado = (60, 80)
     rango_vid_soldado = (200, 250)
 
     has_mago = True
-    costo_mago = Raza.Cost(mins=300, deut=400)
+    costo_mago = Cost(mins=300, deut=400)
     rango_atq_mago = (80, 120)
     rango_vid_mago = (150, 200)
 
-    warcry = "¡Nuestro conocimiento nos ha\notrogado una victoria más!"
+    warcry = ("¡Nuestro conocimiento nos ha "
+              "otorgado una victoria más!")
 
     @staticmethod
-    @abstractmethod
     def habilidad(entity, enemy_entity):
         if not entity.being_invaded:
             return
@@ -84,7 +97,7 @@ class AprendizRaza(Raza):
     
     max_pop = 100
 
-    costo_soldado = Raza.Cost(mins=300, deut=400)
+    costo_soldado = Cost(mins=300, deut=400)
     rango_atq_soldado = (30, 60)
     rango_vid_soldado = (600, 700)
 
@@ -92,7 +105,6 @@ class AprendizRaza(Raza):
               soldados son invencibles!"
 
     @staticmethod
-    @abstractmethod
     def habilidad(entity, enemy_entity):
         if entity.being_invaded:
             return
@@ -117,7 +129,6 @@ class AsesinoRaza(Raza):
               necesario para ganar estas batallas!"
 
     @staticmethod
-    @abstractmethod
     def habilidad(entity):
         if entity.being_invaded:
             return
@@ -126,3 +137,8 @@ class AsesinoRaza(Raza):
         if randrange(10) in range(4):
             entity.duplicate_attack()
             return "Aprendiz habilidad ha sido activada"
+
+maestro = MaestroRaza()
+aprendiz = AprendizRaza()
+asesino = AsesinoRaza()
+

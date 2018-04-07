@@ -3,7 +3,7 @@ from random import randint
 from copy import deepcopy
 from collections import namedtuple
 
-from razas import MaestroRaza, AprendizRaza, AsesinoRaza
+from razas import maestro, aprendiz, asesino
 from fileio import read_planets, read_galaxies, write_csv
 from colors import red, green
 
@@ -127,9 +127,9 @@ class Planet(object):
 
     @raza.setter
     def raza(self, raza_str):
-        self._raza = {"Maestro": MaestroRaza,
-                      "Aprendiz": AprendizRaza,
-                      "Asesino": AsesinoRaza}[raza_str]
+        self._raza = {"Maestro": maestro,
+                      "Aprendiz": aprendiz,
+                      "Asesino": asesino}[raza_str]
 
     # Soldiers
         
