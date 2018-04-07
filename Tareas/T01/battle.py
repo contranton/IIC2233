@@ -85,8 +85,13 @@ class Entity:
     def duplicate_attack(self):
         pass
 
-    def steal_minerals(self, enemy):
-        pass
+    def steal_minerals(self, enemy, amount):
+        if self.is_player:
+            self.planet.galaxia.minerales += amount
+        else:
+            # They can't steal more minerals than we have!
+            stolen_amount = min(amount, enemy.planet.galaxia.minerales)
+            enemy.planet.galaxia.minerales -= stolen_amount
 
     def calculate_survivors(self):
         """
@@ -136,6 +141,9 @@ class Battle:
         "docstring"
         self.attacker, self.defender = attacker, defender
 
+        # For printing turns
+        self._initial_order = [attacker, defender]
+
         self.attacker_ability = None
         self.defender_ability = None
 
@@ -151,14 +159,9 @@ class Battle:
         self.defender_ability = self.defender.habilidad(self.defender,
                                                         self.attacker)
 
-    def _execute_attack(self):
-        attack = self.attacker.ataque
-        defense = self.defender.vida
-
-        self.defender.vida -= attack - defense
-
-    def _generate_info(self, attack, defense, life_or, life_final):
-        s = "Turno {turn_n} de la batalla entre {atkr} y {defr}\n\n"
+    def _generate_info(self, attack, life_or, final_life):
+        s = "Turno {turn_n} de la batalla entre {first} y {scnd}\n"
+        s += "Vida:\n\t{first}: {life_1}\t{scnd}: {life_2}\n"
         if self.attacker_ability:
             s += "Agresor {atkr} ha usado su habilidad!\n\t"
             s += self.attacker_ability + "\n"
@@ -166,40 +169,38 @@ class Battle:
             s += "Defendiente {defr} ha usado su habilidad!\n\t"
             s += self.defender_ability + "\n"
         s += "{atkr} ataca a {defr} con {attk} puntos de ataque!\n"\
-             "{defr} se defiende con {defs} puntos de defensa.\n\n"\
-             "El ataque efectivo es {effc} puntos. Los {life_or} puntos"\
-             "de vida de {defr} se reducen a {final_life}!\n\n"
-
-        s += "{atkr} permanece con {life_atkr} puntos de vida"
+             "Los {life_or} puntos de vida de {defr} se "\
+             " reducen a {final_life}!\n\n"
         return s.format(turn_n=self.turn,
+                        first=self._initial_order[0].name,
+                        scnd=self._initial_order[1].name,
+                        life_1=self._initial_order[0].vida,
+                        life_2=self._initial_order[1].vida,
                         atkr=self.attacker.name,
                         defr=self.defender.name,
                         attk=attack,
-                        defs=defense,
-                        effc=attack - defense,
                         life_or=life_or,
-                        final_life=life_final,
-                        life_atkr=self.attacker.vida)
+                        final_life=final_life)
     
     def battle_turns(self):
         self.turn = 1
         while self.defender.vida > 0:
+            self._swap_attacker_defender()
 
             self._activate_abilities()
             attack = self.attacker.ataque
-            defense = self.defender.ataque
             
             or_life = self.defender.vida
-            final_life = or_life - attack + defense
+            final_life = max(or_life - attack, 0)
 
+            info = self._generate_info(attack, or_life, final_life)
             self.defender.vida = final_life
-
-            info = self._generate_info(attack, defense, or_life, final_life)
             yield info
 
-            self._swap_attacker_defender()
             self.turn += 1
 
+        if self.attacker.is_player:
+            input(self.attacker.race.warcry)
         self.defender.calculate_survivors()
 
 
@@ -210,11 +211,19 @@ if __name__ == '__main__':
     p1 = Planet(nombre="Planet1", raza="Maestro", galaxia=g)
     p2 = Planet(nombre="Planet2", raza="Aprendiz", galaxia=g)
 
+    minerals = []
+    minerals.append(p1.galaxia.minerales)
+
     p1.soldados = 50
     p2.soldados = 30
     
     e1 = Entity(p1)
+    e1.is_player = True
     e2 = Entity(p2)
 
     for turn in Battle(e1, e2).battle_turns():
         print(turn)
+
+    minerals.append(p1.galaxia.minerales)
+
+    assert(minerals[0] != minerals[1])
