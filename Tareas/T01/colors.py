@@ -1,4 +1,8 @@
-from termcolor import colored
+try:
+    from termcolor import colored
+except ImportError:
+    def colored(text, *args):
+        return text
 import colorama
 
 # Ensure colors are nice always instead of ugly ansi codes

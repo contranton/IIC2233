@@ -44,9 +44,9 @@ class Entity:
 
         self.dup_attack = False
 
-    def habilidad(self, attacker, defender):
+    def habilidad(self, battle):
         # Must be overwritten for Archimago
-        return self.race.habilidad(attacker, defender)
+        return self.race.habilidad(battle)
 
     def generate_units(self, num_soldados, num_magos):
         """Generate soldiers and mages with individual lives and attacks"""
@@ -62,8 +62,9 @@ class Entity:
 
     @property
     def ataque(self):
+        atk = 0
         if self.soldados:
-            atk = sum(map(lambda x: x.ataque, self.soldados))
+            atk += sum(map(lambda x: x.ataque, self.soldados))
         if self.magos:
             atk += sum(map(lambda x: x.ataque, self.magos))
         if self.being_invaded:
@@ -147,7 +148,8 @@ class Entity:
 
             # Kill off the dead and improve the survivors
             shuffle(self.soldados)
-            [self.soldados.pop() for i in range(len(self.soldados) - survivors)]
+            [self.soldados.pop()
+             for i in range(len(self.soldados) - survivors)]
             for s in self.soldados:
                 s = soldier(s.ataque + 5, s.vida + 10)
 
@@ -166,7 +168,10 @@ class Archimago(Entity):
         self.vida = ARCHMAGE_LIFE
         self._initial_life_set = True
 
+        self.ataques_consecutivos = 0
+
     def habilidad(self, attacker, defender):
+        self.ataques_consecutivos += 1
         s = asesino.habilidad(attacker, defender)
         s += aprendiz.habilidad(attacker, defender)
         return s
@@ -195,14 +200,14 @@ class Battle:
         self.turn = 0
 
     def _swap_attacker_defender(self):
+        if isinstance(self.attacker, Archimago):
+            if self.attacker.ataques_consecutivos < 3:
+                return
         self.attacker, self.defender = self.defender, self.attacker
 
     def _activate_abilities(self):
-        """TODO: Clean me up pls"""
-        self.attacker_ability = self.attacker.habilidad(self.attacker,
-                                                        self.defender)
-        self.defender_ability = self.defender.habilidad(self.defender,
-                                                        self.attacker)
+        self.attacker_ability = self.attacker.habilidad(self)
+        self.defender_ability = self.defender.habilidad(self)
 
     def _generate_info(self, attack, life_or, final_life):
         s = "Turno {turn_n} de la batalla entre {atkr.name} y {defr.name}\n"
@@ -266,6 +271,8 @@ class Battle:
             yield info
 
             self.turn += 1
+
+        # Battle has ended
 
         if self.defender.being_invaded:
             self.defending_planet.soldados = 0

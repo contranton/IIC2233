@@ -1,0 +1,3 @@
+# Required libraries for colorized output
+colorama
+termcolor

@@ -19,6 +19,9 @@ COSTO_TORRE = cost(150, 300)
 ATAQUE_TORRE = 1000
 VIDA_TORRE = 2000
 
+COSTO_MEJORA_ATAQUE = cost(1000, 2000)
+COSTO_MEJORA_ECONOMIA = cost(2000, 4000)
+
 # Don't worry, these names don't conflict with the keywords
 rate = namedtuple("Tasa", "min max")
 
@@ -59,12 +62,24 @@ class Edificio():
     def __repr__(self):
         return str(self.built)
 
-        
+    @property
+    def vida(self):
+        return self._vida
+
+    @vida.setter
+    def vida(self, value):
+        if value < 0:
+            self.built = False
+            self._vida = 0
+        else:
+            self._vida = value
+
+
 class Cuartel(Edificio):
     def __init__(self,):
         "docstring"
         super().__init__(vida=VIDA_CUARTEL)
-        
+
 
 class Torre(Edificio):
     def __init__(self):
@@ -91,7 +106,7 @@ class Planet(object):
         # This avoids a weird recursion with properties
         self._soldados = 0
         self._magos = 0
-        
+
         if not kwargs:
             attrs = _planet_defaults(nombre, raza, galaxia)
         else:
@@ -136,7 +151,7 @@ class Planet(object):
     def cuartel(self, bool_):
         self._cuartel = Cuartel()
         self._cuartel.built = bool_
-    
+
     @property
     def raza(self):
         try:
@@ -152,11 +167,11 @@ class Planet(object):
                       "Asesino": asesino}[raza_str]
 
     # Soldiers
-        
+
     @property
     def max_soldados(self):
         return self.raza.max_pop - self.magos
-        
+
     @property
     def soldados(self):
         return self._soldados
@@ -166,14 +181,14 @@ class Planet(object):
         self._soldados = min(max(value, 0), self.max_soldados)
 
     # Mages
-        
+
     @property
     def max_magos(self):
         if not self.raza.has_mago:
             return 0
         else:
             return self.raza.max_pop - self.soldados
-        
+
     @property
     def magos(self):
         return self._magos
@@ -246,7 +261,7 @@ class Galaxy(object):
 
     @minerales.setter
     def minerales(self, value):
-        self._minerales = int(value)
+        self._minerales = max(int(value), 0)
 
     @property
     def deuterio(self):
@@ -254,7 +269,7 @@ class Galaxy(object):
 
     @deuterio.setter
     def deuterio(self, value):
-        self._deuterio = int(value)
+        self._deuterio = max(int(value), 0)
 
     def __repr__(self):
         s = "%s (%i planets)" % (self.nombre, len(self.planets))
@@ -290,13 +305,17 @@ class Universe(object):
         Planets and Galaxies are loaded in as dicts to ease their
         assignment to each other before being turned into lists.
         """
+        planets_dict = read_planets()
+        if not planets_dict:
+            return
         planets = {p["nombre"]: Planet(raza=p.pop("raza"),
                                        magos=p.pop("magos"),
                                        **p)
-                   for p in read_planets()}
+                   for p in planets_dict}
 
+        galaxies_dict = read_galaxies()
         self.galaxies = {g["nombre"]: Galaxy(**g)
-                         for g in read_galaxies()}
+                         for g in galaxies_dict}
 
         # Set the galaxies' planets and the planets' galaxies
         for p in planets.values():

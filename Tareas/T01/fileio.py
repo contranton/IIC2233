@@ -6,6 +6,8 @@ def parse_entry_type(datum, type_):
         return str(datum)
     elif type_ == "int":
         return int(datum)
+    elif type_ in ("Cuartel", "Torre"):
+        return parse_entry_type(datum, "bool")
     elif type_ == "bool":
         return True if datum == "True" else False
     else:
@@ -18,21 +20,23 @@ def read_csv(filename):
 
     # Turns ..\blah\blah2\galaxias.csv into "Galaxia"
     # content_name = filename.split("\\")[-1].split(".")[-2][:-1].title()
-
-    with open(filename, 'r', encoding="utf-8") as f:
-        lines = [line.strip().split(", ") for line in list(f)]
-        header = lines[0]
-
-        # Raymond Hettinger twitter tips for the win!
-        # Separates header names and types into separate lists
-        names, types = list(zip(*[s.split(": ") for s in header]))
-
-        kwargs = []
-        
-        for line in lines[1:]:
-            kwargs.append({names[i]: parse_entry_type(val_str, types[i])
-                           for i, val_str in enumerate(line)})
-
+    try:
+        with open(filename, 'r', encoding="utf-8") as f:
+            lines = [line.strip().split(", ") for line in list(f)]
+            header = lines[0]
+            
+            # Raymond Hettinger twitter tips for the win!
+            # Separates header names and types into separate lists
+            names, types = list(zip(*[s.split(": ") for s in header]))
+            
+            kwargs = []
+            
+            for line in lines[1:]:
+                kwargs.append({names[i]: parse_entry_type(val_str, types[i])
+                               for i, val_str in enumerate(line)})
+    except FileNotFoundError:
+        return None
+                
     return kwargs
 
 

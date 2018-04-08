@@ -1,4 +1,14 @@
-from planetas import Planeta
+from menus import MainMenu
+from universe import Universe
+import colorama
 
 if __name__ == '__main__':
-    Planeta()
+    import traceback
+    colorama.init()
+    print(colorama.Style.BRIGHT)
+
+    try:
+        MainMenu(Universe()).run()
+    except:
+        traceback.print_exc()
+        input("mandame pantallazo de esto pls :3")

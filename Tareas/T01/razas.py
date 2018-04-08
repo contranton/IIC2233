@@ -75,7 +75,8 @@ class MaestroRaza(Raza):
               "otorgado una victoria más!")
 
     @staticmethod
-    def habilidad(entity, enemy_entity):
+    def habilidad(battle):
+        entity, enemy_entity = battle.attacker, battle.defender
         if not entity.being_invaded:
             return ""
 
@@ -109,7 +110,8 @@ class AprendizRaza(Raza):
               soldados son invencibles!"
 
     @staticmethod
-    def habilidad(entity, enemy_entity):
+    def habilidad(battle):
+        entity, enemy_entity = battle.attacker, battle.defender
         if entity.being_invaded:
             return ""
 
@@ -137,7 +139,8 @@ class AsesinoRaza(Raza):
               necesario para ganar estas batallas!"
 
     @staticmethod
-    def habilidad(entity, enemy_entity):
+    def habilidad(battle):
+        entity, enemy_entity = battle.attacker, battle.defender
         if entity.being_invaded:
             return ""
 

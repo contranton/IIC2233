@@ -10,11 +10,13 @@ from menus_base import (NumericalChoiceMenu,
                         AreYouSureMenu,
                         InfoMenu)
 
-from universe import Planet, Galaxy, COSTO_CUARTEL, COSTO_TORRE
+from universe import (Planet, Galaxy, COSTO_CUARTEL, COSTO_TORRE,
+                      COSTO_MEJORA_ECONOMIA, COSTO_MEJORA_ATAQUE)
 from colors import red, green, yellow, cyan
 from battle import Battle, Archimago
 
 now = datetime.datetime.now
+
 
 
 def make_planet_dialog(universe, parent_galaxy):
@@ -43,7 +45,7 @@ def make_planet_dialog(universe, parent_galaxy):
                 planet_name = planet_name_menu.run()
             else:
                 valid = True
-                
+
         # Choose planet race
         planet_race_menu = NumericalChoiceMenu()
         planet_race_menu.title = "Creando nuevo planeta"
@@ -183,7 +185,7 @@ class CreateGalaxyMenu(TextInputMenu):
         choose_conquered_planet_menu._remove_quit_item()
 
         conquered_planet = choose_conquered_planet_menu.run()
-        
+
         conquered_planet.conquistado = True
 
         # Populate unconquered planets
@@ -426,25 +428,33 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
     def planet_info(self):
         planet_choose_menu = NumericalChoiceMenu()
         planet_choose_menu.title = "Elige un planeta para ver su información"
-        planet_choose_menu.content += "\n\n" +\
-                                      "Planeta\t\t" +\
-                                      red("Evolucion\t") +\
-                                      cyan("Galaxia\t")
 
         # Make menu options
         planets_list = [(p, p.galaxia.nombre)
                         for g in self.universe.galaxies_list
                         for p in g.planets_list]
 
+        if len(planets_list) == 0:
+            InfoMenu("No hay planetas existentes!"
+                     " Crea una galaxia primero").run()
+            return True
+
         planets_list.sort(key=lambda t: (t[1], -t[0].evolucion))
 
         options = [p.nombre for p, g in planets_list]
+        longest = len(sorted(options)[-1])
+        options = [("{:%i}" % (longest + 5)).format(name) for name in options]
         functions = [lambda p=p: p for p, g in planets_list]
-        opt_data = [red("\t%0.2f" % p.evolucion) +
-                    cyan("\t(%s)" % g)
+        opt_data = [cyan("\t%0.2f" % p.evolucion) +
+                    red("\t(%s)" % g)
                     for p, g in planets_list]
 
         planet_choose_menu.items = (options, functions, opt_data)
+
+        planet_choose_menu.content += "\n\n" +\
+                                      "Planeta" + " "*(longest + 5) +\
+                                      cyan("Evolucion\t") +\
+                                      red("Galaxia\t")
 
         # Run menu to select planet
         planet = planet_choose_menu.run()
@@ -547,7 +557,13 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
         menu.items = (options, functions, opt_data)
 
         planet = menu.run()
-        return planet
+        if not planet:
+            return True
+        elif planet.conquistado:
+            VisitConqueredPlanetMenu(planet).run()
+        else:
+            VisitUnconqueredPlanetMenu(planet).run()
+        return self.visit_planet()
 
     def run(self):
         if not self.galaxy:
@@ -556,20 +572,7 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
                 # If user has cancelled galaxy selection
                 return True
 
-        planet = self.visit_planet()
-
-        if not planet:
-            # If user has chosen to go back without selecting a planet
-            return True
-
-        if planet.conquistado:
-            _ = VisitConqueredPlanetMenu(planet).run()
-        else:
-            _ = VisitUnconqueredPlanetMenu(planet).run()
-        if _:
-            return super().run()
-        else:
-            return True
+        return super().run()
 
     def write_changes(self):
         self.universe.write_content()
@@ -606,14 +609,23 @@ class VisitPlanetMenu(NumericalChoiceMenu):
     def title(self, value):
         self._title = value
 
+    def _get_conquered_planet(self):
+        planet = filter(lambda x: x.conquistado,
+                        self.planet.galaxia.planets_list)
+        try:
+            planet = sample(list(planet), 1)[0]
+        except ValueError:
+            return None
+        return planet
+
     def event_archmage_invasion(self):
 
-        input("INVADED")
+        invaded_planet = self._get_conquered_planet()
+        if not invaded_planet:
+            return True
+        
+        input("ESTAS SIENDO INVADIDO POR EL ARCHIMAGO!!")
         infomenu = InfoMenu("Invasion del Archimago!!!")
-
-        invaded_planet = filter(lambda x: x.conquistado,
-                                self.planet.galaxia.planets_list)
-        invaded_planet = sample(list(invaded_planet), 1)[0]
 
         a = Archimago(self.planet.galaxia)
         b = Battle(self.planet.galaxia, a, invaded_planet)
@@ -623,11 +635,23 @@ class VisitPlanetMenu(NumericalChoiceMenu):
             infomenu.content = t
             infomenu.run()
 
-        return False
+        return True
 
     def event_asteroid_hit(self):
-        pass
-        
+        hit_planet = self._get_conquered_planet()
+        if not hit_planet:
+            return True
+
+        input("HA CAIDO UN ASTEROIDE EN %s!!" % hit_planet.nombre.upper())
+
+        damage = randrange(1500, 2500)
+
+        for building in (hit_planet.cuartel, hit_planet.torre):
+            building -= damage
+
+        hit_planet.soldados //= 2
+        hit_planet.magos //= 2
+
     def run(self):
         # IMPLEMENT ARCHMAGE AND ASTEROID EVENTS
         if randrange(10) in range(2):
@@ -768,8 +792,8 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         else:
             unit = "Soldados"
 
-        unit_range = (0, self.purchasable_soldiers) if unit == "Soldados"\
-                     else (0, self.purchasable_wizards)
+        unit_range = ((0, self.purchasable_soldiers) if unit == "Soldados"
+                      else (0, self.purchasable_wizards))
 
         menu = NumericalInputMenu(unit_range)
         menu.title = "Elige el número de %s a comprar" % unit.lower()
@@ -791,7 +815,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
 
     def get_resources(self):
         p = self.planet
-        
+
         last_collect = p.ultima_recoleccion
         current_t = now()
         delta = current_t - last_collect
@@ -801,7 +825,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
 
         menu = AreYouSureMenu()
         menu.title = cyan("Recolectando recursos")
-        
+
         menu.content = green("{:,} segundos".format(delta.seconds))
         menu.content += (" han transcurrido desde la última recolleción."
                          "\nSi cosechas ahora, obtendrás:\n")
@@ -818,7 +842,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
 
     def make_improvements(self):
         p = self.planet
-        
+
         menu = NumericalChoiceMenu()
         menu.title = self.title + cyan("Comprando mejoras")
 
@@ -843,17 +867,25 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
                 InfoMenu(title=self.title +
                          "Nivel de economía ya está maximizado").run()
             else:
-                p.nivel_economia += 1
-                p.galaxia.minerales -= 2000
-                p.galaxia.deuterio -= 4000
+                if p.galaxia.minerales < COSTO_MEJORA_ECONOMIA.mins or\
+                   p.galaxia.deuterio < COSTO_MEJORA_ECONOMIA.deut:
+                    InfoMenu(title=self.title + "Insuficientes recursos!").run()
+                else:
+                    p.nivel_economia += 1
+                    p.galaxia.minerales -= COSTO_MEJORA_ECONOMIA.mins
+                    p.galaxia.deuterio -= COSTO_MEJORA_ECONOMIA.deut
         elif attr == "ATTK":
             if p.nivel_ataque == 3:
                 InfoMenu(title=self.title +
-                         "Nivel de deuterio ya está maximizado").run()
+                         "Nivel de ataque ya está maximizado").run()
             else:
-                p.nivel_ataque += 1
-                p.galaxia.minerales -= 1000
-                p.galaxia.deuterio -= 2000
+                if p.galaxia.minerales < COSTO_MEJORA_ATAQUE.mins or\
+                   p.galaxia.deuterio < COSTO_MEJORA_ATAQUE.deut:
+                    InfoMenu(title=self.title + "Insuficientes recursos!").run()
+                else:
+                    p.nivel_ataque += 1
+                    p.galaxia.minerales -= COSTO_MEJORA_ATAQUE.mins
+                    p.galaxia.deuterio -= COSTO_MEJORA_ATAQUE.deut
 
         return self.make_improvements()
 
@@ -891,22 +923,25 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
 
         return False
 
-
     def invade(self):
 
         menu = NumericalChoiceMenu()
         menu.title = "Elige un planeta para enviar su ejército"
         options = [p.nombre for p in self.planet.galaxia.planets_list
                    if p.conquistado]
+        if len(options) == 0:
+            InfoMenu("No hay planetas conquistados en esta galaxia"
+                     " para enviar su ejercito!").run()
+            return True
         functions = [lambda x=p: x for p in self.planet.galaxia.planets_list
                      if p.conquistado]
         labels = []
         temp = green("\tPoblación: {}/{}")
         for pf in functions:
-            p = pf()  
+            p = pf()
             labels.append(temp.format(p.soldados + p.magos, p.raza.max_pop))
         menu.items = (options, functions, labels)
-            
+
         attacking_planet = menu.run()
         if not attacking_planet:
             return True
@@ -926,9 +961,7 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
             infomenu.run()
         b.update_attacker(attacking_planet)
 
-        # Return false to skip the previous menu as conquered
-        # status might have changed
-        return True
+        return False
 
 
 if __name__ == '__main__':
