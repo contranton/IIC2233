@@ -1,5 +1,6 @@
 from time import sleep
-from random import randrange
+from random import randrange, sample
+from copy import deepcopy
 import datetime
 
 from menus_base import (NumericalChoiceMenu,
@@ -11,7 +12,7 @@ from menus_base import (NumericalChoiceMenu,
 
 from universe import Planet, Galaxy, COSTO_CUARTEL, COSTO_TORRE
 from colors import red, green, yellow, cyan
-from battle import Battle
+from battle import Battle, Archimago
 
 now = datetime.datetime.now
 
@@ -507,6 +508,8 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
         self.is_main = True
         self.galaxy = None
 
+        self.original_galaxy = None
+
     def choose_galaxy(self):
         choose_galaxy_menu = NumericalChoiceMenu()
         choose_galaxy_menu.title = "Escoge una galaxia para jugar"
@@ -518,17 +521,20 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
             return False
 
         self.galaxy = self.universe.galaxies[galaxy_name]
+        self.original_galaxy = deepcopy(self.galaxy)
 
         self.title = "Jugando con la galaxia %s" % galaxy_name
 
-        options = ["Visitar planeta", "Escribir cambios"]
-        functions = [self.visit_planet, self.write_changes]
+        options = ["Visitar planeta", "Escribir cambios", "Volver"]
+        functions = [self.visit_planet, self.write_changes, self.volver]
 
         self.items = (options, functions)
+        self._remove_quit_item()
 
         return True
 
     def visit_planet(self):
+        self.wrote_changes = False
         menu = NumericalChoiceMenu()
 
         menu.title = "Elije un planeta a visitar"
@@ -561,13 +567,21 @@ class PlayGalaxyMenu(NumericalChoiceMenu):
         else:
             _ = VisitUnconqueredPlanetMenu(planet).run()
         if _:
-            return self.run()
+            return super().run()
         else:
             return True
 
-
     def write_changes(self):
-        pass
+        self.universe.write_content()
+        self.wrote_changes = True
+
+    def volver(self):
+        if not self.wrote_changes:
+            if AreYouSureMenu(title="Los cambios no se han guardado y se perderan").run():
+                self.galaxy = self.original_galaxy
+                return False
+            return True
+        return False
 
 
 class VisitPlanetMenu(NumericalChoiceMenu):
@@ -593,7 +607,23 @@ class VisitPlanetMenu(NumericalChoiceMenu):
         self._title = value
 
     def event_archmage_invasion(self):
-        pass
+
+        input("INVADED")
+        infomenu = InfoMenu("Invasion del Archimago!!!")
+
+        invaded_planet = filter(lambda x: x.conquistado,
+                                self.planet.galaxia.planets_list)
+        invaded_planet = sample(list(invaded_planet), 1)[0]
+
+        a = Archimago(self.planet.galaxia)
+        b = Battle(self.planet.galaxia, a, invaded_planet)
+        b.attacker.is_player = True
+        b.defender.being_invaded = True
+        for t in b.battle_turns():
+            infomenu.content = t
+            infomenu.run()
+
+        return False
 
     def event_asteroid_hit(self):
         pass
@@ -887,13 +917,17 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
             return True
 
         infomenu = InfoMenu("Invasion!")
+
         b = Battle(self.planet.galaxia, attacking_planet, self.planet)
         b.attacker.is_player = True
         b.defender.being_invaded = True
-        for t in b.battle_turns(self.planet):
+        for t in b.battle_turns():
             infomenu.content = t
             infomenu.run()
+        b.update_attacker(attacking_planet)
 
+        # Return false to skip the previous menu as conquered
+        # status might have changed
         return True
 
 

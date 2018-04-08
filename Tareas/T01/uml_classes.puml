@@ -5,7 +5,7 @@ skinparam class{
 	  BackgroundColor<< MainProgramExecution>> Lime
 }
 
-title Diagrama de Clases Preliminario -- Tarea 1: CHAUCRAFT\nJavier Contreras (@contranton)\nIIC2233, 2018-1\n\nDiagram made with <i>plantuml</i>
+title Diagrama de Clases -- Tarea 1: CHAUCRAFT\nJavier Contreras (@contranton)\nIIC2233, 2018-1\n\nDiagram made with <i>plantuml</i>
 
 class Universe{
       
@@ -17,34 +17,42 @@ class Universe{
 
 class Galaxy{
       str nombre
-      int minerales
-      int deuterio
       
       <get> Planet[] planets_list
-
-      Planet[] planets
+      <get/set> int minerales
+      <get/set> int deuterio
 }
+
+Class Edificio{
+      int vida
+      bool built
+}
+
+Class Cuartel
+
+Class Torre{
+      <get> int ataque
+}
+
+Edificio <- Cuartel
+Edificio <- Torre
 
 Class Planet{
       str nombre
 
       datetime ult_recoleccion
 
-      bool conquistado
-      bool torre
-      bool cuartel
+      <get/set> Raza raza
 
-      int num_soldados = 0
-      int num_magos = 0
+      bool conquistado
+      <get/set> Torre torre
+      <get/set> Cuartel cuartel
 
       int nivel_ataque = 0
       int nivel_economia = 0
 
-      -- Properties --
-      <get> Raza raza
-
-      <get/set> int num_soldados 
-      <get/set> int num_magos
+      <get/set> int soldados 
+      <get/set> int magos
       <get> int max_soldados
       <get> int max_magos
       
@@ -58,12 +66,14 @@ Class Planet{
       <get> int ataque_efectivo
       <get> int vida_efectiva
 
+      void maximize_stats()
+
 }
+
+Edificio o-- Planet
 
 Planet --* Galaxy
 Galaxy --* Universe
-
-' Soldiers and mages will inherit from these:
 
 abstract Class Raza<< Singleton >> #lightskyblue{
 
@@ -81,14 +91,14 @@ abstract Class Raza<< Singleton >> #lightskyblue{
 
 	 str warcry
 
-	 void habilidad()
+	 void habilidad(Entity entity1, Entity entity2)
 }
 
-abstract Class Maestro #powderblue
+ Class Maestro #powderblue
 
-abstract Class Aprendiz #powderblue
+ Class Aprendiz #powderblue
 
-abstract Class Asesino #powderblue
+ Class Asesino #powderblue
 
 Maestro --^ Raza
 Aprendiz --^ Raza
@@ -138,6 +148,12 @@ YesNoMenu ^-- AreYouSureMenu
 
 class MainMenu << MainProgramExecution >>{
       Universe universe
+
+      bool create_galaxy()
+      bool modify_galaxy()
+      bool query_Galaxy()
+      bool play_galaxy()
+      bool quit_()
 }
 
 class CreateGalaxyMenu #gold{
@@ -148,7 +164,7 @@ class CreateGalaxyMenu #gold{
 }
 
 note left of MainMenu
-     Different menus are created through program execution. Detailed relationships
+     Different menus are created recursively through program execution. Detailed relationships
      concerning which main-like menus inherit which menu types have been obviated to
      avoid unnecessary clutter.
 end note
@@ -156,28 +172,30 @@ end note
 class QueryGalaxyMenu #gold{
       Universe universe
 
-      void general_info()
-      void planet_info()
-      void best_galaxy()
-      void planet_ranking()
+      bool general_info()
+      bool planet_info()
+      bool best_galaxy()
+      bool planet_ranking()
 }
 
 class ModifyGalaxyMenu #gold{
       Universe universe
 
-      void add_planet()
-      void eliminate_conquered()
-      void increase_mins_rate()
-      void increase_deut_rate()
-      void add_soldiers()
-      void add_wizards()
+      bool add_planet()
+      bool eliminate_conquered()
+      bool increase_mins_rate()
+      bool increase_deut_rate()
+      bool add_soldiers()
+      bool add_wizards()
 }
 
 class PlayGalaxyMenu #gold{
       Universe universe
+      Galaxy galaxy
 
-      void visit_planet()
-      void save_changes()
+      bool choose_galaxy()
+      bool visit_planet()
+      bool write_changes()
 }
 
 class VisitConqueredPlanetMenu #moccasin {
@@ -192,21 +210,18 @@ class VisitConqueredPlanetMenu #moccasin {
 class VisitUnconqueredPlanetMenu #moccasin {
       Planet planet
       
-      void invade_planet()
-      void purchase_planet()
+      void invade()
+      void purchase()
 }
 
-class BattleInfoMenu #moccasin{
-      Planet planet
-}
 
-PlayGalaxyMenu -right-* VisitConqueredPlanetMenu
-PlayGalaxyMenu -right-* VisitUnconqueredPlanetMenu
+PlayGalaxyMenu --* VisitConqueredPlanetMenu
+PlayGalaxyMenu --* VisitUnconqueredPlanetMenu
 
 BattleInfoMenu --* PlayGalaxyMenu
 
 
-Menu ^-left- MainMenu
+Menu ^-- MainMenu
 MainMenu *-- Menu
 
 MainMenu --* Universe
@@ -227,5 +242,51 @@ note top of PlayGalaxyMenu
      or galaxy but rather actions performed <i><b>on</b></i> them
 end note
 
+Class Entity{
+      Galaxy galaxia
+      str name
+      Raza race
+      Cuartel cuartel
+      Torre torre
+      
+      int[] soldados
+      int[] magos
 
+      bool is_player
+      bool being_invaded
+      bool dup_attack
+
+      str habilidad(Entity attacker, Entity defender)
+      void generate_units(int n_soldados, int n_magos)
+
+      <get> int ataque
+      <get/set> int vida
+
+      void duplicate_attack()
+      void steal_minerals(int amount)
+
+      void calculate_survivors()
+}
+
+Class Archimago{
+      <get/set> int vida
+      str habilidad(Entity attacker, Entity defender)
+}
+
+Class Battle{
+      Entity attacker
+      Entity defender
+      Planet defender_planet
+
+      int turn
+
+      Generator battle_turns(Planet defender_planet)
+
+      void make_entities(Galaxy galaxy, Planet|Archimago attacker, Planet defending_planet)
+      void update_planets(Planet planet_attacker, Planet planet_defender)
+
+      void _swap_attacker_defender()
+      void _activate_abilities()
+      str _generate_info(int attack, int original_life, int final_life)
+}
 
