@@ -115,7 +115,7 @@ class AprendizRaza(Raza):
 
         # 70% chance
         if randrange(10) in range(7):
-            entity.steal_minerals(enemy_entity, 200)
+            entity.steal_minerals(200)
             s = entity.name + " le roba 200 minerales a "
             s += enemy_entity.name
             return s

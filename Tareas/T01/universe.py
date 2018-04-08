@@ -317,7 +317,7 @@ class Universe(object):
         # A HACK to get the race names from the uninstantiated race classes
         # And to fix galaxy name
         for p in planets:
-            p['_raza'] = str(p['_raza']).split(".")[-1][:-6]  # Awfuuuuuul
+            p['_raza'] = p['_raza'].name
             p['galaxia'] = p['galaxia'].nombre
 
         # Remove planets list in galaxy entry

@@ -99,7 +99,7 @@ class Entity:
     def duplicate_attack(self):
         self.dup_attack = True
 
-    def steal_minerals(self, enemy, amount):
+    def steal_minerals(self, amount):
         if self.is_player:
             self.galaxia.minerales += amount
         else:
@@ -126,7 +126,7 @@ class Entity:
 
             # Calculate survivors
             mage_life = sum(self.race.rango_vid_mago) // 2
-            survivors = min(self.initial_life / mage_life, len(self.magos))
+            survivors = min(self.vida / mage_life, len(self.magos))
             if planet:
                 planet.magos = survivors
 
@@ -140,7 +140,7 @@ class Entity:
 
             # Calculate survivors
             soldier_life = sum(self.race.rango_vid_soldado) // 2
-            survivors = self.initial_life - len(self.magos)*mage_life
+            survivors = self.vida - len(self.magos)*mage_life
             survivors //= soldier_life
             if planet:
                 planet.soldados = survivors
@@ -245,10 +245,12 @@ class Battle:
                                magos=defending_planet.magos,
                                cuartel=defending_planet.cuartel,
                                torre=defending_planet.torre)
+        
         self.defender.generate_units(defending_planet.soldados,
                                      defending_planet.magos)
+        self.defending_planet = defending_planet
 
-    def battle_turns(self, defending_planet):
+    def battle_turns(self):
         self.turn = 1
         while self.defender.vida > 0:
             self._swap_attacker_defender()
@@ -265,13 +267,26 @@ class Battle:
 
             self.turn += 1
 
-        self.defender.calculate_survivors(defending_planet)
-        if self.attacker.is_player:
+        if self.defender.being_invaded:
+            self.defending_planet.soldados = 0
+            self.defending_planet.magos = 0
+
+        self.attacker.calculate_survivors()
+
+        if isinstance(self.attacker, Archimago):
+            self.defending_planet.maximize_stats()
+            self.defending_planet.conquistado = False
+        elif self.attacker.is_player:
             input(self.attacker.race.warcry)
-            defending_planet.conquistado = True
-        elif isinstance(self.attacker, Archimago):
-            defending_planet.maximize_stats()
-            defending_planet.conquistado = False
+            self.defending_planet.conquistado = True
+
+    def update_attacker(self, planet_attacker):
+        i = self.defender
+        if self.attacker.being_invaded:
+            i = self.attacker
+            
+        planet_attacker.soldados = len(i.soldados)
+        planet_attacker.magos = len(i.magos)
 
 
 if __name__ == '__main__':
