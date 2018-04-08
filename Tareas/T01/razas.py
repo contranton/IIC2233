@@ -37,6 +37,9 @@ class Raza(metaclass=ABCMeta):
             raise Exception("Instantiated multiple race classes" +
                             ". We're a singleton bruh.")
 
+    def __repr__(self):
+        return self.name
+
     @staticmethod
 <<<<<<< HEAD
     def habilidad(entity, enemy_entity):
@@ -63,7 +66,7 @@ class Raza(metaclass=ABCMeta):
 =======
     @property
     def warcry(self):
-        
+
         s += self._warcry
         return s
 
@@ -104,10 +107,10 @@ class MaestroRaza(Raza):
 >>>>>>> Cherry Pick: Make race objects singletons
     def habilidad(entity, enemy_entity):
         if not entity.being_invaded:
-            return
+            return ""
 
         if not entity.turn == 1:
-            return
+            return ""
 
         # 30% chance
         if randrange(10) in range(3):
@@ -120,11 +123,13 @@ class MaestroRaza(Raza):
             return "Habilidad Maestro ha sido activada"
 >>>>>>> Initial implementation of battle system
 
+        return ""
+
 
 class AprendizRaza(Raza):
 
     name = "Aprendiz"
-    
+
     max_pop = 100
 
     costo_soldado = Cost(mins=300, deut=400)
@@ -137,7 +142,7 @@ class AprendizRaza(Raza):
     @staticmethod
     def habilidad(entity, enemy_entity):
         if entity.being_invaded:
-            return
+            return ""
 
         # 70% chance
         if randrange(10) in range(7):
@@ -146,14 +151,16 @@ class AprendizRaza(Raza):
             s += enemy_entity.name
             return s
 
+        return ""
+
 
 class AsesinoRaza(Raza):
 
     name = "Asesino"
-    
+
     max_pop = 400
 
-    costo_soldado = Raza.Cost(mins=100, deut=200)
+    costo_soldado = Cost(mins=100, deut=200)
     rango_atq_soldado = (40, 45)
     rango_vid_soldado = (250, 270)
 
@@ -161,14 +168,17 @@ class AsesinoRaza(Raza):
               necesario para ganar estas batallas!"
 
     @staticmethod
-    def habilidad(entity):
+    def habilidad(entity, enemy_entity):
         if entity.being_invaded:
-            return
+            return ""
 
         # 40% chance
         if randrange(10) in range(4):
             entity.duplicate_attack()
             return "Aprendiz habilidad ha sido activada"
+
+        return ""
+
 
 maestro = MaestroRaza()
 aprendiz = AprendizRaza()

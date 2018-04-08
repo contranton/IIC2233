@@ -7,13 +7,17 @@ Battle_Turns: generator that yields combatants at the end of every turn
 from collections import namedtuple
 from random import randrange, shuffle
 
+from razas import aprendiz, asesino
+
 soldier = namedtuple("soldado", "ataque vida")
 mage = namedtuple("mago", "ataque vida")
 
+ARCHMAGE_LIFE = 10000
+ARCHMAGE_ATTACK = 400
 
 class Entity:
     """
-    Adapter for planets and archmage for battle systems
+    Adapter for planets, player and archmage for battle systems
 
     This must be initialized as soon as the Play Galaxy Menu is selected,
     as the lives and attack of soldiers and mage increase after a successful
@@ -23,32 +27,36 @@ class Entity:
 
     Thus, these increases are lost upon reentering the game from the main menu.
     """
-    def __init__(self, planet):
+    def __init__(self, galaxia, name, race, soldados, magos, cuartel, torre):
         "docstring"
-        self.planet = planet
-        self.name = planet.nombre
+        self.galaxia = galaxia
+        self.name = name
 
-        self.race = planet.raza
-        self.habilidad = self.race.habilidad
-        
-        self.cuartel = planet.cuartel
-        self.torre = planet.torre
+        self.race = race
+
+        self.cuartel = cuartel
+        self.torre = torre
+
         self.soldados, self.magos = None, None
 
         self.is_player = False
         self.being_invaded = False
 
-        self.generate_units()
+        self.dup_attack = False
 
-    def generate_units(self):
+    def habilidad(self, attacker, defender):
+        # Must be overwritten for Archimago
+        return self.race.habilidad(attacker, defender)
+
+    def generate_units(self, num_soldados, num_magos):
         """Generate soldiers and mages with individual lives and attacks"""
         self.soldados = [soldier(randrange(*self.race.rango_atq_soldado),
                                  randrange(*self.race.rango_vid_soldado))
-                         for i in range(self.planet.soldados)]
+                         for i in range(num_soldados)]
 
         self.magos = [mage(randrange(*self.race.rango_atq_mago),
                            randrange(*self.race.rango_vid_mago))
-                      for i in range(self.planet.magos)]
+                      for i in range(num_magos)]
 
         self._initial_life_set = False
 
@@ -58,7 +66,12 @@ class Entity:
             atk = sum(map(lambda x: x.ataque, self.soldados))
         if self.magos:
             atk += sum(map(lambda x: x.ataque, self.magos))
-        atk += self.torre.ataque
+        if self.being_invaded:
+            atk += self.torre.ataque
+        if self.dup_attack:
+            atk *= 2
+            self.dup_attack = False
+
         return atk
 
     @property
@@ -68,6 +81,7 @@ class Entity:
             return self._vida
 
         # Otherwise, initial life is sum of all combatants' lives
+        life = 0
         if self.soldados:
             life = sum(map(lambda x: x.vida, self.soldados))
         if self.magos:
@@ -75,7 +89,7 @@ class Entity:
         self._vida = life
         self.initial_life = life
         self._initial_life_set = True
-        
+
         return life
 
     @vida.setter
@@ -83,17 +97,17 @@ class Entity:
         self._vida = value
 
     def duplicate_attack(self):
-        pass
+        self.dup_attack = True
 
     def steal_minerals(self, enemy, amount):
         if self.is_player:
-            self.planet.galaxia.minerales += amount
+            self.galaxia.minerales += amount
         else:
             # They can't steal more minerals than we have!
-            stolen_amount = min(amount, enemy.planet.galaxia.minerales)
-            enemy.planet.galaxia.minerales -= stolen_amount
+            stolen_amount = min(amount, self.galaxia.minerales)
+            self.galaxia.minerales -= stolen_amount
 
-    def calculate_survivors(self):
+    def calculate_survivors(self, planet=None):
         """
         Calculates surviving combatants after a battle and updates this
         entity's soldiers and mages lists by removing random KIAs and
@@ -113,7 +127,8 @@ class Entity:
             # Calculate survivors
             mage_life = sum(self.race.rango_vid_mago) // 2
             survivors = min(self.initial_life / mage_life, len(self.magos))
-            self.planet.magos = survivors
+            if planet:
+                planet.magos = survivors
 
             # Kill off the dead and improve the survivors
             shuffle(self.magos)
@@ -125,9 +140,10 @@ class Entity:
 
             # Calculate survivors
             soldier_life = sum(self.race.rango_vid_soldado) // 2
-            survivors = self.initial_life - self.planet.magos*mage_life
+            survivors = self.initial_life - len(self.magos)*mage_life
             survivors //= soldier_life
-            self.planet.soldados = survivors
+            if planet:
+                planet.soldados = survivors
 
             # Kill off the dead and improve the survivors
             shuffle(self.soldados)
@@ -136,13 +152,42 @@ class Entity:
                 s = soldier(s.ataque + 5, s.vida + 10)
 
 
-class Battle:
-    def __init__(self, attacker, defender):
-        "docstring"
-        self.attacker, self.defender = attacker, defender
+class Archimago(Entity):
 
-        # For printing turns
-        self._initial_order = [attacker, defender]
+    def __init__(self, galaxia):
+        "docstring"
+        super().__init__(galaxia=galaxia,
+                         name="El Archi-Mago",
+                         race="Archimago",
+                         soldados=0,
+                         magos=0,
+                         cuartel=False,
+                         torre=False)
+        self.vida = ARCHMAGE_LIFE
+        self._initial_life_set = True
+
+    def habilidad(self, attacker, defender):
+        s = asesino.habilidad(attacker, defender)
+        s += aprendiz.habilidad(attacker, defender)
+        return s
+
+    @Entity.vida.getter
+    def vida(self):
+        return self._vida
+
+    @vida.setter
+    def vida(self, value):
+        self._vida = value
+
+    @Entity.ataque.getter
+    def ataque(self):
+        return ARCHMAGE_ATTACK
+
+
+class Battle:
+    def __init__(self, galaxy, attacker, defender):
+        "Defender is always a planet!"
+        self.make_entities(galaxy, attacker, defender)
 
         self.attacker_ability = None
         self.defender_ability = None
@@ -160,36 +205,57 @@ class Battle:
                                                         self.attacker)
 
     def _generate_info(self, attack, life_or, final_life):
-        s = "Turno {turn_n} de la batalla entre {first} y {scnd}\n"
-        s += "Vida:\n\t{first}: {life_1}\t{scnd}: {life_2}\n"
+        s = "Turno {turn_n} de la batalla entre {atkr.name} y {defr.name}\n"
+        s += ("Vida:\n\t{atkr.name}: {atkr.vida}\t" +
+              "{defr.name}: {defr.vida}\n\n")
         if self.attacker_ability:
-            s += "Agresor {atkr} ha usado su habilidad!\n\t"
+            s += "Agresor {atkr.name} ha usado su habilidad!\n\t"
             s += self.attacker_ability + "\n"
         if self.defender_ability:
-            s += "Defendiente {defr} ha usado su habilidad!\n\t"
+            s += "Defendiente {defr.name} ha usado su habilidad!\n\t"
             s += self.defender_ability + "\n"
-        s += "{atkr} ataca a {defr} con {attk} puntos de ataque!\n"\
-             "Los {life_or} puntos de vida de {defr} se "\
+        s += "{atkr.name} ataca a {defr.name} con {attk} puntos de ataque!\n"\
+             "Los {life_or} puntos de vida de {defr.name} se "\
              " reducen a {final_life}!\n\n"
         return s.format(turn_n=self.turn,
-                        first=self._initial_order[0].name,
-                        scnd=self._initial_order[1].name,
-                        life_1=self._initial_order[0].vida,
-                        life_2=self._initial_order[1].vida,
-                        atkr=self.attacker.name,
-                        defr=self.defender.name,
+                        atkr=self.attacker,
+                        defr=self.defender,
                         attk=attack,
                         life_or=life_or,
                         final_life=final_life)
-    
-    def battle_turns(self):
+
+    def make_entities(self, galaxy, attacker, defending_planet):
+        if isinstance(attacker, Archimago):
+            self.attacker = attacker
+        else:
+            self.attacker = Entity(galaxy,
+                                   name=attacker.nombre,
+                                   race=attacker.raza,
+                                   soldados=attacker.soldados,
+                                   magos=attacker.magos,
+                                   cuartel=attacker.cuartel,
+                                   torre=attacker.torre)
+            self.attacker.generate_units(attacker.soldados,
+                                         attacker.magos)
+
+        self.defender = Entity(galaxy,
+                               name=defending_planet.nombre,
+                               race=defending_planet.raza,
+                               soldados=defending_planet.soldados,
+                               magos=defending_planet.magos,
+                               cuartel=defending_planet.cuartel,
+                               torre=defending_planet.torre)
+        self.defender.generate_units(defending_planet.soldados,
+                                     defending_planet.magos)
+
+    def battle_turns(self, defending_planet):
         self.turn = 1
         while self.defender.vida > 0:
             self._swap_attacker_defender()
 
             self._activate_abilities()
             attack = self.attacker.ataque
-            
+
             or_life = self.defender.vida
             final_life = max(or_life - attack, 0)
 
@@ -199,13 +265,18 @@ class Battle:
 
             self.turn += 1
 
+        self.defender.calculate_survivors(defending_planet)
         if self.attacker.is_player:
             input(self.attacker.race.warcry)
-        self.defender.calculate_survivors()
+            defending_planet.conquistado = True
+        elif isinstance(self.attacker, Archimago):
+            defending_planet.maximize_stats()
+            defending_planet.conquistado = False
 
 
 if __name__ == '__main__':
     from universe import Planet, Galaxy
+    from colorama.ansi import clear_screen as CLS
     g = Galaxy()
     g.nombre = "Galaxia"
     p1 = Planet(nombre="Planet1", raza="Maestro", galaxia=g)
@@ -216,14 +287,20 @@ if __name__ == '__main__':
 
     p1.soldados = 50
     p2.soldados = 30
-    
-    e1 = Entity(p1)
-    e1.is_player = True
-    e2 = Entity(p2)
 
-    for turn in Battle(e1, e2).battle_turns():
-        print(turn)
+    for turn in Battle(g, p1, p2).battle_turns(p2):
+        print(CLS()+turn)
 
     minerals.append(p1.galaxia.minerales)
 
     assert(minerals[0] != minerals[1])
+
+    a = Archimago(g)
+
+    p1.galaxia.minerales += 2000
+    minerals.append(p1.galaxia.minerales)
+
+    for turn in Battle(g, a, p1).battle_turns(p1):
+        print(CLS()+turn)
+
+    assert(minerals[2] != p1.galaxia.minerales)
