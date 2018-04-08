@@ -41,29 +41,10 @@ class Raza(metaclass=ABCMeta):
         return self.name
 
     @staticmethod
-<<<<<<< HEAD
     def habilidad(entity, enemy_entity):
         """Special race ability, used in battles"""
         pass
 
-<<<<<<< variant A
->>>>>>> variant B
-    def habilidad(entity, enemy_entity):
-        """Special race ability, used in battles"""
-        pass
-
-    @property
-    def warcry(self):
-        
-        s += self._warcry
-        return s
-
-    @warcry.setter
-    def warcry(self, value):
-        self._warcry = value
-
-======= end
-=======
     @property
     def warcry(self):
 
@@ -74,8 +55,6 @@ class Raza(metaclass=ABCMeta):
     def warcry(self, value):
         self._warcry = value
 
-
->>>>>>> Initial implementation of battle system
 
 class MaestroRaza(Raza):
 
@@ -96,15 +75,6 @@ class MaestroRaza(Raza):
               "otorgado una victoria más!")
 
     @staticmethod
-<<<<<<< HEAD
-    @abstractmethod
-<<<<<<< HEAD
-    def habilidad():
-        pass
->>>>>>> Stashed changes
-=======
-=======
->>>>>>> Cherry Pick: Make race objects singletons
     def habilidad(entity, enemy_entity):
         if not entity.being_invaded:
             return ""
@@ -121,7 +91,6 @@ class MaestroRaza(Raza):
             m = m[:(len(s)//2)]
 
             return "Habilidad Maestro ha sido activada"
->>>>>>> Initial implementation of battle system
 
         return ""
 
