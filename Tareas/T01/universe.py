@@ -56,6 +56,9 @@ class Edificio():
         self.vida = vida
         self.built = False
 
+    def __repr__(self):
+        return str(self.built)
+
         
 class Cuartel(Edificio):
     def __init__(self,):
@@ -98,15 +101,23 @@ class Planet(object):
             setattr(self, key, value)
 
     def __str__(self):
-        temp = red("{0:^20}") +\
-               green("\t{1:30}")
-        return "\n".join([temp.format(str(attr).strip("_").title(), str(val))
+        temp = red("{0:^20}") + green("\t{1:30}")
+        return "\n".join([temp.format(str(attr).replace("_", "")
+                                               .strip()
+                                               .title(), str(val))
                           for attr, val in self.__dict__.items()])
 
     def __repr__(self):
         s = "Planet(\"%s\" Raza:(%s) Evo:[%f])" %\
             (self.nombre, self.raza.name, self.evolucion)
         return s
+
+    def maximize_stats(self):
+        self.nivel_ataque = 3
+        self.nivel_economia = 3
+        self.torre = True
+        self.cuartel = True
+        self.soldados = self.max_soldados
 
     @property
     def torre(self):
@@ -116,6 +127,15 @@ class Planet(object):
     def torre(self, bool_):
         self._torre = Torre()
         self._torre.built = bool_
+
+    @property
+    def cuartel(self):
+        return self._cuartel
+
+    @cuartel.setter
+    def cuartel(self, bool_):
+        self._cuartel = Cuartel()
+        self._cuartel.built = bool_
     
     @property
     def raza(self):
@@ -196,7 +216,7 @@ class Planet(object):
     def evolucion(self):
         return self.nivel_economia + self.nivel_ataque\
             + (self.soldados + self.magos)/(self.raza.max_pop)\
-            + int(self.torre) + int(self.cuartel)
+            + int(self.torre.built) + int(self.cuartel.built)
 
 
 class Galaxy(object):

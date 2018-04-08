@@ -1,4 +1,5 @@
 from time import sleep
+from random import randrange
 import datetime
 
 from menus_base import (NumericalChoiceMenu,
@@ -10,6 +11,7 @@ from menus_base import (NumericalChoiceMenu,
 
 from universe import Planet, Galaxy, COSTO_CUARTEL, COSTO_TORRE
 from colors import red, green, yellow, cyan
+from battle import Battle
 
 now = datetime.datetime.now
 
@@ -216,16 +218,14 @@ class ModifyGalaxyMenu(NumericalChoiceMenu):
                    "Aumentar tasa de minerales",
                    "Aumentar tasa de deuterio",
                    "Agregar soldados",
-                   "Agregar magos",
-                   "Volver"]
+                   "Agregar magos"]
 
         functions = [self.add_planet,
                      self.eliminate_conquered,
                      self.increase_mins_rate,
                      self.increase_deut_rate,
                      self.add_soldiers,
-                     self.add_wizards,
-                     lambda: False]
+                     self.add_wizards]
 
         self.items = (options, functions)
 
@@ -387,14 +387,12 @@ class QueryGalaxyMenu(NumericalChoiceMenu):
         options = ["Informacion general",
                    "Informacion de planetas",
                    "Mejor galaxia",
-                   "Ranking de planetas",
-                   "Volver"]
+                   "Ranking de planetas"]
 
         functions = [self.general_info,
                      self.planet_info,
                      self.best_galaxy,
-                     self.planet_ranking,
-                     lambda: False]
+                     self.planet_ranking]
 
         self.items = (options, functions)
 
@@ -594,8 +592,19 @@ class VisitPlanetMenu(NumericalChoiceMenu):
     def title(self, value):
         self._title = value
 
+    def event_archmage_invasion(self):
+        pass
+
+    def event_asteroid_hit(self):
+        pass
+        
     def run(self):
         # IMPLEMENT ARCHMAGE AND ASTEROID EVENTS
+        if randrange(10) in range(2):
+            if randrange(2):
+                self.event_archmage_invasion()
+            else:
+                self.event_asteroid_hit()
         return super().run()
 
 
@@ -854,13 +863,36 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
 
 
     def invade(self):
-        menu = AreYouSureMenu("A punto de invadir planeta %s" %
+
+        menu = NumericalChoiceMenu()
+        menu.title = "Elige un planeta para enviar su ejército"
+        options = [p.nombre for p in self.planet.galaxia.planets_list
+                   if p.conquistado]
+        functions = [lambda x=p: x for p in self.planet.galaxia.planets_list
+                     if p.conquistado]
+        labels = []
+        temp = green("\tPoblación: {}/{}")
+        for pf in functions:
+            p = pf()  
+            labels.append(temp.format(p.soldados + p.magos, p.raza.max_pop))
+        menu.items = (options, functions, labels)
+            
+        attacking_planet = menu.run()
+        if not attacking_planet:
+            return True
+
+        menu = AreYouSureMenu(title="A punto de invadir planeta %s" %
                               self.planet.nombre)
         if not menu.run():
             return True
 
-        input("WAAAAAR")
-        
+        infomenu = InfoMenu("Invasion!")
+        b = Battle(self.planet.galaxia, attacking_planet, self.planet)
+        b.attacker.is_player = True
+        b.defender.being_invaded = True
+        for t in b.battle_turns(self.planet):
+            infomenu.content = t
+            infomenu.run()
 
         return True
 
