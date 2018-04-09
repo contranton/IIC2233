@@ -1,3 +1,3 @@
 @echo off
-pip -r requirements.txt
+pip install -r requirements.txt
 python main.py
