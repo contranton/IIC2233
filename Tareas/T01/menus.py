@@ -51,6 +51,7 @@ def make_planet_dialog(universe, parent_galaxy):
         planet_race_menu.title = "Creando nuevo planeta"
         planet_race_menu.content = "Elige la raza del planeta"
         planet_race_menu.items = (["Maestro", "Aprendiz", "Asesino"], [])
+        planet_race_menu._remove_quit_item()
 
         planet_race = planet_race_menu.run()
 
