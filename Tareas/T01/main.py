@@ -11,4 +11,4 @@ if __name__ == '__main__':
         MainMenu(Universe()).run()
     except:
         traceback.print_exc()
-        input("mandame pantallazo de esto pls :3")
+        input("Ayudante, te he fallado :cc")

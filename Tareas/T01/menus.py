@@ -69,8 +69,6 @@ class MainMenu(NumericalChoiceMenu):
 
         self.title = green("Bienevenido a ChauCraft!")
 
-        self.content = cyan("Bienvenido, usuario, a tu universo")
-
         self.prompt = yellow(self.prompt)
 
         options = ["Crear Galaxia",
@@ -597,11 +595,21 @@ class VisitPlanetMenu(NumericalChoiceMenu):
     @property
     def title(self):
         s = self._title
-        temp = ("\n\nRecursos disponibles:\n"
-                "\tMinerales: " + yellow("{0:,}") +
-                "\n\tDeuterio: " + yellow("{1:,}"))
-        s += temp.format(self.planet.galaxia.minerales,
-                         self.planet.galaxia.deuterio)
+        temp = ("\nEste planeta posee {solds} soldados y {mags} magos\n" +
+                "Su raza es {race}\n" +
+                "{has_c} cuartel y {has_t} torre." +
+                "\n\nRecursos disponibles:\n"
+                "\tMinerales: " + yellow("{mins:,}") +
+                "\n\tDeuterio: " + yellow("{deut:,}"))
+        s += temp.format(mins=self.planet.galaxia.minerales,
+                         deut=self.planet.galaxia.deuterio,
+                         solds=green(self.planet.soldados),
+                         mags=green(self.planet.magos),
+                         race=red(self.planet.raza.name),
+                         has_c={1: green("Posee"),
+                                0: red("No posee")}[self.planet.cuartel.built],
+                         has_t={1: green("posee"),
+                                0: red("no posee")}[self.planet.torre.built],)
         s += "\n" + cyan("-"*40) + "\n"
         return s
 
@@ -635,6 +643,8 @@ class VisitPlanetMenu(NumericalChoiceMenu):
             infomenu.content = t
             infomenu.run()
 
+        b.update_defender(invaded_planet)
+
         return True
 
     def event_asteroid_hit(self):
@@ -647,7 +657,7 @@ class VisitPlanetMenu(NumericalChoiceMenu):
         damage = randrange(1500, 2500)
 
         for building in (hit_planet.cuartel, hit_planet.torre):
-            building -= damage
+            building.vida -= damage
 
         hit_planet.soldados //= 2
         hit_planet.magos //= 2
@@ -683,7 +693,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
 
     @property
     def _build_menu_info(self):
-        has_c, has_t = self.planet.cuartel, self.planet.torre
+        has_c, has_t = self.planet.cuartel.built, self.planet.torre.built
         mins, deut = (self.planet.galaxia.minerales,
                       self.planet.galaxia.deuterio)
         options = ["Cuartel", "Torre"]
@@ -729,7 +739,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
 
     def _buy_cuartel(self):
         if AreYouSureMenu(title="Comprando Cuartel").run():
-            self.planet.cuartel = True
+            self.planet.cuartel.built = True
             self.planet.galaxia.minerales -= COSTO_CUARTEL.mins
             self.planet.galaxia.deuterio -= COSTO_CUARTEL.deut
 
@@ -737,7 +747,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
 
     def _buy_torre(self):
         if AreYouSureMenu(title="Comprando Torre").run():
-            self.planet.torre = True
+            self.planet.torre.built = True
             self.planet.galaxia.minerales -= COSTO_TORRE.mins
             self.planet.galaxia.deuterio -= COSTO_TORRE.deut
 
@@ -817,7 +827,7 @@ class VisitConqueredPlanetMenu(VisitPlanetMenu):
         p = self.planet
 
         last_collect = p.ultima_recoleccion
-        current_t = now()
+        current_t = now().replace(microsecond=0)
         delta = current_t - last_collect
 
         deuterio = int(p.effective_tasa_deuterio * delta.seconds)
@@ -960,6 +970,7 @@ class VisitUnconqueredPlanetMenu(VisitPlanetMenu):
             infomenu.content = t
             infomenu.run()
         b.update_attacker(attacking_planet)
+        b.update_defender(self.planet)
 
         return False
 

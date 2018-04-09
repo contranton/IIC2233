@@ -10,20 +10,20 @@ colorama.init(convert=True)
 
 
 def red(text):
-    return colored(text, "red", attrs=('bold',))
+    return colored(str(text), "red", attrs=('bold',))
 
 
 def green(text):
-    return colored(text, "green")
+    return colored(str(text), "green")
 
 
 def cyan(text):
-    return colored(text, "cyan", attrs=('bold',))
+    return colored(str(text), "cyan", attrs=('bold',))
 
 
 def yellow(text):
-    return colored(text, "yellow")
+    return colored(str(text), "yellow")
 
 
 def magenta(text):
-    return colored(text, "magenta", attrs=('bold',))
+    return colored(str(text), "magenta", attrs=('bold',))

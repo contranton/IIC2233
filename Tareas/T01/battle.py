@@ -8,6 +8,8 @@ from collections import namedtuple
 from random import randrange, shuffle
 
 from razas import aprendiz, asesino
+from colors import cyan, red
+from menus_base import InfoMenu
 
 soldier = namedtuple("soldado", "ataque vida")
 mage = namedtuple("mago", "ataque vida")
@@ -170,7 +172,8 @@ class Archimago(Entity):
 
         self.ataques_consecutivos = 0
 
-    def habilidad(self, attacker, defender):
+    def habilidad(self, battle):
+        attacker, defender = battle.attacker, battle.defender
         self.ataques_consecutivos += 1
         s = asesino.habilidad(attacker, defender)
         s += aprendiz.habilidad(attacker, defender)
@@ -211,14 +214,14 @@ class Battle:
 
     def _generate_info(self, attack, life_or, final_life):
         s = "Turno {turn_n} de la batalla entre {atkr.name} y {defr.name}\n"
-        s += ("Vida:\n\t{atkr.name}: {atkr.vida}\t" +
-              "{defr.name}: {defr.vida}\n\n")
+        s += (cyan("Vida:\n\t{atkr.name}: {atkr.vida}\t" +
+                   "{defr.name}: {defr.vida}\n\n"))
         if self.attacker_ability:
-            s += "Agresor {atkr.name} ha usado su habilidad!\n\t"
-            s += self.attacker_ability + "\n"
+            s += red("Agresor {atkr.name} ha usado su habilidad!\n\t")
+            s += red(self.attacker_ability + "\n\n")
         if self.defender_ability:
-            s += "Defendiente {defr.name} ha usado su habilidad!\n\t"
-            s += self.defender_ability + "\n"
+            s += red("Defendiente {defr.name} ha usado su habilidad!\n\t")
+            s += red(self.defender_ability + "\n\n")
         s += "{atkr.name} ataca a {defr.name} con {attk} puntos de ataque!\n"\
              "Los {life_or} puntos de vida de {defr.name} se "\
              " reducen a {final_life}!\n\n"
@@ -273,6 +276,7 @@ class Battle:
             self.turn += 1
 
         # Battle has ended
+        # self.attacker is the entity that has won the battle
 
         if self.defender.being_invaded:
             self.defending_planet.soldados = 0
@@ -281,19 +285,41 @@ class Battle:
         self.attacker.calculate_survivors()
 
         if isinstance(self.attacker, Archimago):
+            # When archmage wins
+            InfoMenu(title="El archimago ha conquistado " +
+                     self.defending_planet.nombre + "!").run()
             self.defending_planet.maximize_stats()
+            self.defender.generate_units(self.defending_planet.soldados,
+                                         self.defending_planet.magos)
             self.defending_planet.conquistado = False
         elif self.attacker.is_player:
-            input(self.attacker.race.warcry)
+            # When player has won
+            InfoMenu(title="Planeta " + self.defending_planet.nombre +
+                     " ha sido conquistado!",
+                     content=self.attacker.race.warcry).run()
             self.defending_planet.conquistado = True
+            self.defender.generate_units(0, 0)
+        else:
+            # When player loses invasion
+            self.defender.generate_units(0, 0)
+            InfoMenu(title="La invasion de " + self.defending_planet.nombre +
+                     " ha fallado!").run()
 
     def update_attacker(self, planet_attacker):
         i = self.defender
-        if self.attacker.being_invaded:
+        if i.being_invaded:
             i = self.attacker
             
         planet_attacker.soldados = len(i.soldados)
         planet_attacker.magos = len(i.magos)
+
+    def update_defender(self, planet_defender):
+        i = self.defender
+        if not i.being_invaded:
+            i = self.attacker
+
+        planet_defender.soldados = len(i.soldados)
+        planet_defender.magos = len(i.magos)
 
 
 if __name__ == '__main__':

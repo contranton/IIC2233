@@ -1,11 +1,11 @@
-'scale 2
+scale 2
 skinparam Linetype ortho
 
 skinparam class{
 	  BackgroundColor<< MainProgramExecution>> Lime
 }
 
-title Diagrama de Clases -- Tarea 1: CHAUCRAFT\nJavier Contreras (@contranton)\nIIC2233, 2018-1\n\nDiagram made with <i>plantuml</i>
+title Class Diagram -- Tarea 1: CHAUCRAFT\nJavier Contreras (@contranton)\nIIC2233, 2018-1\n\nDiagram made with <i>plantuml</i>
 
 class Universe{
       
@@ -23,19 +23,19 @@ class Galaxy{
       <get/set> int deuterio
 }
 
-Class Edificio{
+Class Edificio #physical{
       int vida
       bool built
 }
 
-Class Cuartel
+Class Cuartel #physical
 
-Class Torre{
+Class Torre #physical{
       <get> int ataque
 }
 
-Edificio <- Cuartel
-Edificio <- Torre
+Edificio ^- Cuartel
+Edificio ^- Torre
 
 Class Planet{
       str nombre
@@ -70,7 +70,7 @@ Class Planet{
 
 }
 
-Edificio o-- Planet
+Edificio --* Planet
 
 Planet --* Galaxy
 Galaxy --* Universe
@@ -100,9 +100,9 @@ abstract Class Raza<< Singleton >> #lightskyblue{
 
  Class Asesino #powderblue
 
-Maestro --^ Raza
-Aprendiz --^ Raza
-Asesino --^ Raza
+Maestro ..|> Raza
+Aprendiz ..|> Raza
+Asesino ..|> Raza
 
 Raza --o Planet
 
@@ -199,7 +199,6 @@ class PlayGalaxyMenu #gold{
 }
 
 class VisitConqueredPlanetMenu #moccasin {
-      Planet planet
 
       void build_building()
       void create_units()
@@ -208,17 +207,26 @@ class VisitConqueredPlanetMenu #moccasin {
 }
 
 class VisitUnconqueredPlanetMenu #moccasin {
-      Planet planet
       
       void invade()
       void purchase()
 }
 
+class VisitPlanetMenu #moccasin{
+      Planet planet
 
-PlayGalaxyMenu --* VisitConqueredPlanetMenu
-PlayGalaxyMenu --* VisitUnconqueredPlanetMenu
+      bool event_archmage_invasion()
+      bool event_asteroid_hit()
+}
 
-BattleInfoMenu --* PlayGalaxyMenu
+note bottom of VisitPlanetMenu
+     Overwrites superclass's run() method to include random events
+     end note
+
+PlayGalaxyMenu *-- VisitPlanetMenu
+VisitPlanetMenu ^-- VisitUnconqueredPlanetMenu
+VisitPlanetMenu ^-- VisitConqueredPlanetMenu
+
 
 
 Menu ^-- MainMenu
@@ -242,7 +250,7 @@ note top of PlayGalaxyMenu
      or galaxy but rather actions performed <i><b>on</b></i> them
 end note
 
-Class Entity{
+Class Entity #snow{
       Galaxy galaxia
       str name
       Raza race
@@ -268,12 +276,12 @@ Class Entity{
       void calculate_survivors()
 }
 
-Class Archimago{
+Class Archimago #snow{
       <get/set> int vida
       str habilidad(Entity attacker, Entity defender)
 }
 
-Class Battle{
+Class Battle #snow{
       Entity attacker
       Entity defender
       Planet defender_planet
@@ -290,3 +298,6 @@ Class Battle{
       str _generate_info(int attack, int original_life, int final_life)
 }
 
+Entity --* Battle
+Archimago --^ Entity
+Battle --* VisitPlanetMenu

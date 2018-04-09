@@ -30,7 +30,7 @@ class Raza(metaclass=ABCMeta):
             RACE_INSTANCES.add(type(self))
 
             s = ("Wubba Lubba Dub Dub, hemos logrado conquistar un" +
-                 " nuevo planeta\n")
+                 " nuevo planeta!\n")
             self.warcry = s + self.__class__.warcry
         else:
             del self
@@ -41,14 +41,13 @@ class Raza(metaclass=ABCMeta):
         return self.name
 
     @staticmethod
-    def habilidad(entity, enemy_entity):
+    def habilidad(battle):
         """Special race ability, used in battles"""
         pass
 
     @property
     def warcry(self):
-
-        s += self._warcry
+        s = self._warcry
         return s
 
     @warcry.setter
@@ -80,7 +79,7 @@ class MaestroRaza(Raza):
         if not entity.being_invaded:
             return ""
 
-        if not entity.turn == 1:
+        if not battle.turn == 1:
             return ""
 
         # 30% chance
@@ -91,7 +90,9 @@ class MaestroRaza(Raza):
             m = enemy_entity.magos
             m = m[:(len(s)//2)]
 
-            return "Habilidad Maestro ha sido activada"
+            s = entity.name + " ha destruido la mitad del ejercito de "
+            s += enemy_entity.name + "!!"
+            return s
 
         return ""
 
@@ -106,8 +107,8 @@ class AprendizRaza(Raza):
     rango_atq_soldado = (30, 60)
     rango_vid_soldado = (600, 700)
 
-    warcry = "¡Con una gran defensa y medicinas,\nnuestros\
-              soldados son invencibles!"
+    warcry = ("¡Con una gran defensa y medicinas,nuestros"
+              "soldados son invencibles!")
 
     @staticmethod
     def habilidad(battle):
@@ -135,8 +136,8 @@ class AsesinoRaza(Raza):
     rango_atq_soldado = (40, 45)
     rango_vid_soldado = (250, 270)
 
-    warcry = "¡El poder de las sombras es lo\núnico\
-              necesario para ganar estas batallas!"
+    warcry = ("¡El poder de las sombras es lo único "
+              "necesario para ganar estas batallas!")
 
     @staticmethod
     def habilidad(battle):
@@ -147,7 +148,7 @@ class AsesinoRaza(Raza):
         # 40% chance
         if randrange(10) in range(4):
             entity.duplicate_attack()
-            return "Aprendiz habilidad ha sido activada"
+            return entity.name + " adquiere doble ataque!"
 
         return ""
 

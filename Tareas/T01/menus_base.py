@@ -313,10 +313,10 @@ class AreYouSureMenu(YesNoMenu):
 
 
 class InfoMenu(Menu):
-    def __init__(self, title="Informacion"):
+    def __init__(self, title="Informacion", content=""):
         """Menu for info display with a unique input option for returning"""
         self.title = title
-        self.content = ""
+        self.content = content
         self.prompt = "Pulsa para continuar..."
 
     def _validate_input(self, _):
