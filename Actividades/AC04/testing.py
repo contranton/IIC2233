@@ -1,6 +1,8 @@
 import unittest
 import library as lib
 
+from custom_exceptions import InvalidDateError
+
 
 class testFunctions(unittest.TestCase):
     def setUp(self):
@@ -10,10 +12,14 @@ class testFunctions(unittest.TestCase):
         self.dislikes = "7443"
 
     def test_tiempo_trending(self):
-        self.assertEqual(lib.tiempo_trending(self.publish_date, self.trending_date), 36)
+        self.assertEqual(lib.tiempo_trending(self.publish_date,
+                                             self.trending_date),
+                         36)
 
     def test_like_dislike_ratio(self):
-        self.assertAlmostEquals(lib.like_dislike_ratio(self.likes, self.dislikes), 0.205965336558)
+        self.assertAlmostEquals(lib.like_dislike_ratio(self.likes,
+                                                       self.dislikes),
+                                0.205965336558)
 
 
 class testExceptions(unittest.TestCase):
@@ -22,12 +28,13 @@ class testExceptions(unittest.TestCase):
         self.trending_date = "18.4.02"
 
     def test_wrong_date(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidDateError):
             lib.tiempo_trending(self.wrong_publish_date, self.trending_date)
 
     def test_wrong_likes(self):
         with self.assertRaises(ValueError):
             lib.like_dislike_ratio("n13J#", "1353")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -31,14 +31,16 @@ if __name__ == '__main__':
     videos = file_reading()
 
     # A partir de este punto, el estudiante debe manejar los errores
-    from custom_exceptions import MoreLikesThanViewsException, NoTagsException, InvalidDateError
+    from custom_exceptions import (MoreLikesThanViewsException,
+                                   NoTagsException,
+                                   InvalidDateError)
     for video in videos:
 
         try:
             days = lib.tiempo_trending(video.publish_date, video.trending_date)
             print("El video {} estuvo trending {} dia(s) despues de publicado"
                   .format(video.title, days))
-        except ValueError as err:
+        except InvalidDateError as err:
             lib.log(video, err)
             continue
 

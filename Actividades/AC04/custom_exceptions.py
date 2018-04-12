@@ -9,5 +9,5 @@ class NoTagsException(Exception):
 
 class InvalidDateError(Exception):
     def __init__(self):
-        super().__init__("Fecha invalida!")
+        super().__init__("Fecha en formato equivocado!")
                            
