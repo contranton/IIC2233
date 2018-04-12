@@ -7,7 +7,7 @@ from custom_exceptions import InvalidDateError
 class testFunctions(unittest.TestCase):
     def setUp(self):
         self.trending_date = "18.12.03"
-        self.publish_date = "18.4.02"
+        self.publish_date = "18.04.02"
         self.likes = "1533"
         self.dislikes = "7443"
 
@@ -17,15 +17,15 @@ class testFunctions(unittest.TestCase):
                          36)
 
     def test_like_dislike_ratio(self):
-        self.assertAlmostEquals(lib.like_dislike_ratio(self.likes,
-                                                       self.dislikes),
-                                0.205965336558)
+        self.assertAlmostEqual(lib.like_dislike_ratio(self.likes,
+                                                      self.dislikes),
+                               0.205965336558)
 
 
 class testExceptions(unittest.TestCase):
     def setUp(self):
         self.wrong_publish_date = "18 - 12 - 03"
-        self.trending_date = "18.4.02"
+        self.trending_date = "18.04.02"
 
     def test_wrong_date(self):
         with self.assertRaises(InvalidDateError):

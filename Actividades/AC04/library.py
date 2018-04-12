@@ -4,16 +4,44 @@ from custom_exceptions import (MoreLikesThanViewsException,
                                InvalidDateError)
 
 
+def awful_check_date(date):
+    date_split = date.split(".")
+    if len(date_split) != 3:
+        return False
+    if not all(map(lambda x: x.isnumeric, date_split)):
+        return False
+
+    y, d, m = date_split
+    if len(y) != len(d) or len(d) != len(m):
+        return False
+    if (int(m) - 1) not in range(12):
+        return False
+    if int(d) > 31:
+        return False
+    # Screw leap years, different month lenghts, yadda yadda
+    # This is why it's loads better to do something like:
+    #
+    # try:
+    #     publish_d = datetime.datetime.strptime(publish_date, "%y.%d%.%m")
+    # except ValueError:
+    #     raise InvalidDateError()
+    #
+    # which uses a library already built to handle these cases!
+    # A bit of a silly restriction, that one. Rewriting the wheel
+    # for this is tedious, unnecessary, and can introduce more errors!
+    return True
+
+
 def tiempo_trending(publish_date, trending_date):
 
-    # We use try to re-raise the error, not to really manage it
-    # Isn't this a good practice? Rewriting the format checking code
-    # seems tedious, unnecessary, and may introduce more errors!
-    try:
-        publish_d = datetime.datetime.strptime(publish_date, "%y.%d.%m")
-        trending_d = datetime.datetime.strptime(trending_date, "%y.%d.%m")
-    except ValueError:
+    # Tedioooous
+    if not awful_check_date(publish_date):
         raise InvalidDateError()
+    if not awful_check_date(trending_date):
+        raise InvalidDateError()
+
+    publish_d = datetime.datetime.strptime(publish_date, "%y.%d.%m")
+    trending_d = datetime.datetime.strptime(trending_date, "%y.%d.%m")
 
     days = (trending_d - publish_d).days
 
