@@ -10,7 +10,8 @@ class TestXList(unittest.TestCase):
 
     def test_indexing(self):
         with self.assertRaises(IndexError):
-            self.xList[4]
+            self.xList[3]
+            self.xList[-4]
 
         assert(self.xList[0] == 1)
         assert(self.xList[len(self.xList) - 1] == 3)

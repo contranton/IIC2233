@@ -37,15 +37,14 @@ class xList(object):
         return self._len
 
     def __getitem__(self, index):
-        try:
-            if index < 0:
-                index = index % len(self)
-            return getattr(self, self.__attr_name(index))
-        except AttributeError:
+        if index >= len(self) or (index < 0 and abs(index) > len(self)):
             raise IndexError("xList index out of range")
+        return getattr(self, self.__attr_name(index % len(self)))
 
     def __setitem__(self, key, val):
-        setattr(self, self.__attr_name(key), val)
+        if key >= len(self) or (key < 0 and abs(key) > len(self)):
+            raise IndexError("xList assignment index out of range")
+        setattr(self, self.__attr_name(key % len(self)), val)
 
     def __delitem__(self, index):
         # Can't use range, can we? xd
