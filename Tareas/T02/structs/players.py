@@ -9,8 +9,3 @@ class xPlayer(object):
         self.natl = natl
         self.overall = overall
 
-
-class xTeam(object):
-    def __init__(self, players):
-        super(xTeam, self).__init__()
-        self.players = players
