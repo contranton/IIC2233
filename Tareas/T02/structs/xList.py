@@ -70,3 +70,12 @@ class xList(object):
 
     def remove(self, index):
         del self[index]
+
+
+def xEnum(L: xList):
+    new_L = xList()
+    i = 0
+    for item in L:
+        new_L.append(xList(i, item))
+        i += 1
+    return new_L
