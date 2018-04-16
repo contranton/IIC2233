@@ -1,6 +1,7 @@
 import unittest
 from structs.xList import xList
 from structs.xDict import xDict
+from structs.xGraph import xGraph
 
 
 class TestXList(unittest.TestCase):
@@ -20,7 +21,12 @@ class TestXList(unittest.TestCase):
 
     def test_repr(self):
         print(self.xList)
-        
+
+    def test_containment(self):
+        assert(2 in xList(1, 2, 3))
+        assert(3 not in xList(1, 2))
+        a = xDict()
+        assert(a in xList(a, 1, 2))
 
     def test_assignment(self):
         self.xList[0] = 4
@@ -81,6 +87,24 @@ class TestXDict(unittest.TestCase):
         assert(self.xDictStr["f"] == 6)
 
         assert(len(self.xDictNum) == 6)
+
+
+class testXGraph(unittest.TestCase):
+
+    def setUp(self):
+        adj_matrix = xDict()
+        adj_matrix["items"] = xList("A", "B", "C")
+        adj_matrix["mtx"] = xList(xList(0, 1, 0.95),
+                                  xList(1, 0, 0),
+                                  xList(0.95, 0, 0))
+        self.xGraph = xGraph(adj_matrix)
+        self.ANode = self.xGraph.nodes[0]
+        self.BNode = self.xGraph.nodes[1]
+        self.CNode = self.xGraph.nodes[2]
+
+    def test_siblings(self):
+        assert(self.ANode.siblings[0].dest == self.BNode)
+        assert(self.ANode.siblings[0].weight == 1)
 
 
 if __name__ == '__main__':
