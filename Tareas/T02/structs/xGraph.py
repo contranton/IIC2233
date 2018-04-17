@@ -50,9 +50,8 @@ class xNode(object):
 
 class xGraph(object):
 
-    def __init__(self, adj_matrix: xDict):
+    def __init__(self):
         self.nodes = xList()
-        self.initialize_graph(adj_matrix)
 
     def initialize_graph(self, adj_matrix):
         items = adj_matrix["items"]
@@ -74,8 +73,8 @@ class xGraph(object):
         return new_node
 
     def get_all_shortest_paths(self):
+        pass
         
-
 
 if __name__ == '__main__':
     adj_matrix = xDict()

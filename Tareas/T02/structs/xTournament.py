@@ -13,13 +13,35 @@ class xGame(object):
         self.winner = None
         self.loser = None
 
+        self.played = False
+
     def __repr__(self):
         return "<Juego {} entre {} y {}>".format(self.id,
                                                  self.team1.name,
                                                  self.team2.name)
         
     def play(self):
-        pass
+        if self.played:
+            raise Exception("This round has already been played")
+        self.played = True
+
+        self.t1_goals = self.team1.calculate_goals()
+        self.t2_goals = self.team2.calculate_goals()
+
+        self.t1_cards = self.team1.calculate_cards()
+        self.t2_cards = self.team2.calculate_cards()
+
+        if self.t1_goals == self.t2_goals:
+            print("EMPATE")
+            
+        elif self.t1_goals > self.t2_goals:
+            print("TEAM 1 WINS")
+            self.winner = self.team1
+            self.loser = self.team2
+        else:
+            print("TEAM 2 WINS")
+            self.winner = self.team2
+            self.loser = self.team1
  
 
 class xTournament(object):
@@ -53,6 +75,7 @@ class xTournament(object):
         level = self.current_level
         for game in self.bracket[level]:
             game.play()
+
 
 if __name__ == '__main__':
     pass

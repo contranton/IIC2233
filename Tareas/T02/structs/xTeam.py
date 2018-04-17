@@ -4,3 +4,5 @@ class xTeam(object):
         super(xTeam, self).__init__()
         self.name = name
         self.hope = hope
+
+    

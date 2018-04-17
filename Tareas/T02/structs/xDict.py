@@ -4,7 +4,6 @@ from structs.xList import xList
 class xDict(object):
     """
     We store items using the id as an item reference.
-    No need for hashing anything as our dataset ensures unique ids
     """
     def __init__(self, keys=xList(), values=xList()):
         if len(keys) != len(values):
