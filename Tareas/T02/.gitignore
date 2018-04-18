@@ -1,3 +1,5 @@
 *.csv
-GUI
+GUI/Interfaz.py
+GUI/clases.py
+GUI/assets
 *.pdf
