@@ -115,10 +115,11 @@ def pokémon_para_entrenador(entrenador, pokémones):
         sorted(pokémones_buena_estadística(fav_stat, pokemons),
                key=lambda x: obtener_estadística(fav_stat, x),
                reverse=True)
-    import pdb; pdb.set_trace()
+
     # Usamos enumerate para que itertools.takewhile reciba como parametro
     # el numero de pokemons ya entregados y los limite a los primeros 6
-    return takewhile(lambda i, p: i < 5, enumerate(best_poks))
+    return map(lambda x: x[1],
+               takewhile(lambda i: i[0] < 5, enumerate(best_poks)))
 
 
 def poder_total_entrenador(entrenador, pokémones):
@@ -136,9 +137,10 @@ def poder_total_entrenador(entrenador, pokémones):
 def consulta_general(tipo, estadistica):
     pokemons = obtener_data('pokemondb.csv', 'Pokémon')
     entrenadores = obtener_data('entrenadoresdb.csv', 'Entrenador')
-    return reduce(lambda x, y: x | y,
-                  map(lambda e: set(pokémon_para_entrenador(e, pokemons)),
-                      entrenadores))
+    all_pokes = map(lambda e: set(pokémon_para_entrenador(e, pokemons)),
+                    entrenadores)
+    
+    return reduce(lambda x, y: x | y, all_pokes)
 
 # ---------- AQUI SE CORRE EL CÓDIGO ----------
 
@@ -168,10 +170,18 @@ if __name__ == "__main__":
     # -----------------------
     # Chandelure
     # Volcarona
-    pokemons = list(obtener_data("pokemondb.csv", "pokemones"))
-    entrenadores = list(obtener_data("entrenadoresdb.csv", "entrenadores"))
-    result = consulta_general("Hoja", "ataque")
-    print(list(result))
+    pokemons = obtener_data("pokemondb.csv", "pokemones")
+    entrenadores = obtener_data("entrenadoresdb.csv", "entrenadores")
 
-    list(pokémon_para_entrenador(entrenadores[0], pokemons))
-    input()
+    result = consulta_general("Hoja", "ataque")
+    for poke in result:
+        print(poke.nombre)
+    print("\n")
+    result = consulta_general("Agua", "defensa_especial")
+    for poke in result:
+        print(poke.nombre)
+    print("\n")
+    result = consulta_general("Fuego", "ataque_especial")
+    for poke in result:
+        print(poke.nombre)
+
