@@ -3,7 +3,7 @@ from collections import namedtuple
 from itertools import tee, takewhile
 
 # from operator import attrgetter
-# from functools import reduce
+from functools import reduce
 
 # ---------- FUNCIONES DE CSV ----------
 
@@ -68,8 +68,8 @@ def obtener_estadística_promedio(estadística, pokémones):
     :return: float
     """
     p1, p2 = tee(pokémones)
-    L = len(p1)
-    return sum(map(p2, lambda x: obtener_estadística(estadística, x)))/L
+    L = max(len(list(p1)), 1)  # Max to avoid division by zero
+    return sum(map(lambda x: obtener_estadística(estadística, x), p2))/L
 
 
 def pokémones_buena_estadística(estadística, pokémones):
@@ -82,8 +82,9 @@ def pokémones_buena_estadística(estadística, pokémones):
     :param pokémones: iterable de pokémones
     :return: generador
     """
-    avg = obtener_estadística_promedio(estadística, pokémones)
-    return (p for p in pokémones if obtener_estadística(estadística, p) > avg)
+    p1, p2 = tee(pokémones)
+    avg = obtener_estadística_promedio(estadística, p1)
+    return (p for p in p2 if obtener_estadística(estadística, p) > avg)
 
 
 def pokémon_para_entrenador(entrenador, pokémones):
@@ -107,14 +108,14 @@ def pokémon_para_entrenador(entrenador, pokémones):
         filter(lambda p:
                not int(p.legendario) or int(entrenador.legendario),
                pokemons)
-
+    
     # Obtiene los pokemones sobre el promedio y los ordena
     fav_stat = entrenador.estadistica_favorita
     best_poks =\
         sorted(pokémones_buena_estadística(fav_stat, pokemons),
                key=lambda x: obtener_estadística(fav_stat, x),
                reverse=True)
-
+    import pdb; pdb.set_trace()
     # Usamos enumerate para que itertools.takewhile reciba como parametro
     # el numero de pokemons ya entregados y los limite a los primeros 6
     return takewhile(lambda i, p: i < 5, enumerate(best_poks))
@@ -131,6 +132,13 @@ def poder_total_entrenador(entrenador, pokémones):
     """
     return sum(map(lambda p: obtener_estadística("total", p), pokémones))
 
+
+def consulta_general(tipo, estadistica):
+    pokemons = obtener_data('pokemondb.csv', 'Pokémon')
+    entrenadores = obtener_data('entrenadoresdb.csv', 'Entrenador')
+    return reduce(lambda x, y: x | y,
+                  map(lambda e: set(pokémon_para_entrenador(e, pokemons)),
+                      entrenadores))
 
 # ---------- AQUI SE CORRE EL CÓDIGO ----------
 
@@ -160,5 +168,10 @@ if __name__ == "__main__":
     # -----------------------
     # Chandelure
     # Volcarona
+    pokemons = list(obtener_data("pokemondb.csv", "pokemones"))
+    entrenadores = list(obtener_data("entrenadoresdb.csv", "entrenadores"))
+    result = consulta_general("Hoja", "ataque")
+    print(list(result))
 
-    pass
+    list(pokémon_para_entrenador(entrenadores[0], pokemons))
+    input()
