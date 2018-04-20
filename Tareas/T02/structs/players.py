@@ -15,22 +15,49 @@ class xPlayer(object):
         self.natl = natl
         self.overall = overall
 
+        self.assigned = False
 
-class xTeam(object):
-    """Documentation for xTeam
+
+class xTeam():
+    """Documentation for xTeam, ONLY FOR PLAYER TEAM
 
     """
-    def __init__(self, name, players):
-        super(xTeam, self).__init__()
+    def __init__(self, name, players=xList()):
         self.name = name
-        self.players = players
 
-        self.quality = sum(self.players, key=lambda x: x.overall) / 1089
-        self.initial_hope = self.calculate_affinity() * self.quality
-
+        self.players = xList(*players)
         self.game_hope = None
 
+    @property
+    def quality(self):
+        return sum(self.players, key=lambda x: x.overall) / 1089
+
+    @property
+    def initial_hope(self):
+        return self.calculate_affinity() * self.quality
+
+    def add_player(self, player: xPlayer):
+        if len(self.players) < 11:
+            self.players.append(player)
+        else:
+            raise Exception("TOO MANY PLAYERS BRUH")
+
+    def fill_random_players(self, player_list: xList):
+        # CAn't use random.sample cus we can't let xList
+        # inherit from Sequence -__-
+        i = 0
+        while i < 11:
+            x = randrange(len(player_list))
+            player = player_list[x]
+            if player.assigned:
+                continue
+
+            self.add_player(player)
+            player.assigned = True
+            i += 1
+
     def calculate_affinity(self) -> int:
+        # TODO
         return 5
 
     def calculate_faults(self) -> xList(xPlayer):
@@ -48,7 +75,7 @@ class xTeam(object):
                 faults.append(player)
         return faults
 
-    def calculate_cards(self) -> xDict[str, xDict[str, int]]:
+    def calculate_cards(self):  # -> xDict[str name, xDict[str type, int num]]
         cards = xDict()
         for player in self.players:
             cards[player.name] = xDict()

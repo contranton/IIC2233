@@ -9,8 +9,8 @@ class xDict(object):
         if len(keys) != len(values):
             raise ValueError("xDict constructor xLists have differing lenghts")
 
-        self.keys = keys
-        self.values = values
+        self.__keys = keys
+        self.__values = values
 
         self._len = 0
         i = 0
@@ -29,6 +29,18 @@ class xDict(object):
                 key = abs(hash(key))
         return "_" + str(key)
 
+    def __iter__(self):
+        raise Exception("xDict is not iterable")
+
+    def keys(self):
+        return self.__keys
+
+    def values(self):
+        return self.__values
+
+    def items(self):
+        return zip(self.__keys, self.__values)
+    
     def __repr__(self):
         bckt_L = "--{"
         bckt_R = "}--"
@@ -36,7 +48,7 @@ class xDict(object):
         L = xList()
         i = 0
         while i < len(self) - 1:
-            L.append(str(self.keys[i]) + ":" + str(self.values[i]))
+            L.append(str(self.__keys[i]) + ":" + str(self.__values[i]))
             i += 1
         s += ",".join(L) + bckt_R
         return s
@@ -51,10 +63,10 @@ class xDict(object):
             raise KeyError("Key {} not in xDict".format(key))
 
     def __setitem__(self, key, val):
-        if key not in self.keys:
+        if key not in self.__keys:
             self._len += 1
-            self.keys.append(key)
-            self.values.append(val)
+            self.__keys.append(key)
+            self.__values.append(val)
         setattr(self, self._attr_name(key), xList(key, val))
 
     def __delitem__(self, key):

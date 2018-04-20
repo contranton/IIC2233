@@ -1,10 +1,10 @@
-import uniitest
+import unittest
 
 from structs.xTournament import xTournament
 
+
 class TestXTournament(unittest.TestCase):
 
-    def setUp():
+    def setUp(self):
         
-
         self.T = xTournament(equipos)

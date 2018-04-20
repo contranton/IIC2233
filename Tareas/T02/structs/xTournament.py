@@ -7,8 +7,10 @@ from structs.xTeam import xTeam
 
 
 class xGame(object):
-    def __init__(self, id, team1: xTeam, team2: xTeam) -> None:
+    def __init__(self, id, team1, team2) -> None:
         self.id = id
+        if len(team1.players) < 11 or len(team2.players) < 11:
+            raise Exception("INSUFFICIENT PLAYERS FOR TEAMS")
         self.team1 = team1
         self.team2 = team2
         self.winner = None
@@ -66,11 +68,8 @@ class xTournament(object):
 
     Losers in semi-finals must play a round to set third-place
     """
-    def __init__(self, equipos: xList[xTeam]):
-        self.teams = xList()
-        for team_name, team_hope in xList(*equipos):
-            # TODO: NEED TO GET PLAYERS IN HERE
-            self.teams.append(xTeam(team_name, team_hope))
+    def __init__(self, equipos):  #: xList[xTeam]):
+        self.teams = equipos
 
         self.bracket = xDict()
         self.bracket[0] = self.make_initial_bracket()
@@ -101,7 +100,13 @@ class xTournament(object):
             if level < log2(len(self.teams)):
                 next_bkt = xGame(i, game1.winner, game2.winner)
                 self.bracket[level+1][i] = next_bkt
+        self.current_level += 1
 
+    def simulate(self):
+        while self.current_level < log2(len(self.bracket[0])):
+            self.play_round()
+
+    
 
 if __name__ == '__main__':
     pass
