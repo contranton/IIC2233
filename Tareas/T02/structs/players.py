@@ -6,16 +6,23 @@ from structs.xList import xList
 
 class xPlayer(object):
     def __init__(self, ID, alias, name, club, league, natl, overall):
-        super(xPlayer, self).__init__()
-        self.ID = ID
+        self.ID = int(ID)
         self.alias = alias
         self.name = name
         self.club = club
         self.league = league
         self.natl = natl
-        self.overall = overall
+        self.overall = int(overall)
+
+        # Affinity with other players
+        self.affinity = xDict()
 
         self.assigned = False
+
+    def __repr__(self):
+        s = "xPlayer({}, {})"
+        s = s.format(self.alias, self.overall)
+        return s
 
 
 class xTeam():
@@ -30,11 +37,11 @@ class xTeam():
 
     @property
     def quality(self):
-        return sum(self.players, key=lambda x: x.overall) / 1089
+        return sum(map(lambda x: x.overall, self.players)) / 1089
 
     @property
     def initial_hope(self):
-        return self.calculate_affinity() * self.quality
+        return self.calculate_total_affinity() * self.quality
 
     def add_player(self, player: xPlayer):
         if len(self.players) < 11:
@@ -53,15 +60,21 @@ class xTeam():
                 continue
 
             self.add_player(player)
-            player.assigned = True
             i += 1
 
-    def calculate_affinity(self) -> int:
+    def calculate_player_affinities(self, player_graph=None):
+        # TODO: implement for real
+        for player in self.players:
+            for other in self.players:
+                if player != other:
+                    player.affinity[other.ID] = 0.5
+
+    def calculate_total_affinity(self) -> int:
         # TODO
         return 5
 
     def calculate_faults(self) -> xList(xPlayer):
-        faults = xDict()
+        faults = xList()
         for player in self.players:
             prob = 5
             for other in self.players:

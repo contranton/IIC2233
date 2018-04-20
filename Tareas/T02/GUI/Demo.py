@@ -10,23 +10,27 @@ from structs.xTournament import xTournament
 def read_players() -> xList:
     players = xList()
     with open("../players_db_chica.csv", 'r', encoding="utf-8") as f:
-        lines = xList(*f.readlines())
         print("Reading file...")
+        lines = xList(*f.readlines())
+        lines.pop(0)
         for line in lines:
-            player = xList(*line.split(","))
+            player = xList(*line.strip().split(","))
             players.append(player)
+        print("File read finished")
     return players
 
 
 class Juego:
     def __init__(self):
         self.user_team = xTeam("Mi equipo")
-        
+
         self.players = xDict()  # For internal use
         jugadores = xList()  # For GUI
         for player in read_players():
-            self.players[player[2]] = xPlayer(*player)
+            self.players[player[0]] = xPlayer(*player)
             jugadores.append(player)
+
+        self.affinity_graph = None
 
         equipos = [('Super Campeones', 300), ('FC Barcelona', 200),
                    ('Real Madrid', 180),
@@ -50,14 +54,17 @@ class Juego:
 
     def simular_campeonato(self, equipos):  # list[list[str, int]]):
         teams = xList()
+
         for eq in equipos:
             team = xTeam(eq[0])
+            print(team)
             team.fill_random_players(self.players.values())
+            team.calculate_player_affinities(self.affinity_graph)
             for p in team.players:
                 p.assigned = True
             teams.append(team)
 
-        teams.append(self.user_team)
+        assert(all(map(lambda x: len(x.players) == 11, teams)) is True)
 
         # Simulate game
         tournament = xTournament(teams)
@@ -66,7 +73,7 @@ class Juego:
 
         # Deassign assigned players
         for team in teams:
-            for player in team.players:
+            for player in team.players.values():
                 player.assigned = False
 
     def consulta_usuario(self):
@@ -88,7 +95,10 @@ class Juego:
 #### NO CAMBIAR NADA PARA ABAJO
 def main():
     app = QApplication([])
-
-    a = Juego()
+    try:
+        a = Juego()
+    except:
+        import pdb
+        pdb.pm()
 
     app.exec_()

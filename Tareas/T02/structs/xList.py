@@ -50,9 +50,9 @@ class xList(object):
         # Can't use range, can we? xd
         if index < 0:
             index = index % len(self)
-        i = index
+        i = index + 1
         # Shift indices left
-        while i < len(self) - 1:
+        while i < len(self):
             self[i - 1] = self[i]
             i += 1
         delattr(self, self.__attr_name(len(self) - 1))

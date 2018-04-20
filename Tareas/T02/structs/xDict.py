@@ -5,17 +5,18 @@ class xDict(object):
     """
     We store items using the id as an item reference.
     """
-    def __init__(self, keys=xList(), values=xList()):
-        if len(keys) != len(values):
-            raise ValueError("xDict constructor xLists have differing lenghts")
+    def __init__(self, keys=None, values=None):
 
-        self.__keys = keys
-        self.__values = values
+        self.__keys = keys if keys else xList()
+        self.__values = values if values else xList()
+        
+        if len(self.__keys) != len(self.__values):
+            raise ValueError("xDict constructor xLists have differing lenghts")
 
         self._len = 0
         i = 0
-        while i < len(keys):
-            self[keys[i]] = values[i]
+        while i < len(self.__keys):
+            self[self.__keys[i]] = self.__values[i]
             self._len += 1
             i += 1
 
@@ -47,7 +48,7 @@ class xDict(object):
         s = bckt_L
         L = xList()
         i = 0
-        while i < len(self) - 1:
+        while i < len(self):
             L.append(str(self.__keys[i]) + ":" + str(self.__values[i]))
             i += 1
         s += ",".join(L) + bckt_R

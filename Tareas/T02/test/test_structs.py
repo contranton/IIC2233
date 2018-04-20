@@ -44,9 +44,9 @@ class TestXList(unittest.TestCase):
         assert(last == 4)
         assert(len(self.xList) == 3)
 
-        middle = self.xList.pop(1)
-        assert(middle == 2)
-        assert(len(self.xList) == 2)
+        first = self.xList.pop(0)
+        assert(first == 1)
+        assert(self.xList[-1] == 3)
 
     def test_remove(self):
         self.xList.remove(0)

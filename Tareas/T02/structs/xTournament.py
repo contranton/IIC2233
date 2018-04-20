@@ -10,11 +10,15 @@ class xGame(object):
     def __init__(self, id, team1, team2) -> None:
         self.id = id
         if len(team1.players) < 11 or len(team2.players) < 11:
+            print(team1.players)
+            print(team2.players)
             raise Exception("INSUFFICIENT PLAYERS FOR TEAMS")
         self.team1 = team1
         self.team2 = team2
         self.winner = None
         self.loser = None
+
+        self.results = xDict()
 
         self.played = False
 
@@ -22,7 +26,7 @@ class xGame(object):
         return "<Juego {} entre {} y {}>".format(self.id,
                                                  self.team1.name,
                                                  self.team2.name)
-        
+
     def play(self):
         if self.played:
             raise Exception("This round has already been played")
@@ -30,7 +34,7 @@ class xGame(object):
 
         for team in xList(self.team1, self.team2):
             faults = team.calculate_faults()
-            
+
             hope = team.calculate_game_hope(len(faults))
             goals = team.calculate_goals(hope)
             cards = team.calculate_cards()
@@ -88,13 +92,20 @@ class xTournament(object):
 
     def play_round(self):
         level = self.current_level
-        # THIS IS UNINTENDED BEHAVIOR OF XLIST IMPLEMENTATION
-        # Somehow, by doing zip(xList, xList) for equal xLists
-        # returns two-tuples of contiguous elements O.o
-        # Just what I was looking for though :D
         bkt = self.bracket[level]
+
+        # Pair up teams in pairs for each bracket
+        paired_up = xList()
+        i = 0
+        while i < len(bkt)//2:
+            paired_up.append(
+                xList(bkt[2*i], bkt[2*i+1])
+            )
+            i += 1
+
         i = len(bkt)
-        for game1, game2 in xList(*zip(bkt, bkt)):
+        self.bracket[level+1] = xDict()
+        for game1, game2 in paired_up:
             game1.play()
             game2.play()
             if level < log2(len(self.teams)):

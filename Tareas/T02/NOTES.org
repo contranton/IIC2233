@@ -1,0 +1,6 @@
+* TODO For a random game, candoes the user team be picked or is it /always/ added?
+* TODO User team can be given by gui as team "Tu Equipo"
+* TODO Implement calculate_player_affinities [[structs/players.py::62][HERE]]
+
+* CURRENT:
++ 'Calculate' affinity between players /in a team/
