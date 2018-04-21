@@ -19,6 +19,11 @@ class TestXList(unittest.TestCase):
         assert(self.xList[-1] == 3)
         assert(self.xList[-len(self.xList)] == 1)
 
+    def test_iterating(self):
+        assert(xList(*self.xList) == xList(1, 2, 3))
+        nested = [i*j for i in self.xList for j in self.xList]
+        assert(nested == [1, 2, 3, 2, 4, 6, 3, 6, 9])
+
     def test_repr(self):
         print(self.xList)
 
@@ -92,15 +97,13 @@ class TestXDict(unittest.TestCase):
 class testXGraph(unittest.TestCase):
 
     def setUp(self):
-        adj_matrix = xDict()
-        adj_matrix["items"] = xList("A", "B", "C")
-        adj_matrix["mtx"] = xList(xList(0, 1, 0.95),
-                                  xList(1, 0, 0),
-                                  xList(0.95, 0, 0))
-        self.xGraph = xGraph(adj_matrix)
+        items = xList(*"abc")
+        self.xGraph = xGraph(items)
         self.ANode = self.xGraph.nodes[0]
         self.BNode = self.xGraph.nodes[1]
         self.CNode = self.xGraph.nodes[2]
+
+        self.ANode.add_sibling(self.BNode, 1)
 
     def test_siblings(self):
         assert(self.ANode.siblings[0].dest == self.BNode)

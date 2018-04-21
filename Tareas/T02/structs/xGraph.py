@@ -26,12 +26,12 @@ class xNode(object):
     Undirected, i.e. only siblings, no 'parents' or 'children'
     """
     def __init__(self, content, siblings=None):
-        if not siblings:
-            self.siblings = xList()
-        else:
-            self.siblings = siblings  # type: xList[_xLink]
-
+        self.siblings = siblings if siblings else xList()  # xList[_xLink]
         self.content = content
+
+        # For dijkstra
+        self.total_distance = 1000000
+        self.tentative_distance = 1000
 
     def __call__(self):
         return self.content
@@ -56,10 +56,12 @@ class xNode(object):
 
 class xGraph(object):
 
-    def __init__(self, items=xList()):
+    def __init__(self, items=None):
         # Initialized floating, i.e. with no connections
         self.nodes = xList()
+        items = items if items else xList()
         for item in items:
+            print(".",end="",flush=True)
             self.nodes.append(self.create_or_get_node(item))
 
     def create_or_get_node(self, content, trust_all_different=True):
@@ -74,12 +76,43 @@ class xGraph(object):
                     return node
         return new_node
 
-    def get_shortest_path(self, transform=lambda x: x):
+    def get_node_from_content(self, content):
+        for n in self.nodes:
+            if n.content == content:
+                return n
+        raise Exception("No node this graph contains %s" % str(content))
+
+    def get_closest(self, orig, dest, transform=lambda x: x):
         # weight = transform(weight) such that in
-        # worst-match query we do transform=lambda x: 1-x
+        # best-match query we do transform=lambda x: 1-x
         # or something like that
-        pass
-        
+        current = self.get_node_from_content(orig)
+        dest = self.get_node_from_content(dest)
+
+        # Dijkstra's algorithm
+        visited = xList()
+        unvisited = xList()
+
+        # Set nearest neighbors to distance 0
+        current.total_distance = 0
+
+        while len(visited) > 0:
+            for link in current.siblins:
+                if link.dest in visited:
+                    continue
+                unvisited.append(link.dest)
+
+            for link in current.siblings:
+                link.dest.tentative_distance = current.total_distance +\
+                                               transform(link.weight)
+                link.dest.total_distance = min(link.dest.total_distance,
+                                               link.dest.tentative_distance)
+            visited.append(current)
+            current = unvisited.pop(0)
+
+            
+
+
 
 if __name__ == '__main__':
     adj_matrix = xDict()

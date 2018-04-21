@@ -1,9 +1,55 @@
+class _xIterator(object):
+    def __init__(self, xlist, by_val=True):
+        self.first = True
+        self.current = xlist.first
+
+        self.by_val = by_val
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current is None or\
+           (self.current.next is None and not self.first):
+            raise StopIteration
+        else:
+            if self.first:
+                self.first = False
+                return self.current.val if self.by_val else self.current
+            self.current = self.current.next
+            return self.current.val if self.by_val else self.current
+
+
+class _listItem(object):
+    def __init__(self, val, index):
+        self.index = index
+        self.val = val
+        self.next = None
+
+    def __iter__(self):
+        return self
+
+    def __repr__(self):
+        s = "{}: {} -> {}"
+        s = s.format(self.index, self.val,
+                     type(self.next).__name__)
+        return s
+
+
 class xList(object):
     def __init__(self, *args):
         "docstring"
         i = 0
+        current_item = None
+        self.first = None
         for arg in args:
-            setattr(self, self.__attr_name(i), arg)
+            if i == 0:
+                current_item = _listItem(arg, i)
+                self.first = current_item
+                i += 1
+                continue
+            current_item.next = _listItem(arg, i)
+            current_item = current_item.next
             i += 1
         self._len = i
 
@@ -12,16 +58,16 @@ class xList(object):
         return "_" + str(index)
 
     def __iter__(self):
-        self._n = 0
-        return self
+        return _xIterator(self)
 
-    def __next__(self):
-        if self._n == len(self):
-            raise StopIteration
-        else:
-            val = self[self._n]
-            self._n += 1
-            return val
+    def __eq__(self, other):
+        for i, v in xEnum(self):
+            try:
+                if other[i] != v:
+                    return False
+            except IndexError:
+                return False
+        return True
 
     def __repr__(self):
         bckt_L = "--|"
@@ -39,27 +85,52 @@ class xList(object):
     def __getitem__(self, index):
         if index >= len(self) or (index < 0 and abs(index) > len(self)):
             raise IndexError("xList index out of range")
-        return getattr(self, self.__attr_name(index % len(self)))
 
-    def __setitem__(self, key, val):
-        if key >= len(self) or (key < 0 and abs(key) > len(self)):
+        index = index % len(self)
+
+        for x in _xIterator(self, by_val=False):
+            if x.index == index:
+                return x.val
+
+    def __setitem__(self, index, val):
+        if index >= len(self) or (index < 0 and abs(index) > len(self)):
             raise IndexError("xList assignment index out of range")
-        setattr(self, self.__attr_name(key % len(self)), val)
+
+        index = index % len(self)
+
+        for x in _xIterator(self, by_val=False):
+            if x.index == index:
+                x.val = val
+                break
 
     def __delitem__(self, index):
         # Can't use range, can we? xd
         if index < 0:
             index = index % len(self)
-        i = index + 1
         # Shift indices left
-        while i < len(self):
-            self[i - 1] = self[i]
-            i += 1
-        delattr(self, self.__attr_name(len(self) - 1))
+        for k in _xIterator(self, by_val=False):
+            if k.index == index:
+                aux = True
+                while aux:
+                    if k.next is None:
+                        k = None
+                        aux = False
+                        break
+                    k.val = k.next.val
+                    k = k.next
+                break
+
         self._len -= 1
 
     def append(self, item):
-        setattr(self, self.__attr_name(len(self)), item)
+        if self.first is None:
+            self.first = _listItem(item, 0)
+            self._len = 1
+            return
+        for k in _xIterator(self, by_val=False):
+            if k.next is None:
+                k.next = _listItem(item, k.index + 1)
+                break
         self._len += 1
 
     def pop(self, index=-1):

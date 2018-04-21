@@ -3,7 +3,7 @@ from math import log2
 
 from structs.xList import xList
 from structs.xDict import xDict
-from structs.xTeam import xTeam
+from structs.players import xTeam
 
 
 class xGame(object):
@@ -27,10 +27,13 @@ class xGame(object):
                                                  self.team1.name,
                                                  self.team2.name)
 
+    def __contains__(self, team):
+        return team == self.team1 or team == self.team2
+
     def __str__(self):
-        s = "{}: {} vs. {}"
-        return s.format(self.id, str(self.team1),
-                        str(self.team2), str(self.winner))
+        s = "{} vs. {}"
+        return s.format(str(self.team1),
+                        str(self.team2))
 
     def play(self):
         if self.played:
@@ -68,7 +71,7 @@ class xGame(object):
         else:
             self.winner = self.team2
             self.loser = self.team1
- 
+
 
 class xTournament(object):
     """
@@ -87,12 +90,16 @@ class xTournament(object):
 
         self.current_level = 0
 
+        self.third_round_game = None
+        self.last_game = None
+
     @property
     def games(self):
         g = xList()
         for level in self.bracket.values():
             for game in level.values():
                 g.append(game)
+        g.append(self.third_round_game)
         return g
 
     def make_initial_bracket(self):
@@ -126,14 +133,14 @@ class xTournament(object):
         for game1, game2 in paired_up:
             game1.play()
             game2.play()
-            if level < log2(len(self.teams.values())):
+            if level < log2(len(self.teams.values())) - 1:
                 next_bkt = xGame(i, game1.winner, game2.winner)
                 self.bracket[level+1][i] = next_bkt
                 i += 1
         self.current_level += 1
 
     def simulate(self):
-        while self.current_level < log2(len(self.bracket[0])):
+        while self.current_level < log2(len(self.teams.values())) - 1:
             self.play_round()
 
         last_game = self.bracket[self.current_level].values()[0]
@@ -150,6 +157,19 @@ class xTournament(object):
         self.first = last_game.winner
         self.second = last_game.loser
         self.third = self.third_round_game.winner
+
+    def find_team_games(self, team: xTeam) -> xList:
+        """
+        Find all games in tournament in which team has played
+
+        Returns xDict with tournament phase as key and game object as value
+        """
+        games = xDict()
+        for lvl, bkt in self.bracket.items():
+            for game in bkt.values():
+                if team in game:
+                    games[lvl] = game
+        return games
 
 
 if __name__ == '__main__':

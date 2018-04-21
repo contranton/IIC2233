@@ -3,7 +3,7 @@ from structs.xList import xList
 
 class xDict(object):
     """
-    We store items using the id as an item reference.
+    Dammit, we can't use fast look-up without direct memory access T.T
     """
     def __init__(self, keys=None, values=None):
 
@@ -19,16 +19,6 @@ class xDict(object):
             self[self.__keys[i]] = self.__values[i]
             self._len += 1
             i += 1
-
-    @staticmethod
-    def _attr_name(key):
-        # If key isn't a nice number
-        if not isinstance(key, int):
-            if isinstance(key, str) and not key.isnumeric:
-                # Yeah yeah, we use abs so we lose twice the namespace, but
-                # we're still preeeetty unlikely to get collisions
-                key = abs(hash(key))
-        return "_" + str(key)
 
     def __iter__(self):
         raise Exception("xDict is not iterable")
@@ -58,17 +48,19 @@ class xDict(object):
         return self._len
 
     def __getitem__(self, key):
-        try:
-            return getattr(self, self._attr_name(key))[1]
-        except AttributeError:
-            raise KeyError("Key {} not in xDict".format(key))
+        for key_, val in self.items():
+            if key_ == key:
+                return val
+        raise KeyError("Key {} not in xDict".format(key))
 
     def __setitem__(self, key, val):
         if key not in self.__keys:
             self._len += 1
             self.__keys.append(key)
             self.__values.append(val)
-        setattr(self, self._attr_name(key), xList(key, val))
+        for key_, val_ in self.items():
+            if key_ == key:
+                val = val
 
     def __delitem__(self, key):
         raise NotImplementedError()

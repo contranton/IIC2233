@@ -1,7 +1,16 @@
-* TODO For a random game, can the user team be picked or is it /always/ added?
-* TODO User team can be given by gui as team "Tu Equipo". Ensure we don't overwrite its player list
-* TODO Implement calculate_player_affinities [[structs/players.py::62][HERE]]
+* DONE For a random game, can the user team be picked or is it /always/ added?
+* DONE User team can be given by gui as team "Tu Equipo". Ensure we don't overwrite its player list
+* TODO Implement calculate_player_affinities [[./structs/players.py::77][HERE]]
 
-* TODO Ensure cards, faults, and goals are calculated and stored properly
+* DONE Ensure cards, faults, and goals are calculated and stored properly
+
+* TODO Fix Goals
 
 * CURRENT:
+- Make player xGraph
+
+
+* Decisions:
+1) If user team is not complete, empty spaces are filled in randomly
+2) Implemented list using setattr and getattr through an attribute =_n= for each 'index' n. Similarly for dicts, where =_h= is now a hash if applicable.
+3) Initially implemented lists and dicts using setattr and getattr for fast access but this used dictionaries under the hood. We reimplemented the list as a sequence of items a-la linked list, and user dicts have lost the 'advantage' of speed

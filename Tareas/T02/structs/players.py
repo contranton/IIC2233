@@ -1,7 +1,9 @@
+from sys import stdout
 from random import randrange
 
 from structs.xDict import xDict
 from structs.xList import xList
+from structs.xGraph import xGraph
 
 
 class xPlayer(object):
@@ -26,9 +28,6 @@ class xPlayer(object):
 
 
 class xTeam():
-    """Documentation for xTeam, ONLY FOR PLAYER TEAM
-
-    """
     def __init__(self, name, players=xList()):
         self.name = name
 
@@ -44,7 +43,7 @@ class xTeam():
 
     @property
     def quality(self):
-        return sum(map(lambda x: x.overall, self.players)) / 1089
+        return sum(map(lambda x: x.overall, self.players)) / 11
 
     @property
     def initial_hope(self):
@@ -59,7 +58,7 @@ class xTeam():
     def fill_random_players(self, player_list: xList):
         # CAn't use random.sample cus we can't let xList
         # inherit from Sequence -__-
-        i = 0
+        i = len(self.players)
         while i < 11:
             x = randrange(len(player_list))
             player = player_list[x]
@@ -75,13 +74,16 @@ class xTeam():
             for other in self.players:
                 if player != other:
                     player.affinity[other.ID] = 0.5
+                        #player_graph.graph.get_closest(player, other,
+                        #                               transform=lambda x: 1-x)
 
     def calculate_total_affinity(self) -> int:
         # TODO
-        return 5
+        return 0.5
 
-    def calculate_faults(self) -> xList(xPlayer):
+    def calculate_faults(self):  # -> xList[xPlayer]
         faults = xList()
+
         for player in self.players:
             prob = 5
             for other in self.players:
@@ -93,6 +95,7 @@ class xTeam():
                     continue
             if randrange(100) in range(prob):
                 faults.append(player)
+
         return faults
 
     def calculate_cards(self):  # -> xDict[str name, xDict[str type, int num]]
@@ -117,3 +120,30 @@ class xTeam():
 
     def calculate_goals(self, hope):
         return int((hope/40)**2)
+
+
+class xPlayerGraph():
+    def __init__(self, player_list):  # xList[xPlayer]
+        print("Creando conexiones iniciales de jugadores")
+        self.graph = xGraph(player_list)
+        for node in self.graph.nodes:
+            print(".", end="", flush=True)
+            p1 = node.content
+            for other in self.graph.nodes:
+                p2 = other.content
+                if p1 == p2:
+                    continue
+
+                # Natl & Club -> Close Friends
+                if p1.natl == p2.natl and p1.club == p2.club:
+                    node.add_sibling(other, 1)
+
+                # Natl & Club -> Far Friends
+                elif p1.natl == p2.natl and p1.league == p2.league:
+                    node.add_sibling(other, 0.95)
+
+                # Natl | Club | League -> Acquaintances
+                elif (p1.natl == p2.natl or p1.club == p2.club
+                      or p1.league == p2.league):
+                    node.add_sibling(other, 0.9)
+        print("Conexiones iniciales terminadas")
