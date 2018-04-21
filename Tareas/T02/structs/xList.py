@@ -71,6 +71,9 @@ class xList(object):
     def remove(self, index):
         del self[index]
 
+    def copy(self):
+        return xList(*self)
+
 
 def xEnum(L: xList):
     new_L = xList()

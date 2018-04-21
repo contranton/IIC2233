@@ -35,6 +35,13 @@ class xTeam():
         self.players = xList(*players)
         self.game_hope = None
 
+    def __repr__(self):
+        s = "Equipo({})"
+        return s.format(self.name)
+
+    def __str__(self):
+        return self.name
+
     @property
     def quality(self):
         return sum(map(lambda x: x.overall, self.players)) / 1089
@@ -95,11 +102,13 @@ class xTeam():
             if randrange(5) == 0:
                 cards[player.name]["Amarilla"] = 1
             else:
+                pass
                 cards[player.name]["Amarilla"] = 0
 
             if randrange(20) == 0:
                 cards[player.name]["Roja"] = 1
             else:
+                pass
                 cards[player.name]["Roja"] = 0
         return cards
 

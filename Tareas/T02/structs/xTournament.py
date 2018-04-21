@@ -27,6 +27,11 @@ class xGame(object):
                                                  self.team1.name,
                                                  self.team2.name)
 
+    def __str__(self):
+        s = "{}: {} vs. {}"
+        return s.format(self.id, str(self.team1),
+                        str(self.team2), str(self.winner))
+
     def play(self):
         if self.played:
             raise Exception("This round has already been played")
@@ -73,20 +78,33 @@ class xTournament(object):
     Losers in semi-finals must play a round to set third-place
     """
     def __init__(self, equipos):  #: xList[xTeam]):
-        self.teams = equipos
+        self.teams = xDict()
+        for eq in equipos:
+            self.teams[eq.name] = eq
 
         self.bracket = xDict()
         self.bracket[0] = self.make_initial_bracket()
 
         self.current_level = 0
 
+    @property
+    def games(self):
+        g = xList()
+        for level in self.bracket.values():
+            for game in level.values():
+                g.append(game)
+        return g
+
     def make_initial_bracket(self):
         bkt = xDict()
-        shuffle(self.teams)
+
+        teams = self.teams.values().copy()
+        shuffle(teams)
 
         i = 0
-        while i < len(self.teams)//2:
-            bkt[i] = xGame(i, self.teams[2*i], self.teams[2*i+1])
+        while i < len(teams)//2:
+            bkt[i] = xGame(i, teams[2*i],
+                           teams[2*i+1])
             i += 1
         return bkt
 
@@ -96,28 +114,43 @@ class xTournament(object):
 
         # Pair up teams in pairs for each bracket
         paired_up = xList()
-        i = 0
-        while i < len(bkt)//2:
+        j = 0
+        while j < len(bkt)//2:
             paired_up.append(
-                xList(bkt[2*i], bkt[2*i+1])
+                xList(bkt.values()[2*j], bkt.values()[2*j+1])
             )
-            i += 1
+            j += 1
 
-        i = len(bkt)
+        i = bkt.keys()[-1] + 1
         self.bracket[level+1] = xDict()
         for game1, game2 in paired_up:
             game1.play()
             game2.play()
-            if level < log2(len(self.teams)):
+            if level < log2(len(self.teams.values())):
                 next_bkt = xGame(i, game1.winner, game2.winner)
                 self.bracket[level+1][i] = next_bkt
+                i += 1
         self.current_level += 1
 
     def simulate(self):
         while self.current_level < log2(len(self.bracket[0])):
             self.play_round()
 
-    
+        last_game = self.bracket[self.current_level].values()[0]
+        last_game.play()
+        self.last_game = last_game
+
+        # Losers of second-to-last round play the 3rd place match
+        p1 = self.bracket[self.current_level - 1].values()[0].loser
+        p2 = self.bracket[self.current_level - 1].values()[1].loser
+        self.third_round_game = xGame(last_game.id + 1, p1, p2)
+        self.third_round_game.play()
+        self.bracket[self.current_level] = self.third_round_game
+
+        self.first = last_game.winner
+        self.second = last_game.loser
+        self.third = self.third_round_game.winner
+
 
 if __name__ == '__main__':
     pass

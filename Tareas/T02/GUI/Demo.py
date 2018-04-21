@@ -57,7 +57,6 @@ class Juego:
 
         for eq in equipos:
             team = xTeam(eq[0])
-            print(team)
             team.fill_random_players(self.players.values())
             team.calculate_player_affinities(self.affinity_graph)
             for p in team.players:
@@ -73,20 +72,78 @@ class Juego:
 
         # Deassign assigned players
         for team in teams:
-            for player in team.players.values():
+            for player in team.players:
                 player.assigned = False
 
+        self.update_resultados()
+
+    def update_resultados(self):
+        s = "Fase Eliminatoria:\n{}\nCuartos de Final:\n{}\n"\
+            "Semi-Finales:\n{}\nRonda Tercer Lugar:\n{}\nFinal:\n{}"
+        strs = xList()
+        for level in self.tournament.bracket.values():
+            s_lvl = ""
+            for game in level.values():
+                s_lvl += str(game) + "\n"
+            strs.append(s_lvl)
+
+        # Hack to remove the last game before we add the third roung
+        strs.pop()
+
+        # Remaining rounds
+        strs.append(str(self.tournament.third_round_game) + "\n")
+        strs.append(str(self.tournament.last_game))
+        results = s.format(*strs)
+
+        self.gui.resetear_resultados()
+        self.gui.agregar_resultado(results)
+
     def consulta_usuario(self):
-        pass
+        raise NotImplementedError("User Team not yet integrated with tournament")
 
     def consulta_equipo(self, nombre):
-        pass
+        try:
+            team = self.tournament.teams[nombre]
+        except KeyError:
+            return 
 
     def consulta_ganadores(self):
-        pass
 
+        T = self.tournament
+
+        s = "1er lugar: {}\n2do lugar: {}\n3er lugar: {}"
+        s = s.format(str(T.first), str(T.second), str(T.third))
+
+        self.gui.resetear_respuestas()
+        self.gui.agregar_respuesta(s)
+        
     def consulta_partido(self, id):
-        pass
+        def _extract_cards(color, results):
+            return sum(map(lambda x: x["Amarilla"], R1["cards"].values()))
+
+        G = self.tournament.games[int(id)]
+        R1 = G.results[G.team1.name]
+        R2 = G.results[G.team2.name]
+
+        cards_1 = xList(_extract_cards("Amarilla", R1),
+                        _extract_cards("Roja", R1))
+        cards_2 = xList(_extract_cards("Amarilla", R2),
+                        _extract_cards("Roja", R2))
+        
+        s = "{game}\n\nGoles:\n  {t1}: {t1_g}\n  {t2}: {t2_g}\n\n"\
+            "Faltas:\n  {t1}: {t1_f}\n  {t2}: {t2_f}\n\n"\
+            "Tarjetas:\n  {t1}: {t1_y} amarillas, {t1_r} rojas"\
+            "\n  {t2}: {t2_y} amarillas, {t2_r} rojas"
+        s = s.format(game=str(G),
+                     t1=G.team1, t1_g=R1["goals"],
+                     t1_f=R1["faults"],
+                     t1_y=cards_1[0], t1_r=cards_1[1],
+                     t2=G.team2, t2_g=R2["goals"],
+                     t2_y=cards_2[0], t2_r=cards_2[1],
+                     t2_f=R2["faults"], t2_j=R2["cards"])
+
+        self.gui.resetear_respuestas()
+        self.gui.agregar_respuesta(s)
 
     def consulta_fase(self, numero):
         pass
