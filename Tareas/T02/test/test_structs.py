@@ -2,6 +2,7 @@ import unittest
 from structs.xList import xList
 from structs.xDict import xDict
 from structs.xGraph import xGraph
+from structs.xSet import xSet
 
 
 class TestXList(unittest.TestCase):
@@ -25,7 +26,7 @@ class TestXList(unittest.TestCase):
         assert(nested == [1, 2, 3, 2, 4, 6, 3, 6, 9])
 
     def test_repr(self):
-        print(self.xList)
+        str(self)
 
     def test_containment(self):
         assert(2 in xList(1, 2, 3))
@@ -77,7 +78,7 @@ class TestXDict(unittest.TestCase):
         xDict(xList(), xList())
 
     def test_repr(self):
-        print(self.xDictNum)
+        str(self)
 
     def test_access(self):
         assert(self.xDictNum[1] == "a")
@@ -97,18 +98,54 @@ class TestXDict(unittest.TestCase):
 class testXGraph(unittest.TestCase):
 
     def setUp(self):
-        items = xList(*"abc")
+        items = xList(*"abcd")
         self.xGraph = xGraph(items)
         self.ANode = self.xGraph.nodes[0]
         self.BNode = self.xGraph.nodes[1]
         self.CNode = self.xGraph.nodes[2]
+        self.DNode = self.xGraph.nodes[3]
 
         self.ANode.add_sibling(self.BNode, 1)
+        self.ANode.add_sibling(self.CNode, 5)
+        self.BNode.add_sibling(self.CNode, 2)
+        self.BNode.add_sibling(self.DNode, 4)
+        self.CNode.add_sibling(self.DNode, 1)
 
     def test_siblings(self):
         assert(self.ANode.siblings[0].dest == self.BNode)
         assert(self.ANode.siblings[0].weight == 1)
+        assert(self.BNode.siblings[0].dest == self.ANode)
+        assert(self.BNode.siblings[1].dest == self.CNode)
+        assert(self.BNode.siblings[1].weight == 2)
+
+    # @unittest.skip("Dijkstra not Implemented")
+    def test_shortest(self):
+        assert(self.xGraph.get_shortest_distance(self.ANode, self.CNode) == 3)
+        assert(self.xGraph.get_shortest_distance(self.ANode, self.DNode) == 4)
+        assert(self.xGraph.get_shortest_distance(self.CNode, self.DNode) == 1)
+
+        assert(self.xGraph.get_shortest_distance(self.ANode, self.ANode) == 0)
 
 
+class testXSet(unittest.TestCase):
+    def setUp(self):
+        self.xSet = xSet(xList(1, 2, 3, 4))
+
+    def test_add(self):
+        self.xSet.add(*xList(3, 4, 5, 6))
+        assert(xList(*self.xSet) == xList(1, 2, 3, 4, 5, 6))
+
+        self.xSet.add(10)
+        assert(xList(*self.xSet) == xList(1, 2, 3, 4, 5, 6, 10))
+
+    def test_intersection(self):
+        new = self.xSet & xSet(xList(3, 4, 5, 6))
+        assert(xList(*new) == xList(3, 4))
+
+    def test_union(self):
+        new = self.xSet | xSet(xList(3, 4, 5, 6))
+        assert(xList(*new) == xList(1, 2, 3, 4, 5, 6))
+        
+        
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,6 @@
 from structs.xList import xList, xEnum
 from structs.xDict import xDict
+from structs.xSet import xSet
 
 
 class _xLink(object):
@@ -28,7 +29,10 @@ class xNode(object):
     def __init__(self, content, siblings=None):
         self.siblings = siblings if siblings else xList()  # xList[_xLink]
         self.content = content
+        self.reset_distances()
 
+
+    def reset_distances(self):
         # For dijkstra
         self.total_distance = 1000000
         self.tentative_distance = 1000
@@ -61,7 +65,7 @@ class xGraph(object):
         self.nodes = xList()
         items = items if items else xList()
         for item in items:
-            print(".",end="",flush=True)
+            print(".", end="", flush=True)
             self.nodes.append(self.create_or_get_node(item))
 
     def create_or_get_node(self, content, trust_all_different=True):
@@ -80,49 +84,75 @@ class xGraph(object):
         for n in self.nodes:
             if n.content == content:
                 return n
-        raise Exception("No node this graph contains %s" % str(content))
+        raise Exception("No node in this graph contains %s" % str(content))
 
-    def get_closest(self, orig, dest, transform=lambda x: x):
+    def get_shortest_distance(self, orig, dest, transform=lambda x: x):
         # weight = transform(weight) such that in
         # best-match query we do transform=lambda x: 1-x
         # or something like that
-        current = self.get_node_from_content(orig)
-        dest = self.get_node_from_content(dest)
+        if not isinstance(orig, xNode):
+            current = self.get_node_from_content(orig)
+        else:
+            current = orig
+
+        if not isinstance(orig, xNode):
+            dest = self.get_node_from_content(dest)
+
+        # Reset total and tentative distances
+        for node in self.nodes:
+            node.reset_distances()
 
         # Dijkstra's algorithm
+        # Sourced from the one and only true source of completely
+        # trustworthy information on the internet: Wikipedia
+        # https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
         visited = xList()
-        unvisited = xList()
+        unvisited = xList(current)
 
         # Set nearest neighbors to distance 0
         current.total_distance = 0
+        current.tentative_distance = 0
 
-        while len(visited) > 0:
-            for link in current.siblins:
-                if link.dest in visited:
+        while unvisited:
+            current = unvisited.pop()
+#            import pdb; pdb.set_trace()
+            # Get next nodes to traverse and add them to unvisited set
+            for link in current.siblings:
+                if link.dest in visited or link.dest in unvisited:
                     continue
                 unvisited.append(link.dest)
 
+            # Update distance for neighbors
             for link in current.siblings:
                 link.dest.tentative_distance = current.total_distance +\
                                                transform(link.weight)
                 link.dest.total_distance = min(link.dest.total_distance,
                                                link.dest.tentative_distance)
+
+            unvisited = unvisited.sort(key=lambda x: x.total_distance,
+                                       reverse=True)
+                
+            # This node has now been visited
             visited.append(current)
-            current = unvisited.pop(0)
+            if dest in visited:
+                break
 
-            
-
+        print(len(visited))
+        return current.total_distance
 
 
 if __name__ == '__main__':
-    adj_matrix = xDict()
-    items = xList("a", "b", "c")
+    items = xList(*"abcd")
+    G = xGraph(items)
+    ANode = G.nodes[0]
+    BNode = G.nodes[1]
+    CNode = G.nodes[2]
+    DNode = G.nodes[3]
 
-    graph = xGraph(items)
-    aNode = graph.nodes[0]
-    bNode = graph.nodes[1]
-    cNode = graph.nodes[2]
+    ANode.add_sibling(BNode, 1)
+    ANode.add_sibling(CNode, 5)
+    BNode.add_sibling(CNode, 2)
+    BNode.add_sibling(DNode, 4)
+    CNode.add_sibling(DNode, 1)
 
-    aNode.add_sibling(bNode, 0.85)
-    bNode.add_sibling(cNode, 0.5)
-    aNode.add_sibling(cNode, 0.9)
+    print(G.get_shortest_distance(ANode, DNode))

@@ -1,13 +1,15 @@
 * DONE For a random game, can the user team be picked or is it /always/ added?
 * DONE User team can be given by gui as team "Tu Equipo". Ensure we don't overwrite its player list
-* TODO Implement calculate_player_affinities [[./structs/players.py::77][HERE]]
+* DONE Implement calculate_player_affinities [[./structs/players.py::77][HERE]]
 
 * DONE Ensure cards, faults, and goals are calculated and stored properly
 
-* TODO Fix Goals
+* DONE Fix Goals
+* TODO Implement choice to use simple teams, i.e. with given hope instead of calculating it
+* TODO Player graph query menu
 
 * CURRENT:
-- Make player xGraph
+- Integrate player-graph into games
 
 
 * Decisions:

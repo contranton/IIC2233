@@ -21,7 +21,9 @@ class _xIterator(object):
 
 
 class _listItem(object):
-    def __init__(self, val, index):
+    def __init__(self, prev, val, index):
+        self.prev = prev
+
         self.index = index
         self.val = val
         self.next = None
@@ -40,15 +42,15 @@ class xList(object):
     def __init__(self, *args):
         "docstring"
         i = 0
-        current_item = None
         self.first = None
+        current_item = self.first
         for arg in args:
             if i == 0:
-                current_item = _listItem(arg, i)
+                current_item = _listItem(None, arg, i)
                 self.first = current_item
                 i += 1
                 continue
-            current_item.next = _listItem(arg, i)
+            current_item.next = _listItem(current_item, arg, i)
             current_item = current_item.next
             i += 1
         self._len = i
@@ -112,10 +114,17 @@ class xList(object):
             if k.index == index:
                 aux = True
                 while aux:
+                    # If last node, make None
                     if k.next is None:
-                        k = None
+                        if k.index == 0:
+                            self.first = None
+                        else:
+                            # Hack to actually delete stuff
+                            k.prev.next = None
                         aux = False
                         break
+
+                    # Else, shift data left
                     k.val = k.next.val
                     k = k.next
                 break
@@ -124,12 +133,12 @@ class xList(object):
 
     def append(self, item):
         if self.first is None:
-            self.first = _listItem(item, 0)
+            self.first = _listItem(None, item, 0)
             self._len = 1
             return
         for k in _xIterator(self, by_val=False):
             if k.next is None:
-                k.next = _listItem(item, k.index + 1)
+                k.next = _listItem(k, item, k.index + 1)
                 break
         self._len += 1
 
@@ -144,6 +153,9 @@ class xList(object):
 
     def copy(self):
         return xList(*self)
+
+    def sort(self, key=None, reverse=False):
+        return xList(*sorted(self, key=key, reverse=reverse))
 
 
 def xEnum(L: xList):

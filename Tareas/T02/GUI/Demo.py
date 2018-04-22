@@ -5,18 +5,7 @@ from structs.players import xTeam, xPlayer, xPlayerGraph
 from structs.xList import xList
 from structs.xDict import xDict
 from structs.xTournament import xTournament
-
-def read_players() -> xList:
-    players = xList()
-    with open("../players_db_chica.csv", 'r', encoding="utf-8") as f:
-        print("Reading file...")
-        lines = xList(*f.readlines())
-        lines.pop(0)
-        for line in lines:
-            player = xList(*line.strip().split(","))
-            players.append(player)
-        print("File read finished")
-    return players
+from fileio import read_players
 
 
 class Juego:

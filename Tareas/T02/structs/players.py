@@ -68,18 +68,34 @@ class xTeam():
             self.add_player(player)
             i += 1
 
-    def calculate_player_affinities(self, player_graph=None):
-        # TODO: implement for real
+    def calculate_player_affinities(self, player_graph):
+        print("Calculando afinidades entre jugadores del equipo %s" %
+              self.name)
+        for player in self.players:
+            print(".", end="", flush=True)
+            for other in self.players:
+                if player == other:
+                    continue
+                try:
+                    player.affinity[other.ID]
+                    continue
+                except KeyError:
+                    aff = 1 - player_graph.graph.get_shortest_distance(
+                        player, other, transform=lambda x: 1-x)
+                    player.affinity[other.ID] = aff
+                    other.affinity[player.ID] = aff
+        print("\tListo")
+
+    def calculate_total_affinity(self) -> float:
+        aff = 0
         for player in self.players:
             for other in self.players:
-                if player != other:
-                    player.affinity[other.ID] = 0.5
-                        #player_graph.graph.get_closest(player, other,
-                        #                               transform=lambda x: 1-x)
-
-    def calculate_total_affinity(self) -> int:
-        # TODO
-        return 0.5
+                try:
+                    aff += player.affinity[other.ID]
+                except KeyError:
+                    # Player has no affinity with himself
+                    continue
+        return aff/(11*11)
 
     def calculate_faults(self):  # -> xList[xPlayer]
         faults = xList()
