@@ -26,6 +26,12 @@ class xPlayer(object):
         s = s.format(self.alias, self.overall)
         return s
 
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def __id__(self):
+        return self.ID
+
 
 class xTeam():
     def __init__(self, name, players=xList()):
@@ -73,17 +79,10 @@ class xTeam():
               self.name)
         for player in self.players:
             print(".", end="", flush=True)
-            for other in self.players:
-                if player == other:
-                    continue
-                try:
-                    player.affinity[other.ID]
-                    continue
-                except KeyError:
-                    aff = 1 - player_graph.graph.get_shortest_distance(
-                        player, other, transform=lambda x: 1-x)
-                    player.affinity[other.ID] = aff
-                    other.affinity[player.ID] = aff
+            affs = player_graph.get_player_affinities(player, self)
+            for other, aff in affs:
+                player.affinity[other.ID] = 1 - aff
+                other.affinity[player.ID] = 1 - aff
         print("\tListo")
 
     def calculate_total_affinity(self) -> float:
@@ -154,6 +153,11 @@ class xPlayerGraph():
                 if p1.natl == p2.natl and p1.club == p2.club:
                     node.add_sibling(other, 1)
 
+                    # 1 Is the largest affinity so we can set it
+                    # immediately
+                    p1.affinity[p2.ID] = 1
+                    p2.affinity[p1.ID] = 1
+
                 # Natl & Club -> Far Friends
                 elif p1.natl == p2.natl and p1.league == p2.league:
                     node.add_sibling(other, 0.95)
@@ -163,3 +167,25 @@ class xPlayerGraph():
                       or p1.league == p2.league):
                     node.add_sibling(other, 0.9)
         print("Conexiones iniciales terminadas")
+
+    def get_player_affinities(self, player, team):
+        destinations = xList(
+            *filter(
+                lambda x: x != player and x.ID not in player.affinity.keys(),
+                team.players)
+        )
+
+        return self.graph.get_shortest_distance_multiple_dests(
+            player, destinations, transform=lambda x: 1-x)
+
+    def get_best_friend(self, player):
+        pass
+
+    def get_worst_friend(self, player):
+        pass
+
+    def get_most_popular(self):
+        return max(map(lambda n: len(n.siblings), self.graph.nodes))
+
+    def star_choice(self, player):
+        pass

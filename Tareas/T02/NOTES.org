@@ -5,12 +5,11 @@
 * DONE Ensure cards, faults, and goals are calculated and stored properly
 
 * DONE Fix Goals
-* TODO Implement choice to use simple teams, i.e. with given hope instead of calculating it
-* TODO Player graph query menu
-
+* DONE Implement choice to use simple teams, i.e. with given hope instead of calculating it
+* TODO Player graph query menu 
 * CURRENT:
-- Integrate player-graph into games
-
+- Queries in graph
+  
 
 * Decisions:
 1) If user team is not complete, empty spaces are filled in randomly

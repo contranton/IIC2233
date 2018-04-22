@@ -9,12 +9,12 @@ from fileio import read_players
 
 
 class Juego:
-    def __init__(self):
+    def __init__(self, small=True):
         self.user_team = xTeam("Tu equipo")
 
         self.players = xDict()  # For internal use
         jugadores = xList()  # For GUI
-        for player in read_players():
+        for player in read_players(small):
             self.players[player[2]] = xPlayer(*player)
             jugadores.append(player)
 
@@ -235,9 +235,9 @@ class Juego:
         self.gui.agregar_respuesta(s)
 
 #### NO CAMBIAR NADA PARA ABAJO
-def main():
+def main(small):
     app = QApplication([])
 
-    a = Juego()
+    a = Juego(small)
 
     app.exec_()

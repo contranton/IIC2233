@@ -30,7 +30,9 @@ class xNode(object):
         self.siblings = siblings if siblings else xList()  # xList[_xLink]
         self.content = content
         self.reset_distances()
-
+   
+    def __id__(self):
+        return id(self.content)
 
     def reset_distances(self):
         # For dijkstra
@@ -86,17 +88,25 @@ class xGraph(object):
                 return n
         raise Exception("No node in this graph contains %s" % str(content))
 
-    def get_shortest_distance(self, orig, dest, transform=lambda x: x):
+    def get_shortest_distance_multiple_dests(self, orig, destinations,
+                                             transform=lambda x: x):
+        """
+        The graph MUST be connected, else not all destinations will 
+        be reached
+        """
         # weight = transform(weight) such that in
         # best-match query we do transform=lambda x: 1-x
         # or something like that
+        
         if not isinstance(orig, xNode):
             current = self.get_node_from_content(orig)
         else:
             current = orig
 
-        if not isinstance(orig, xNode):
-            dest = self.get_node_from_content(dest)
+        node_destinations = xList()
+        for dest in destinations:
+            if not isinstance(dest, xNode):
+                node_destinations.append(self.get_node_from_content(dest))
 
         # Reset total and tentative distances
         for node in self.nodes:
@@ -113,6 +123,13 @@ class xGraph(object):
         current.total_distance = 0
         current.tentative_distance = 0
 
+        distances = xDict()
+
+        ops = 0
+        found = 1
+
+        # Define this right away so we don't traverse it unnecesarily
+        len_destinations = len(node_destinations)
         while unvisited:
             current = unvisited.pop()
 #            import pdb; pdb.set_trace()
@@ -124,6 +141,7 @@ class xGraph(object):
 
             # Update distance for neighbors
             for link in current.siblings:
+                ops += 1
                 link.dest.tentative_distance = current.total_distance +\
                                                transform(link.weight)
                 link.dest.total_distance = min(link.dest.total_distance,
@@ -134,11 +152,16 @@ class xGraph(object):
                 
             # This node has now been visited
             visited.append(current)
-            if dest in visited:
+
+            if current in node_destinations:
+                found += 1
+                distances[current.content] = current.total_distance
+
+            if found == len_destinations:
                 break
 
-        print(len(visited))
-        return current.total_distance
+        print(ops)
+        return distances.items()
 
 
 if __name__ == '__main__':

@@ -18,7 +18,7 @@ def get_choice(choices):
 
 
 if __name__ == '__main__':
-
+    os.chdir("GUI")
     print("Programming Evolution Soccer\n"
           "1. Consulta sobre jugadores\n"
           "2. Jugar campeonato")
@@ -26,14 +26,13 @@ if __name__ == '__main__':
     if option == 1:
         consultas()
     elif option == 2:
-        os.chdir("GUI")
         print(
             "Jugar campeonato en modo simple o real?\n"
-            "Calcular la afinidad para:"
-            "1. Solo el equipo jugador (Rapido)"
-            "2. Todos los equipos (Leeeeeeeento)")
+            "Calcular la afinidad para:\n"
+            "1. Solo el equipo jugador (Rapido)\n"
+            "2. Todos los equipos (Leeeeeeeento)\n")
         option = get_choice(xList(1, 2))
         if option == 1:
-            main(simple=True)
+            main(small=True)
         elif option == 2:
-            main(simple=False)
+            main(small=False)
