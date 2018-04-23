@@ -39,6 +39,14 @@ def use_slow_mode():
 
 
 if __name__ == '__main__':
+    import sys
+
+    def hook(type, value, traceback):
+        import pdb
+        pdb.pm()
+
+    sys.__excepthook__ = hook
+    
     os.chdir("GUI")
     print("Programming Evolution Soccer\n"
           "1. Consulta sobre jugadores\n"

@@ -21,6 +21,11 @@ class xPlayer(object):
 
         self.assigned = False
 
+        # Convoluted thing used to remove them from user team
+        # if they were added randomly due to the team not being
+        # completely full
+        self.transitory = False
+
     def __repr__(self):
         s = "xPlayer({}, {})"
         s = s.format(self.alias, self.overall)
@@ -73,7 +78,7 @@ class xTeam():
         i = 0
         for p in self.players:
             if p == player:
-                self.players.pop(i)
+                self.players.remove(i)
                 return
             i += 1
 
@@ -83,7 +88,7 @@ class xTeam():
         else:
             raise ValueError("TOO MANY PLAYERS BRUH")
 
-    def fill_random_players(self, player_list: xList):
+    def fill_random_players(self, player_list: xList, transitory=False):
         # CAn't use random.sample cus we can't let xList
         # inherit from Sequence -__-
         i = len(self.players)
@@ -93,6 +98,7 @@ class xTeam():
             if player.assigned:
                 continue
 
+            player.transitory = transitory
             self.add_player(player)
             i += 1
 

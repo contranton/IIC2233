@@ -55,8 +55,8 @@ class Juego:
 
         self.teams = get_teams(self.players.values())
 
-        equipos = map(lambda team: xList(team.name, len(team.players)),
-                      self.teams)
+        equipos = xList(*map(lambda team: xList(team.name, len(team.players)),
+                             self.teams))
 
         ### No cambiar esta línea
         self.gui = Window(self, jugadores, equipos)
@@ -67,6 +67,8 @@ class Juego:
         # en la cancha no importaban >:(
         if en_cancha:
             return
+        j1 = self.players[j1]
+        j2 = self.players[j2]
         self.user_team.delete_player(j1)
         self.user_team.add_player(j2)
         self.user_team.all_calculated = False
@@ -82,7 +84,7 @@ class Juego:
 
     def simular_campeonato(self, equipos):  # list[list[str, int]]):
         teams = xList()
-
+        
         # Make teams and calculate affinities
         self.gui.resetear_resultados()
         self.gui.agregar_resultado("Simulando torneo...")
@@ -91,16 +93,15 @@ class Juego:
 
             if eq[0] == "Tu equipo":
                 team = self.user_team
-                if len(team.players) < 11:
-                    continue
+                team.fill_random_players(self.players.values(),
+                                         transitory=True)
                 calc_affinity = True
             else:
                 team = xTeam(eq[0])
+                team.fill_random_players(self.players.values())
 
             self.gui.agregar_resultado(
                 "Calculando afinidades para equipo " + eq[0])
-
-            team.fill_random_players(self.players.values())
 
             # If team doesn't play in this championship, its players can
             # play for other teams
@@ -123,10 +124,13 @@ class Juego:
 
         # Deassign assigned players
         for team in teams:
-            if team.name == "Tu equipo":
-                continue
             for player in team.players:
-                player.assigned = False
+                if player.transitory:
+                    team.delete_player(player)
+                    player.transitory = False
+                    player.assigned = False
+                if team.name != "Tu equipo":
+                    player.assigned = False
 
         self.update_resultados()
 
