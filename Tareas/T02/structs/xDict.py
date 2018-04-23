@@ -63,8 +63,14 @@ class xDict(object):
                 val = val
 
     def __delitem__(self, key):
-        raise NotImplementedError()
-
+        i = 0
+        for key_, val_ in self.items():
+            if key_ == key:
+                self.__keys.pop(i)
+                self.__values.pop(i)
+                self._len -= 1
+                return
+            i += 1
 
 if __name__ == '__main__':
     a = xDict(xList(1,2,3), xList(5,6,7))

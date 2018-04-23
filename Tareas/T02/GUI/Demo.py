@@ -1,6 +1,8 @@
 from GUI.Interfaz import Window
 from PyQt5.QtWidgets import QApplication
 
+from random import randrange
+
 from structs.players import xTeam, xPlayer, xPlayerGraph
 from structs.xList import xList
 from structs.xDict import xDict
@@ -8,53 +10,107 @@ from structs.xTournament import xTournament
 from fileio import read_players
 
 
+def get_teams(players):
+    teams = xDict()
+    for player in players:
+        if player.club in teams.keys():
+            try:
+                teams[player.club].add_player(player)
+            except ValueError:
+                continue
+        else:
+            teams[player.club] = xTeam(player.club)
+            teams[player.club].add_player(player)
+    return teams.values()
+
+
 class Juego:
-    def __init__(self, small=True):
+    def __init__(self, small=True, real=True):
         self.user_team = xTeam("Tu equipo")
+        self.real = real
 
         self.players = xDict()  # For internal use
         jugadores = xList()  # For GUI
-        for player in read_players(small):
+        try:
+            players = read_players(small)
+        except IOError:
+            print("No tienes el archivo .csv correspondiente"
+                  "\nAbortando...")
+            input()
+            return
+        print("Creando Jugadores...")
+        i = 0
+        for player in players:
+            if i == 200:
+                break
             self.players[player[2]] = xPlayer(*player)
             jugadores.append(player)
+            i += 1
+        print("Jugadores Creados...")
 
         # Affinity is not yet defined for unkown players
         # It will be calculated on a need-by-need basis as memory
         # requirements for complete storage are rather large
         self.affinity_graph = xPlayerGraph(self.players.values())
 
-        equipos = [('Super Campeones', 300), ('FC Barcelona', 200),
-                   ('Real Madrid', 180),
-                   ('Ayudantes FC', 20000), ('Alumnos FC', 5),
-                   ('UC', 130), ('U Chile', 130),
-                   ('Cobreloa', 110), ('Bad Bunny FC', 15),
-                   ('2+2 = 5 FC', 125), ('Blank', 1200),
-                   ('!"#$%&/(', 190), ('Ra ra rasputin', 200),
-                   ('Arjona', 22), ('No u', 144)]
+        self.teams = get_teams(self.players.values())
+
+        equipos = map(lambda team: xList(team.name, len(team.players)),
+                      self.teams)
 
         ### No cambiar esta línea
         self.gui = Window(self, jugadores, equipos)
         ###
 
     def cambio_jugador(self, j1, j2, en_cancha):
-        pass
+        # Screw y'all, dijeron que las posiciones
+        # en la cancha no importaban >:(
+        if en_cancha:
+            return
+        self.user_team.delete_player(j1)
+        self.user_team.add_player(j2)
+        self.user_team.all_calculated = False
+        self.user_team.calculate_player_affinities(self.affinity_graph)
+        self.gui.cambiar_esperanza(self.user_team.initial_hope)
 
     def entra_jugador(self, jugador: str):
         player = self.players[jugador]
         self.user_team.add_player(player)
+        self.user_team.all_calculated = False
+        self.user_team.calculate_player_affinities(self.affinity_graph)
+        self.gui.cambiar_esperanza(self.user_team.initial_hope)
 
     def simular_campeonato(self, equipos):  # list[list[str, int]]):
         teams = xList()
 
+        # Make teams and calculate affinities
+        self.gui.resetear_resultados()
+        self.gui.agregar_resultado("Simulando torneo...")
         for eq in equipos:
+            calc_affinity = self.real
+
             if eq[0] == "Tu equipo":
                 team = self.user_team
+                if len(team.players) < 11:
+                    continue
+                calc_affinity = True
             else:
                 team = xTeam(eq[0])
+
+            self.gui.agregar_resultado(
+                "Calculando afinidades para equipo " + eq[0])
+
             team.fill_random_players(self.players.values())
-            team.calculate_player_affinities(self.affinity_graph)
-            for p in team.players:
-                p.assigned = True
+
+            # If team doesn't play in this championship, its players can
+            # play for other teams
+            for player in team.players:
+                player.assigned = True
+
+            if calc_affinity:
+                team.calculate_player_affinities(self.affinity_graph)
+            else:
+                team.initial_hope = randrange(60, 90)
             teams.append(team)
 
         assert(len(teams) == 16)
@@ -67,6 +123,8 @@ class Juego:
 
         # Deassign assigned players
         for team in teams:
+            if team.name == "Tu equipo":
+                continue
             for player in team.players:
                 player.assigned = False
 
@@ -225,19 +283,19 @@ class Juego:
             winners.append(str(game.winner))
             losers.append(str(game.loser))
 
-        s = s.format(stage=self._phase_names[numero],
+        s = s.format(stage=self._phase_names[int(numero)],
                      teams="\n".join(teams),
                      winners="\n".join(winners),
                      losers="\n".join(losers))
 
-
         self.gui.resetear_respuestas()
         self.gui.agregar_respuesta(s)
 
-#### NO CAMBIAR NADA PARA ABAJO
-def main(small):
+
+# NO CAMBIAR NADA PARA ABAJO
+def main(small, real):
     app = QApplication([])
 
-    a = Juego(small)
+    Juego(small, real)
 
     app.exec_()

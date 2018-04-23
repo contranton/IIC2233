@@ -2,4 +2,6 @@
 GUI/Interfaz.py
 GUI/clases.py
 GUI/assets
+__pycache__/
+.projectile
 *.pdf

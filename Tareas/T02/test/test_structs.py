@@ -94,6 +94,12 @@ class TestXDict(unittest.TestCase):
 
         assert(len(self.xDictNum) == 6)
 
+    def test_delete(self):
+        del self.xDictNum[5]
+        assert(len(self.xDictNum) == 4)
+        with self.assertRaises(KeyError):
+            self.xDictNum[5]
+
 
 class testXGraph(unittest.TestCase):
 

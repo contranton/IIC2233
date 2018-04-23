@@ -34,11 +34,19 @@ class xPlayer(object):
 
 
 class xTeam():
-    def __init__(self, name, players=xList()):
+    def __init__(self, name, players=None):
         self.name = name
 
-        self.players = xList(*players)
+        self.players = xList(*players) if players else xList()
         self.game_hope = None
+
+        # So that we avoid recalculating affinities
+        # for the same team
+        self.all_calculated = False
+
+        # Only set for non-user teams in 'simple'
+        # tournament mode
+        self._initial_hope = None
 
     def __repr__(self):
         s = "Equipo({})"
@@ -53,13 +61,27 @@ class xTeam():
 
     @property
     def initial_hope(self):
+        if self._initial_hope:
+            return self._initial_hope
         return self.calculate_total_affinity() * self.quality
+
+    @initial_hope.setter
+    def initial_hope(self, val_):
+        self._initial_hope = val_
+
+    def delete_player(self, player):
+        i = 0
+        for p in self.players:
+            if p == player:
+                self.players.pop(i)
+                return
+            i += 1
 
     def add_player(self, player: xPlayer):
         if len(self.players) < 11:
             self.players.append(player)
         else:
-            raise Exception("TOO MANY PLAYERS BRUH")
+            raise ValueError("TOO MANY PLAYERS BRUH")
 
     def fill_random_players(self, player_list: xList):
         # CAn't use random.sample cus we can't let xList
@@ -75,6 +97,8 @@ class xTeam():
             i += 1
 
     def calculate_player_affinities(self, player_graph):
+        if self.all_calculated:
+            return
         print("Calculando afinidades entre jugadores del equipo %s" %
               self.name)
         for player in self.players:
@@ -83,6 +107,8 @@ class xTeam():
             for other, aff in affs:
                 player.affinity[other.ID] = 1 - aff
                 other.affinity[player.ID] = 1 - aff
+        if len(self.players) == 11:
+            self.all_calculated = True
         print("\tListo")
 
     def calculate_total_affinity(self) -> float:
@@ -94,11 +120,19 @@ class xTeam():
                 except KeyError:
                     # Player has no affinity with himself
                     continue
-        return aff/(11*11)
+        return aff / (11*11)
 
     def calculate_faults(self):  # -> xList[xPlayer]
         faults = xList()
 
+        # If simple mode
+        if self._initial_hope:
+            num = min(int(self._initial_hope//60 + randrange(2)), 11)
+            for i in range(num):
+                faults.append(self.players[i])
+            return faults
+
+        # If real mode
         for player in self.players:
             prob = 5
             for other in self.players:
@@ -178,14 +212,25 @@ class xPlayerGraph():
         return self.graph.get_shortest_distance_multiple_dests(
             player, destinations, transform=lambda x: 1-x)
 
+    # Hnggggg these are so pythonic <3<3<3
+
     def get_best_friend(self, player):
-        pass
+        return self.graph.get_closest(player, transform=lambda x: 1 - x).content
 
     def get_worst_friend(self, player):
-        pass
+        return self.graph.get_closest(player, transform=lambda x: x).content
 
     def get_most_popular(self):
-        return max(map(lambda n: len(n.siblings), self.graph.nodes))
+        return max(self.graph.nodes, key=lambda n: len(n.siblings)).content
 
     def star_choice(self, player):
-        pass
+        chisp = xList()
+        others = self.graph.get_nearest(player, threshold=1,
+                                        transform=lambda x: 1 - x)
+        for other in others:
+            player = other.content
+            # Other.total_distance es la afinidad
+            aff = 1 - other.total_distance
+            chisp.append(xList(player, aff * player.overall))
+
+        return max(chisp, key=lambda c: c[1])[0]

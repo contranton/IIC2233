@@ -30,7 +30,7 @@ class xNode(object):
         self.siblings = siblings if siblings else xList()  # xList[_xLink]
         self.content = content
         self.reset_distances()
-   
+
     def __id__(self):
         return id(self.content)
 
@@ -67,7 +67,6 @@ class xGraph(object):
         self.nodes = xList()
         items = items if items else xList()
         for item in items:
-            print(".", end="", flush=True)
             self.nodes.append(self.create_or_get_node(item))
 
     def create_or_get_node(self, content, trust_all_different=True):
@@ -88,81 +87,151 @@ class xGraph(object):
                 return n
         raise Exception("No node in this graph contains %s" % str(content))
 
+    def __iter__(self, initial_node):
+        return iter(xIterGraphDijkstra(self, initial_node))
+
+    def get_shortest_distance(self, orig, dest, transform=lambda x: x):
+        for step in xIterGraphDijkstra(self, orig, transform):
+            if step.current == dest:
+                return step.current.total_distance
+        return None
+
     def get_shortest_distance_multiple_dests(self, orig, destinations,
                                              transform=lambda x: x):
-        """
-        The graph MUST be connected, else not all destinations will 
-        be reached
-        """
-        # weight = transform(weight) such that in
-        # best-match query we do transform=lambda x: 1-x
-        # or something like that
-        
-        if not isinstance(orig, xNode):
-            current = self.get_node_from_content(orig)
-        else:
-            current = orig
 
+        """
+        Returns an xList with the distance to each destination in the form:
+        [(dest1, dist1), (dest2, dist2), ...]
+
+        As xLists, obviously ;)
+        """
         node_destinations = xList()
         for dest in destinations:
             if not isinstance(dest, xNode):
                 node_destinations.append(self.get_node_from_content(dest))
 
-        # Reset total and tentative distances
-        for node in self.nodes:
-            node.reset_distances()
-
-        # Dijkstra's algorithm
-        # Sourced from the one and only true source of completely
-        # trustworthy information on the internet: Wikipedia
-        # https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
-        visited = xList()
-        unvisited = xList(current)
-
-        # Set nearest neighbors to distance 0
-        current.total_distance = 0
-        current.tentative_distance = 0
-
         distances = xDict()
 
         ops = 0
-        found = 1
+        found_dests = 1
 
         # Define this right away so we don't traverse it unnecesarily
         len_destinations = len(node_destinations)
-        while unvisited:
-            current = unvisited.pop()
-#            import pdb; pdb.set_trace()
-            # Get next nodes to traverse and add them to unvisited set
-            for link in current.siblings:
-                if link.dest in visited or link.dest in unvisited:
-                    continue
-                unvisited.append(link.dest)
 
-            # Update distance for neighbors
-            for link in current.siblings:
-                ops += 1
-                link.dest.tentative_distance = current.total_distance +\
-                                               transform(link.weight)
-                link.dest.total_distance = min(link.dest.total_distance,
-                                               link.dest.tentative_distance)
+        for step in xIterGraphDijkstra(self, orig, transform):
+            current = step.current
 
-            unvisited = unvisited.sort(key=lambda x: x.total_distance,
-                                       reverse=True)
-                
-            # This node has now been visited
-            visited.append(current)
-
+            # If goal node has been found, get its distance
             if current in node_destinations:
-                found += 1
+                found_dests += 1
                 distances[current.content] = current.total_distance
 
-            if found == len_destinations:
+            # We've found all we care about, quit!
+            if found_dests == len_destinations:
                 break
+
+            ops = step.ops
 
         print(ops)
         return distances.items()
 
+    def get_closest(self, orig, transform=lambda x: x):
+        closest = None
+
+        last = None
+        for step in xIterGraphDijkstra(self, orig, transform):
+            last = step
+            continue
+
+        closest = min(
+            filter(lambda n: n != last.initial_node, last.visited),
+            key=lambda s: s.total_distance)
+
+        return closest
+
+    def get_nearest(self, orig, threshold, transform=lambda x: x):
+        vis = xList()
+        for step in xIterGraphDijkstra(self, orig, transform):
+            vis.append(step.current)
+            for i, unvis in xEnum(step.unvisited):
+                if unvis.total_distance > threshold:
+                    step.unvisited.pop(i)
+                    step.visited.append(unvis)
+        # First element is always origin
+        try:
+            vis.pop(0)
+        except IndexError:
+            return xList()
+        return vis
+
+
+class xIterGraphDijkstra(object):
+    """
+    Implements Dijkstra's algorithm iteratively
+
+    Sourced from the one and only true source of completely
+    trustworthy information on the internet: Wikipedia
+    https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+    """
+    def __init__(self, graph, initial_node, transform=lambda x: x):
+
+        self.graph = graph
+
+        # Reset total and tentative distances
+        for node in self.graph.nodes:
+            node.reset_distances()
+
+        # Ensure initial is a node
+        if not isinstance(initial_node, xNode):
+            self.current = self.graph.get_node_from_content(initial_node)
+        else:
+            self.current = initial_node
+
+        self.initial_node = self.current
+
+        # Transforms weights uniformly
+        self.transform = transform
+
+        self.unvisited = xList(self.initial_node)
+        self.visited = xList()
+        self.current = self.initial_node
+
+        # Set nearest neighbors to distance 0
+        self.current.total_distance = 0
+        self.current.tentative_distance = 0
+
+        self.ops = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.unvisited:
+            raise StopIteration
+
+        self.current = self.unvisited.pop()
+
+        for link in self.current.siblings:
+            self.ops += 1
+
+            # Update distances between nodes
+            link.dest.tentative_distance = (self.current.total_distance +
+                                            self.transform(link.weight))
+            link.dest.total_distance = min(link.dest.total_distance,
+                                           link.dest.tentative_distance)
+
+            # Add siblings to unvisited set if eligible
+            if link.dest in self.visited or link.dest in self.unvisited:
+                continue
+            self.unvisited.append(link.dest)
+
+        # Make it so the next node to visit is the closest one
+        self.unvisited = self.unvisited.sort(key=lambda x: x.total_distance,
+                                             reverse=True)
+
+        self.visited.append(self.current)
+
+        return self
 
 if __name__ == '__main__':
     items = xList(*"abcd")
@@ -178,4 +247,6 @@ if __name__ == '__main__':
     BNode.add_sibling(DNode, 4)
     CNode.add_sibling(DNode, 1)
 
-    print(G.get_shortest_distance(ANode, DNode))
+    print(G.get_shortest_distance(ANode, BNode, transform=lambda x: x))
+    print(G.get_shortest_distance(ANode, CNode, transform=lambda x: x))
+    print(G.get_shortest_distance(ANode, DNode, transform=lambda x: x))

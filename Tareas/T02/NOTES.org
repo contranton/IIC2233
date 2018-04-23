@@ -8,10 +8,14 @@
 * DONE Implement choice to use simple teams, i.e. with given hope instead of calculating it
 * TODO Player graph query menu 
 * CURRENT:
-- Queries in graph
+  Fix Random player assignment to user team when new ones are added
   
 
 * Decisions:
 1) If user team is not complete, empty spaces are filled in randomly
 2) Implemented list using setattr and getattr through an attribute =_n= for each 'index' n. Similarly for dicts, where =_h= is now a hash if applicable.
 3) Initially implemented lists and dicts using setattr and getattr for fast access but this used dictionaries under the hood. We reimplemented the list as a sequence of items a-la linked list, and user dicts have lost the 'advantage' of speed
+4) Program MUST be run from main.py to avoid import conflicts and namespace memes. From the main menu the Demo module can be executed. We changed the if-main block in Demo.py to a function that's called from main.py.
+5) If simple mode, opponent teams' faults are calculated randomly to have a chance to affect goal number
+6) GUI is fed teams with *number of players* instead of affinity, so we don't have to wait eons before being able to run a tournament. This is a quick estimate of how long it will take for them to calculate the rest, as those with more players have more pre-defined affinities
+
