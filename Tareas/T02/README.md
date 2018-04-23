@@ -9,6 +9,7 @@ Al elegir simular campeonatos, se da la opción de usar modo 'simple' o modo 're
 - Modo simple: Se calcula la afinidad solo entre jugadores del equipo del usuario. Para los otros, se utiliza una fórmula esotérica en base a la calidad del equipo. Esto permite testear rápidamente la generación de resultados y adquisición de consultas en el menú de campeonato.
 - Modo real: Se calcula la afinidad para todos los equipos elegidos en un campeonato.
   - Solo cuando la base de datos escogida es la de 200 elementos este modo es viable; de otra manera, la asignacion inicial de las afinidades (las de 1, 0.95 y 0.9) de por sí ya será lenta por tener que iterar 18000^2 veces.
+
 Al calcular las afinidades, la consola mostrará un indicador del equipo siendo analizado y valores correspondientes a las iteraciones sobre el grafo realizadas por cada jugador.
 
 Hay un pequeño _bug_ en que si simulas campeonatos con tu equipo no completamente relleno y luego le intentas añadir jugadores, no podrás añadirlos todos ya que por alguna razón no logran eliminarse todos los jugadores provisorios que se le agregaron O.o
