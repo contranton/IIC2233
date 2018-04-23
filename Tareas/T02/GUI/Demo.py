@@ -124,7 +124,8 @@ class Juego:
 
         # Deassign assigned players
         for team in teams:
-            for player in team.players:
+            players = xList(*team.players)
+            for player in players:
                 if player.transitory:
                     team.delete_player(player)
                     player.transitory = False
@@ -229,7 +230,7 @@ class Juego:
 
     @staticmethod
     def _extract_cards(color, results):
-        return sum(map(lambda x: x[color], results["cards"].values()))
+        return sum(xList(*map(lambda x: x[color], results["cards"].values())))
 
     def consulta_partido(self, id):
 
@@ -247,8 +248,8 @@ class Juego:
         cards_2 = xList(self._extract_cards("Amarilla", R2),
                         self._extract_cards("Roja", R2))
 
-        faltas_1 = "\n   ".join(map(lambda x: x.name, R1["faults"]))
-        faltas_2 = "\n   ".join(map(lambda x: x.name, R2["faults"]))
+        faltas_1 = "\n   ".join(xList(*map(lambda x: x.name, R1["faults"])))
+        faltas_2 = "\n   ".join(xList(*map(lambda x: x.name, R2["faults"])))
 
         s = "{game}\n\nGoles:\n  {t1}: {t1_g}\n  {t2}: {t2_g}\n\n"\
             "Faltas:\n- {t1}:\n   {t1_f}\n- {t2}:\n   {t2_f}\n\n"\

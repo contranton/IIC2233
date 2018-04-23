@@ -144,7 +144,7 @@ class xGraph(object):
             continue
 
         closest = min(
-            filter(lambda n: n != last.initial_node, last.visited),
+            xList(*filter(lambda n: n != last.initial_node, last.visited)),
             key=lambda s: s.total_distance)
 
         return closest

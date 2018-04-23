@@ -62,7 +62,7 @@ class xTeam():
 
     @property
     def quality(self):
-        return sum(map(lambda x: x.overall, self.players)) / 11
+        return sum(xList(*map(lambda x: x.overall, self.players))) / 11
 
     @property
     def initial_hope(self):
