@@ -114,9 +114,6 @@ class Juego:
                 team.initial_hope = randrange(60, 90)
             teams.append(team)
 
-        assert(len(teams) == 16)
-        assert(all(map(lambda x: len(x.players) == 11, teams)) is True)
-
         # Simulate game
         tournament = xTournament(teams)
         tournament.simulate()
