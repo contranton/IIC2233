@@ -62,8 +62,8 @@ class Cliente:
         self.saldo = 0
         self.carro = []
 
-    @registro
     @verificar_tipos(int)
+    @registro
     def abonar(self, monto):
         self.saldo += monto
         self._mostrar_saldo()
@@ -81,9 +81,9 @@ class Cliente:
         print()
         return self.carro
 
-    @registro
     @verificar_tipos(TiendaOnline, str)
     @temporizador(3)
+    @registro
     def pagar(self, tienda, contraseña):
         if not self.carro:
             print("El carro está vacío.")

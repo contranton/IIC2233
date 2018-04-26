@@ -16,9 +16,10 @@ def write_registro(data):
 
 
 def registro(foo):
-    name = foo.__name__
-
+    @wraps(foo)
     def _(*args, **kwargs):
+        name = foo.__name__
+
         # Combine args with kwargs
         all_args = list(args) + list(kwargs.values())
         str_args = [str(i) for i in all_args]
