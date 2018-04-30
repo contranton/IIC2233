@@ -1,0 +1,6 @@
+.idea/
+.emacs.desktop
+gui/
+*.txt
+*.json
+*.pdf
