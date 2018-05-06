@@ -1,6 +1,6 @@
 import re
 
-from fileio import read_file
+from fileio import read_csv
 
 
 def clean_html(string):
@@ -13,6 +13,7 @@ def clean_html(string):
     The following regexp was developed by yours truly using the aid of
     regexr.com
     """
+    string = string.replace(r"&nbsp;", "")
     return re.sub(re.compile(r"<(.+?(?=>)>)"), "",  string)
 
 
@@ -20,7 +21,7 @@ def is_bot(string):
     words = string.split(" ")
     if len(words) < 6 or len(words) > 84:
         return False
-    counts = [{i: words.count(i)} for i in read_file("vocabulary.txt")]
+    counts = {i[0]: words.count(i[0]) for i in read_csv("vocabulary.txt")}
     if sum(map(lambda x: x != 0, counts.values())) < 4:
         return False
     if not any(counts.values()) > 3:
