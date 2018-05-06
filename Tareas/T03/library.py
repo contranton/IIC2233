@@ -13,7 +13,8 @@ ops = {"==": lambda x, y: x == y,
        "<": lambda x, y: x < y}
 
 
-movie_nt = namedtuple("Movie", "id title rating_IMDb rating_RT rating_MC box_office date")
+movie_nt = namedtuple("Movie", "id title rating_IMDb "
+                      "rating_RT rating_MC box_office date")
 
 
 DB = "MiniDatabase/"
@@ -31,8 +32,10 @@ def with_valid_movie_attrs(*attrs):
         @wraps(foo)
         def _(movies, *args, **kwargs):
             it1, it2 = tee(movies)
-            invalid = next(((m, a) for m in it1 for a in m._asdict().values()
-                            if a == "N/A"), None)
+            get_attrs = lambda m: (getattr(m, attr) for attr in attrs)
+            invalid = next(((movie, attr) for movie in it1
+                            for attr in get_attrs(movie)
+                            if attr == "N/A"), None)
             if invalid:
                 raise MovieError(foo.__name__, invalid[0], invalid[1])
             return foo(it2, *args, **kwargs)
@@ -130,7 +133,7 @@ def take_movie_while(movies: Generator, column: str,
     check(movies)
 
     if column not in movie_nt._fields:
-        raise BadQuery()
+        raise WrongInput("take_movie_while", "column", column)
     op = ops[symbol]
     if column not in "id title box_office date".split(" "):
         attr = lambda m: get_rating(m, column.split("_")[-1])
@@ -170,7 +173,7 @@ def popular_genre(movies: Generator, r_type: str="All") -> List[str]:
     Returns the four best genres according to r_type
     """
     movies = list(movies)
-    genres = get_unique_movie_users("genres", movies)
+    genres = get_unique_movie_users(movies, "genres", movies)
     gr_mvs = ((genre, map(lambda id: get_movie_from_id(movies, id), ids))
               for genre, ids in genres)
     gr_ratings = ((genre, sum(map(lambda m: get_rating(m, r_type), movies)))
@@ -182,7 +185,7 @@ def popular_genre(movies: Generator, r_type: str="All") -> List[str]:
     ratings = list(map(lambda x: x[0],
                        sorted(gr_ratings, key=lambda x: x[1])))
 
-    return ratings[-4:][::-1]
+    return ratings[:4]
 
 
 @with_valid_movie_attrs("rating_IMDb", "rating_RT", "rating_MC")
@@ -192,7 +195,7 @@ def popular_actors(movies: Generator, k_actors: int,
     Returns the k actors most repeated among movies according to r_type
     """
     movies_list = get_top_movies(movies, r_type)[:n_movies]
-    actors = get_unique_movie_users("actors", movies_list)
+    actors = get_unique_movie_users(movies_list, "actors", movies_list)
     return list(
         map(lambda x: x.item,
             sorted(actors, key=lambda x: len(x.ids)))
@@ -248,9 +251,9 @@ def get_profit(movie):
 item_ids = namedtuple("item_ids", "item ids")
 
 
-def get_unique_movie_users(type_, movies_list=None) -> Generator:
+def get_unique_movie_users(movies, type_, movies_list=None) -> Generator:
     """
-    Returns every item paired with all movies it's associated with in
+    Returns every item paired with all movies it's associated with.
     If movies_list is given, items are limited to those movies, else
     all movies are considered
 
@@ -258,19 +261,20 @@ def get_unique_movie_users(type_, movies_list=None) -> Generator:
     """
     path = DB + "/" + type_ + ".csv"
     uniques = set()
+    movie_list_ids = lambda: map(lambda m: m.id, movies_list)
     for id, item in read_csv(path):
         if item not in uniques:
-            # If movies-list has been given but item isn't in it, skip them
-            if movies_list and id not in map(lambda m: m.id, movies_list):
+            # If movies-list has been given but item isn't in it, skip it
+            if movies_list and id not in movie_list_ids():
                 continue
             uniques.add(item)
-            # Get all movie ids associatede with item
+            # Get all movie ids associated with item
             ids = map(lambda x: x[0],
                       filter(lambda x: x[1] == item, read_csv(path)))
             if movies_list:
-                ids = filter(lambda i: i in map(lambda m: m.id, movies_list),
-                             ids)
-            yield item_ids(item, list(ids))
+                ids = filter(lambda i: i in movie_list_ids(), ids)
+            assoc_movs = map(lambda i: get_movie_from_id(movies, i), ids)
+            yield (item, list(assoc_movs))
 
 
 def get_total_profit(movies):
@@ -285,9 +289,10 @@ def highest_paid_actors(movies: Generator, k_actors: int=1) -> List[str]:
     TODO: getmoviesfromactor is redundant since we have the ids
     This is the only place we care about profit. Use reduce!
     """
-    actors = get_unique_movie_users("actors")
+    movies = list(movies)
+    actors = get_unique_movie_users(movies, "actors")
     actor_movies = ((actor, get_movies_from_actor(movies, actor))
-                    for actor, ids in actors)
+                    for actor, movies in actors)
     actor_pays = ((actor,
                    get_total_profit(movies),
                    sorted(list(movies), key=lambda m: get_profit(m)))
@@ -317,12 +322,14 @@ def successful_actors(movies: Generator) -> List[str]:
     """
     Returns actors whose every movie has *all* ratings above 50%
     """
-    actors = get_unique_movie_users("actors")
+    movies = list(movies)
+    actors = get_unique_movie_users(movies, "actors")
+
     result = filter(lambda a:
-                    every_movie_rated_above(get_movies_from_actor(movies,
-                                                                  a.item),
+                    every_movie_rated_above(a[1],
                                             threshold=50),
                     actors)
+
     return list(result)
 
 
@@ -344,6 +351,13 @@ def get_function_from_name(name: str) -> Callable:
         return __foos__[name]
     except KeyError:
         raise BadQuery(name)
+
+    
+def run_query(args):
+    foo = args[0]
+    args = map(lambda arg: run_query(arg) if isinstance(arg, list) else arg,
+               args[1:])
+    return get_function_from_name(foo)(*args)
 
 
 if __name__ == '__main__':
