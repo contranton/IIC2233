@@ -74,7 +74,7 @@ def successful_actors(movies: Generator) -> List[str]:
                                             threshold=50),
                     actors)
 
-    return list(result)[:4]
+    return list(result)
 
 
 def every_movie_rated_above(movies, threshold):

@@ -1,14 +1,14 @@
 from typing import Generator
 from itertools import tee
 
-from library import DB
+import library as L
 from library.fileio import read_csv
 from library.exceptions import BadQuery, MovieError
 
 
 def get_movie_reviews(movie):
     return filter(lambda x: x[0] == movie.id,
-                  read_csv(DB + "reviews.csv"))
+                  read_csv(L.DB + "reviews.csv"))
 
 
 def get_top_movies(movies, r_type="All"):
@@ -43,7 +43,7 @@ def get_rating(movie, r_type="All"):
 
 def get_movies_from_genre(movies, genre):
     movies = map(lambda act: act[0],  # Movie ID
-                 filter(lambda x: x[1] == genre, read_csv(DB + "genres.csv")))
+                 filter(lambda x: x[1] == genre, read_csv(L.DB + "genres.csv")))
     movies = filter(lambda m: m.id == id, movies)
     return movies
 
@@ -55,7 +55,7 @@ def get_movie_from_id(movies, id):
 
 def get_movies_from_actor(movies, actor):
     movs = map(lambda act: act[0],  # Movie ID
-               filter(lambda x: x[1] == actor, read_csv(DB + "actors.csv")))
+               filter(lambda x: x[1] == actor, read_csv(L.DB + "actors.csv")))
     movs = (get_movie_from_id(movies, id) for id in movs)
     return list(movs)
 
@@ -76,7 +76,7 @@ def get_biased_word_percentages(words_list):
 
 def get_review_positivity(review):
     """
-    Returns "+" if positive, "-" if negative, "o" if neutral
+    Returns 1 if positive, -1 if negative, 0 if neutral
     """
     words = review.split(" ")
     per_P, per_N = get_biased_word_percentages(words)
@@ -89,10 +89,10 @@ def get_review_positivity(review):
 
 
 def get_profit(movie):
-    L = len(list(filter(lambda act: act[0] == movie,
-                        read_csv(DB + "actors.csv"))))
+    length = len(list(filter(lambda act: act[0] == movie,
+                             read_csv(L.DB + "actors.csv"))))
     bo = int(movie.box_office[1:].replace(".", ""))
-    return bo / max(L, 1)
+    return bo / max(length, 1)
 
 
 def get_unique_movie_users(movies, type_, movies_list=None) -> Generator:
@@ -103,7 +103,8 @@ def get_unique_movie_users(movies, type_, movies_list=None) -> Generator:
 
     type_ is either 'actors' or 'genres'
     """
-    path = DB + "/" + type_ + ".csv"
+    path = L.DB + "/" + type_ + ".csv"
+    print(L.DB)
     uniques = set()
     movie_list_ids = lambda: map(lambda m: m.id, movies_list)
     for id, item in read_csv(path):

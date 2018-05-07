@@ -7,7 +7,8 @@ from itertools import takewhile
 
 from library.fileio import read_csv
 from library.tools import with_valid_movie_attrs
-from library import SKIP_NA, DB
+from library import SKIP_NA
+import library as L
 
 from library.getters import (get_rating, get_movie_reviews,
                              get_review_positivity, get_rating_attr)
@@ -61,7 +62,7 @@ def best_comments(movies: Generator, n: int) -> Generator:
                                 get_movie_reviews(movie))))
                 for movie in movies)
     comments = list(sorted(comments, key=lambda x: x[1]))
-    best_movies = list(map(lambda x: x[0].title, comments))
+    best_movies = list(map(lambda x: x[0], comments))
     bests = best_movies[-n:] if n > 0 else best_movies[:-n]
     return bests[::-1]
 
@@ -98,9 +99,9 @@ def take_movie_while(movies: Generator, column: str,
 
 def read_reviews():
     name = "reviews.csv"
-    if path.exists(DB + "reviews_clean.csv"):
+    if path.exists(L.DB + "reviews_clean.csv"):
         name = "reviews_clean.csv"
-    return read_csv(DB + name)
+    return read_csv(L.DB + name)
 
 
 def take_fully_defined_movies(movies):

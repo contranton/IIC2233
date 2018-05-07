@@ -4,7 +4,7 @@ import library.databases as D
 import library.general as G
 import library.preproc as P
 from library.getters import get_review_positivity
-
+import library
 
 class TestPreprocessing(unittest.TestCase):
 
@@ -22,8 +22,14 @@ class TestQueries(unittest.TestCase):
     def setUp(self):
         self.movies = D.load_database(test=True)
 
+        self.prevDB = library.DB
+        library.DB = "MiniDatabase/"
+
         # Remove the two problematic movie
         self.movies = list(D.take_fully_defined_movies(self.movies))
+
+    def tearDown(self):
+        library.DB = self.prevDB
 
     def test_filter_by_date(self):
         filtered1 = list(D.filter_by_date(self.movies,
@@ -69,10 +75,8 @@ class TestQueries(unittest.TestCase):
         assert(get_review_positivity(review) == -1)
 
     def test_highest_paid_actors(self):
-        best = G.highest_paid_actors(self.movies, 3)
-        assert(best == ["ACTOR 1",
-                        "ACTOR 2",
-                        "ACTOR 3"])
+        best = G.highest_paid_actors(self.movies)
+        assert(best[0][0] == "Sebastián Behrmann")
 
     def test_successful_actors(self):
         G.successful_actors(self.movies)

@@ -32,8 +32,8 @@ def is_bot(string):
 
 
 def preprocess_comments():
-    reviews = map(lambda r: clean_html(r),
-                  filter(lambda r: is_bot(r[1]), read_reviews()))
+    reviews = map(lambda r: "\"{}\"".format(clean_html(r[1])),
+                  filter(lambda r: not is_bot(r[1]), read_reviews()))
     write_csv("reviews_clean.csv", list(enumerate(reviews)),
               header=("id", "review"))
 

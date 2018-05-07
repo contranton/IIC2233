@@ -41,6 +41,6 @@ def process_queries(queries):
             text += result[0] + ":\n\t"
             text += "\n\t".join((str(i) for i in result[1])) + "\n"
         except (BadQuery, MovieError, WrongInput) as exc:
-            text += "Error: " + repr(exc)
+            text += "Error: " + repr(exc) + "\n"
         yield text
         query_num += 1
