@@ -1,6 +1,7 @@
 import re
 
-from fileio import read_csv
+from library.fileio import read_csv, write_csv
+from library.databases import read_reviews
 
 
 def clean_html(string):
@@ -18,16 +19,23 @@ def clean_html(string):
 
 
 def is_bot(string):
-    words = string.split(" ")
+    words = re.split("[ ,.;?¿!¡]", string)
     if len(words) < 6 or len(words) > 84:
         return False
     counts = {i[0]: words.count(i[0]) for i in read_csv("vocabulary.txt")}
+
     if sum(map(lambda x: x != 0, counts.values())) < 4:
         return False
-    if not any(counts.values()) > 3:
+    if not any(map(lambda x: x >= 3, counts.values())):
         return False
     return True
 
+
+def preprocess_comments():
+    reviews = map(lambda r: clean_html(r),
+                  filter(lambda r: is_bot(r[1]), read_reviews()))
+    write_csv("reviews_clean.csv", list(enumerate(reviews)),
+              header=("id", "review"))
 
 if __name__ == '__main__':
     a = clean_html("Hola <a>SACAME DE AQUI</a> Mundo!<b> UH OH</b> "
