@@ -9,5 +9,6 @@
 - Funciones que retornan bases de datos: library/databases.py
 - Funciones que no retornan bases de datos: libary/general.py
 - Excepciones: library/exceptions.py
+- Preprocesamiento: library/preproc.py
 
 #### Ojala no me haya quedado demasiado roto todo :P
