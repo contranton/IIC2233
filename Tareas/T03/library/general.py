@@ -74,7 +74,8 @@ def successful_actors(movies: Generator) -> List[str]:
                                             threshold=50),
                     actors)
 
-    return list(result)
+    return list(map(lambda r: (r[0],
+                               list(map(lambda x: x.title, r[1]))), result))
 
 
 def every_movie_rated_above(movies, threshold):
@@ -82,6 +83,8 @@ def every_movie_rated_above(movies, threshold):
     Returns a bool stating whether every movie in movies has
     every rating above the threshold
     """
+    if not movies:
+        return False
     return all(map(lambda movie: all(map(lambda r: r > threshold,
                                          get_all_ratings(movie))),
                    movies))

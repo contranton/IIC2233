@@ -104,7 +104,6 @@ def get_unique_movie_users(movies, type_, movies_list=None) -> Generator:
     type_ is either 'actors' or 'genres'
     """
     path = L.DB + "/" + type_ + ".csv"
-    print(L.DB)
     uniques = set()
     movie_list_ids = lambda: map(lambda m: m.id, movies_list)
     for id, item in read_csv(path):

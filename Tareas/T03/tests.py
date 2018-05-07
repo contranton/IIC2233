@@ -79,5 +79,6 @@ class TestQueries(unittest.TestCase):
         assert(best[0][0] == "Sebastián Behrmann")
 
     def test_successful_actors(self):
-        G.successful_actors(self.movies)
+        bests = list(G.successful_actors(self.movies))
+        assert(bests[0][0] == "Enzo Tamburini")
 
