@@ -1,6 +1,6 @@
 import csv
 import statistics
-#from itertools import reduce
+from functools import reduce
 from random import expovariate, sample, random, uniform
 
 
@@ -15,14 +15,14 @@ class Persona:
 
     @property
     def tiempo_llegada(self):
-        return (42000 - self.d_recorrida)/self.velocidad
+        return max((42000 - self.d_recorrida)/self.velocidad, 0)
 
     @property
     def tiempo_mitad(self):
-        return (21000 - self.d_recorrida)/self.velocidad
+        return max((21000 - self.d_recorrida)/self.velocidad, 0)
 
-    def upd_distance(self, time):
-        self.d_recorrida += self.velocidad*time
+    def upd_distance(self, time_delta):
+        self.d_recorrida += self.velocidad*time_delta
     
     def __repr__(self):
         s = "Persona({}, {}, {})"
@@ -70,9 +70,12 @@ class Evento(object):
 
 
 class Simulacion(object):
-    def __init__(self):
-        print("Iteracion | Tiempo de evento (segundos) | Descripcion de evento | Entidad afectada")
-        self.iteracion = 0
+    def __init__(self, it, do_print=False):
+        if do_print:
+            print("Iteracion | Tiempo de evento (segundos) | Descripcion de evento | Entidad afectada")
+        self.iteracion = it
+        self.do_print = do_print
+
         self.tiempo = 0
         self.activos = self.read_personas()
         self.inactivos = []
@@ -99,18 +102,20 @@ class Simulacion(object):
     def lluvia_start(self, evento):
         for p in self.activos:
             p.velocidad *= 3/4
+        self.log("inicio lluvia", "simulacion")
 
         self.eventos.append(Evento("lluvia_end", self.tiempo + 30))
 
     def lluvia_end(self, evento):
         for p in self.activos:
             p.velocidad *= 4/3
+        self.log("fin lluvia", "simulacion")
 
     def llegada(self, evento):
         p = evento.persona
         tiempo_llegada = evento.tiempo
-
-        self.tiempos_llegada.append((p.nombre, tiempo_llegada))
+        self.log("corredor llega a la meta", p.nombre)
+        self.tiempos_llegada.append((tiempo_llegada, p))
             
     def accidente(self, evento):
         chosen = sample(self.activos, min(5, len(self.activos)))
@@ -126,21 +131,24 @@ class Simulacion(object):
         )
 
     def run(self):
-        while self.eventos and self.activos:
+        last_time = 0
+        while self.eventos and self.activos and self.tiempo < 8*60:
             self.eventos.sort(key=lambda e: e.tiempo)
             for p in self.activos:
-                p.upd_distance(self.tiempo)
+                p.upd_distance(self.tiempo - last_time)
             evento = self.eventos.pop(0)
+            last_time = self.tiempo
             self.tiempo = evento.tiempo
             self.funciones[evento.nombre](evento)
 
     def log(self, descripcion, entidad):
-        print("{} | {} | {} | {}"
-              .format(self.iteracion,
-                      int(self.tiempo*60),
-                      descripcion,
-                      entidad))
-
+        if self.do_print:
+            print("{} | {} | {} | {}"
+                  .format(self.iteracion,
+                          int(self.tiempo),
+                          descripcion,
+                          entidad))
+            
     def read_personas(self):
         personas = []
         with open("competidores.csv", 'r', encoding="utf-8") as f:
@@ -161,8 +169,8 @@ class Estadisticas:
         self.terminaron = list(map(lambda x: len(x), competidores_end))
         self.terminaron = sum(self.terminaron)/self.iteraciones
         self.competidores_end = reduce(lambda x,y: x+y, competidores_end)
-        self.wm = list(filter(lambda x: x[1].sexo=='femenino',competidores))
-        self.mn = list(filter(lambda x: x[1].sexo=='masculino',competidores))
+        self.wm = list(filter(lambda x: x[1].sexo=='femenino',competidores_end))
+        self.mn = list(filter(lambda x: x[1].sexo=='masculino',competidores_end))
         self.amateurs_wm = list(filter(lambda x: isinstance(x[1], Amateur),
         self.wm))
         self.aficioados_wm = list(filter(lambda x: isinstance(x[1], Aficionado),
@@ -203,4 +211,7 @@ class Estadisticas:
 
     
 if __name__ == '__main__':
-    sim = Simulacion()
+    sims = [Simulacion(i) for i in range(10)]
+    [sim.run() for sim in sims]
+    tiempos = [sim.tiempos_llegada for sim in sims]
+    Estadisticas(tiempos)
