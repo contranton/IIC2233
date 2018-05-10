@@ -1,6 +1,6 @@
 import csv
 import statistics
-from itertools import reduce
+#from itertools import reduce
 from random import expovariate, sample, random, uniform
 
 
@@ -128,6 +128,8 @@ class Simulacion(object):
     def run(self):
         while self.eventos and self.activos:
             self.eventos.sort(key=lambda e: e.tiempo)
+            for p in self.activos:
+                p.upd_distance(self.tiempo)
             evento = self.eventos.pop(0)
             self.tiempo = evento.tiempo
             self.funciones[evento.nombre](evento)
