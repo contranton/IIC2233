@@ -1,5 +1,8 @@
 import csv
+import statistics
+from itertools import reduce
 from random import expovariate, sample, random, uniform
+
 
 class Persona:
     def __init__(self, nombre, sexo):
@@ -18,6 +21,9 @@ class Persona:
     def tiempo_mitad(self):
         return (21000 - self.d_recorrida)/self.velocidad
 
+    def upd_distance(self, time):
+        self.d_recorrida += self.velocidad*time
+    
     def __repr__(self):
         s = "Persona({}, {}, {})"
         return s.format(self.nombre, self.sexo, self.__class__.__name__)
@@ -75,7 +81,7 @@ class Simulacion(object):
                                lambda p: self.tiempo + p.tiempo_llegada,
                                persona)
                         for persona in self.activos]
-        
+
         self.eventos += [Evento("accidente", expovariate(1/25)),
                          Evento("lluvia_start", expovariate(1/300))]
         self.funciones = {"atajo": self.atajo,
@@ -114,6 +120,7 @@ class Simulacion(object):
                 p.activa = False
                 self.activos.remove(p)
                 self.inactivos.append(p)
+
         self.eventos.append(
             Evento("accidente", self.tiempo + expovariate(1/25))
         )
@@ -122,8 +129,8 @@ class Simulacion(object):
         while self.eventos and self.activos:
             self.eventos.sort(key=lambda e: e.tiempo)
             evento = self.eventos.pop(0)
-            self.funciones[evento.nombre](evento)
             self.tiempo = evento.tiempo
+            self.funciones[evento.nombre](evento)
 
     def log(self, descripcion, entidad):
         print("{} | {} | {} | {}"
@@ -145,5 +152,53 @@ class Simulacion(object):
                 personas.append(persona)
         return personas
 
+
+class Estadisticas:
+    def __init__(self, competidores_end):
+        self.iteraciones = len(competidores_end)
+        self.terminaron = list(map(lambda x: len(x), competidores_end))
+        self.terminaron = sum(self.terminaron)/self.iteraciones
+        self.competidores_end = reduce(lambda x,y: x+y, competidores_end)
+        self.wm = list(filter(lambda x: x[1].sexo=='femenino',competidores))
+        self.mn = list(filter(lambda x: x[1].sexo=='masculino',competidores))
+        self.amateurs_wm = list(filter(lambda x: isinstance(x[1], Amateur),
+        self.wm))
+        self.aficioados_wm = list(filter(lambda x: isinstance(x[1], Aficionado),
+        self.wm))
+        self.pros_wm = list(filter(lambda x: isinstance(x[1], Profesional),
+        self.wm))
+        self.amateurs_mn = list(filter(lambda x: isinstance(x[1], Amateur),
+        self.mn))
+        self.aficioados_mn = list(filter(lambda x: isinstance(x[1], Aficionado),
+        self.mn))
+        self.pros_mn = list(filter(lambda x: isinstance(x[1], Profesional),
+        self.mn))
+        
+    def tiempo_promedio(self, competidores):
+        totales = [tup[0] for tup in competidores]
+        tiempo_promedio = statistics.mean(totales)
+        return tiempo_promedio
+
+    def __str__(self):
+        total_mean = self.tiempo_promedio(self.competidores_end)
+        amateur_man = self.tiempo_promedio(self.amateur_mn)
+        amateur_woman = self.tiempo_promedio(self.amateurs_wm)
+        aficionado_man = self.tiempo_promedio(self.aficioados_mn)
+        aficionado_woman = self.tiempo_promedio(self.aficionado_wm)
+        pro_man = self.tiempo_promedio(self.pros_mn)
+        pro_woman = self.tiempo_promedio(self.pros_wm)
+        return ('Promedio que termino: {}'.format(self.terminaron)
+        + 'Tiempo promedio de corredores en terminar carrera: {}'.format(
+        total_mean)
+        + 'Tiempo mujeres Amateur: {}'.format(amateur_woman)
+        + 'Tiempo mujeres Aficionadas: {}'.format(aficionado_woman)
+        + 'Tiempo mujeres Profesionales: {}'.format(pros_wm)
+        + 'Tiempo hombres Amateur: {}'.format(amateur_man)
+        + 'Tiempo hombres Aficionados: {}'.format(aficionado_man)
+        + 'Tiempo hombres Profesionales: {}'.format(pro_man))
+        
+
+
+    
 if __name__ == '__main__':
     sim = Simulacion()
