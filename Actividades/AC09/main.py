@@ -86,6 +86,10 @@ class Programador(threading.Thread):
                 self.enviar_tarea(tarea)
 
     def trabajar_en_tarea(self, tarea):
+        # Necesitamos este while para que el trabajador deje de trabajar
+        # aun no habiendo terminado el programa inicial (para imprimir el
+        # estado final). Esto es consecuencia de no haber hecho Administrador
+        # un thread.
         while self.can_work:
             reloj(1)
             if self.lento:
