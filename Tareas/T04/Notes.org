@@ -1,0 +1,225 @@
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+
+#+HTML_HEAD: <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+#+HTML_HEAD: <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="https://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="https://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+
+* General ideas
+- Use some sort of finite-state-machine class 'World' with properties readable (NOT WRITEABLE) by everybody
+- 
+
+* IMPORTANT
+- One event might be optional!
+- Control 6 might involve threading /and/ simulation
+
+* Decisions taken
+- Clients first go to each location before figuring out whether they can actually ride or no. For example, they'll decide to go to some ride and get there before finding out their members don't satisfy the height requirement. After this, this attraction will go in a "cant_ride" list of places which won't be traversed a second time once all others have been visited.
+  - Same for restaurants?
+* Planning
+** EXTERNAL EVENTS
+Entities should be able to respond to these
+*** Rain
+
+**** Effects
+- Aquatic rides close
+  - Their operators are free to work on others' lunch breaks
+- Max 1 kid per adult
+
+
+**** Design choices to fit these:
+
+- Rides have a =closed= property
+  #+BEGIN_SRC python
+
+    @property
+    def closed(self):
+        if world.raining:
+            return True
+        if self.being_maintained:
+            return True
+        return False
+      
+  #+END_SRC
+
+- Operators can be reassigned
+
+- Parents' children lists can be bounded depending on world conditions
+
+
+*** Invasion de ruziland
+
+**** Effects
+- 40% of adults leave
+- Probability of failures on rides reduced in half
+
+**** Design choices to fit these:
+- Adults' patience becomes 0 immediately, i.e. it depends on world conditions
+#+BEGIN_SRC python
+  @property
+  def patience(self):
+      if world.being_invaded:
+          return 0
+      return calculated_patience
+
+#+END_SRC
+- Failures in rides also depend on =world.being_invaded=
+
+
+*** Dia de colegio
+
+**** Effects:
+- Kids don't need to be accompanied to go on rides, but they still have an adult in charge
+- Their budget is the even distribution of their adults' budget
+- Minimum of 10 kids per adults
+- Adults enter free but can't enter rides
+
+**** Design decisions to fit these:
+
+- Kids share their adults' budget.
+#+BEGIN_SRC python
+  @property
+  def budget(self):
+      if not self.independent:
+          return super().budget
+      return own_budget # evenly split blah blah
+
+#+END_SRC
+- ASSUME ADULTS AREN'T PARENTS, ONLY RESPONSIBLES. I.E.,  A KID CAN GO WITH A COMPLETE STRANGER, SO TO SPEAK. If adult doesn't have enough kids, fill him up until he has 10.
+  - For this, create kids only when adults have been defined. This is hopefully done the following:
+#+BEGIN_SRC python
+  def create_kids(self):
+      if world.raining:
+          create only one kid
+      if world.school_day:
+          create minimum 10 kids
+      else:
+          create random kids
+
+#+END_SRC
+- Adults have a sort of =can_ride= state. They can come into the park but not ride any rides. 
+  * CAN ADULTS GO INTO RESTAURANTS IF THEY CAN'T GO INTO RIDES? YES. MAKE RESTAURANTS OPEN FOR EVERYBODY ON SCHOOL DAYS.
+** Modelling
+#+BEGIN_SRC plantuml :file notes.png
+
+abstract class Event{
+  int time
+  
+  run(*args, **kwargs)
+}
+
+class World{
+  all the info!
+  privaate
+}
+
+class WorldInterface{
+  getters for World attributes
+}
+
+class Scheduler{
+  future_event_list
+  next_event()
+
+  schedule(time_delta, event):\n\
+    event.update_time(simtime + time_delta)\n\
+    future_event_list.append(event)
+}
+
+#+END_SRC
+
+#+RESULTS:
+[[file:notes.png]]
+** 
+** Libraries to use
+- Use =bisect=?
+* Entregable
+** Eventos
+- Cliente intenta ingresar a parque
+  - Operador de porteria atiende a cliente
+  - Cliente ingresa a parque
+  - Cliente sale de parque
+- Cliente llega a restaurante
+  - Cliente entra a restaurante
+  - Cliente recibe pedido
+  - Cliente sobrepasa tiempo maximo para comer
+  - Cliente sale de restaurante
+- Cliente descanza
+  - Cliente termina de descanzar
+- Cliente llega a atraccion
+  - Cliente entra a fila
+  - Cliente se sale de la fila
+  - Cliente entra a atracción
+  - Cliente sale de atracción
+- Cliente se dirije a instalación
+
+- Empleado comienza colacion
+  - Empleado termina colacion
+- Operador revisa atraccion (Llama tecnico o limpiador)
+  - Operador inicia atraccion
+  - Operador llama a tecnico
+- Limpiador se dirige a lugar
+  - Limpiador llega a lugar
+  - Limpiador limpia
+- Tecnico se dirige a lugar
+  - Tecnico llega a lugar
+  - Tecnico repara
+
+- Atraccion falla
+- Atraccion termina
+  - Viejos clientes se retiran
+  - (Aqui operador revisa atraccion)
+  - Nuevos clientes comienzan a entrar
+  - Atraccion supera limite de tiempo de espera
+  - Atraccion comienza
+
+- Lluvia (evento instantaneo)
+- Invasion de ruziland (evento instantaneo)
+- Dia de colegio (evento instantaneo)
+** Implementacion Dia de Colegio
+*** Minimo de 10 niños por adulto
+Los niños son asignados a cada adulto a la hora de su creacion. Para esto asumo que no hay persistencia entre personas que salen y entran al parque, i.e. son siempre personas nuevas. Dependiendo del estado del mundo, e.g. lluvia o dia de colegio, el rango de niños asignados cambiara. Podemos decir que estos adultos no son necesariamente los padres de los niños, en todos los casos ;)
+
+*** Niños no necesitan ir acompañados a los juegos
+Por una parte, a los niños se les asigna independientemente su propio presupuesto, a diferencia del caso usual en el que sanguijuelean del presupuesto de sus adultos. Por esto, los Niños tendran un property presupuesto. En el caso normal este retorna el presupuesto del adulto encargado, y en el dia de colegio este retornara el presupuesto personal.
+
+*** Adultos entran gratis pero no pueden entrar a juegos
+El precio se reduce a 0 en el control de entrada al parque (nuevamente mediante uso de properties que leen el estado del Mundo). A la vez, los operadores en cada atraccion controlaran que los adultos no suban mientras los niños sí.
+
+*** Comentarios
+Todas las entidades fijas del recinto (el mundo, el parque, las atracciones) corresponden a maquinas de estados finitos en base a los cuales varian las definiciones de los siguientes eventos. 
+Espero poder implementar el paradigma de tres fases comunmente utilizado para simulacion de eventos discretos.
+
+* Random
+class EmployeeManager():
+Ride breaks or too dirty, operator sends message here
+Manager selects the next free technician/cleaner/operator and sends them over
+
+Client arrives at entrance.
+Client gets in queue. (There are 3 queues)
+...
+First Client in queue is attended by operator
+Client enters park or ride or whatever and queue moves forward
+
+
+
+Queue():
+size
+elements = deque()
+enter_new()
+action_at_end()
+
+Every ride has a queue
+
+
+
+
+Events as messages!
+Event(sender, receivers)
+
+Example:
+InstantEvent(client, restaurant, EnterRestaurant)
+EnterRestaurant:
+   add DelayedEvent(client, restaurante, GetFood, delay=
+ConditionalEvent(client, ride, LeaveQueue, )
