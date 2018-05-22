@@ -8,12 +8,18 @@
 
 * General ideas
 - Use some sort of finite-state-machine class 'World' with properties readable (NOT WRITEABLE) by everybody
-- 
+- Three phase simulation:
+  - A phase: Skip time to closest B event
+  - B phase: Execute /all/ B events at this time, sorted by priority, if any
+  - C phase: Attempt to execute /all/ C events
+
+Events must have a 'killswitch' of sorts. For example, upon a client entering a queue, the B event "Leave queue" will be triggered unconditionally when the client loses their patience, *unless* they manage to get to the end of the queue through the B events that make the queue move forward.
+Make entities have only one scheduled event ever? Nah
 
 * IMPORTANT
 - One event might be optional!
 - Control 6 might involve threading /and/ simulation
-
+  
 * Decisions taken
 - Clients first go to each location before figuring out whether they can actually ride or no. For example, they'll decide to go to some ride and get there before finding out their members don't satisfy the height requirement. After this, this attraction will go in a "cant_ride" list of places which won't be traversed a second time once all others have been visited.
   - Same for restaurants?
@@ -131,7 +137,6 @@ class Scheduler{
 
 #+RESULTS:
 [[file:notes.png]]
-** 
 ** Libraries to use
 - Use =bisect=?
 * Entregable

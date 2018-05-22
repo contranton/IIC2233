@@ -14,12 +14,16 @@ class Event(object):
     id_counter = counter(1)
 
     def __init__(self, time=timebase.origin):
+        self.time = time
         self.event_id = next(Event.id_counter)
 
     def run(self):
         # log
         # all sorts of underlying boilerplate and whatnot
         self.execute()
+
+    def update_time(self, time_val):
+        self.time = time_val
 
     @abstractmethod
     def execute(self):
