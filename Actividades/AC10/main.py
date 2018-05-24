@@ -18,6 +18,7 @@ class MainWindow(QWidget):
 
         for p in self.postits:
             self.grid_layout.addWidget(p, *p.posicion)
+            
         hor_layout = QHBoxLayout()
 
         self.btn_send = QPushButton('Send', self)
@@ -73,8 +74,11 @@ class PostIt(QWidget):
         layout.addWidget(self.btn)
         self.setLayout(layout)
 
-        self.show()
-        self.setVisible(False)
+        retain = self.sizePolicy()
+        retain.setRetainSizeWhenHidden(True)
+        self.setSizePolicy(retain)
+        
+        self.hide()
 
     def __repr__(self):
         return self.texto
@@ -82,13 +86,13 @@ class PostIt(QWidget):
     def crear_nuevo(self, string):
         self.texto = string
         self.label.setText(self.texto)
-        self.setVisible(True)
+        self.show()
 
     def borrar(self):
         print("Borrando")
         self.texto = ""
         self.label.setText("")
-        self.setVisible(False)
+        self.hide()
 
 
 #True si cumple los requisitos, False caso contrario
