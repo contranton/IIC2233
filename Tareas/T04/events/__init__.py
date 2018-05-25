@@ -1,3 +1,6 @@
+from misc_lib import Logger
+
+
 class Event(object):
 
     logger = Logger()
@@ -9,7 +12,7 @@ class Event(object):
         self.update_time(0)
 
     def __call__(self, *args, **kwargs):
-        print(self.time, end=": ")
+        print("{}: {} on {}".format(self.time, self.name, self.entity))
         return self.function(self.entity, *args, **kwargs)
 
     @property
