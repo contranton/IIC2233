@@ -1,6 +1,8 @@
 import csv
 from collections import namedtuple
 
+from entity import Attraction, Restaurant
+
 
 def read_csv(path):
     with open(path, 'r', encoding="utf-8") as f:
@@ -25,14 +27,12 @@ def get_associations():
 def get_attractions():
     rows = read_csv("data/attractions.csv")
     attraction = namedtuple("Attraction", " ".join(rows[0]))
-    for (id, name, type, adult_cost, child_cost,
-         cap, duration, min_height, dirt_lim, max_time) in rows[1:]:
-        yield attraction(id, str(name), str(type), adult_cost, child_cost, cap,
-                         duration, min_height, dirt_lim, max_time)
+    for row in rows[1:]:
+        yield Attraction(*row)
 
 
 def get_restaurants():
     rows = read_csv("data/restaurants.csv")
     restaurant = namedtuple("Restaurant", " ".join(rows[0]))
-    for id, name, cap, ad_cost, ch_cost, max_d in rows[1:]:
-        yield restaurant(id, name, cap, ad_cost, ch_cost, max_d)
+    for row in rows[1:]:
+        yield Restaurant(*row)

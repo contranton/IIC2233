@@ -1,4 +1,4 @@
-from misc_lib import Logger
+from misc_lib import Logger, timestamp_to_datetime
 
 
 class Event(object):
@@ -12,7 +12,8 @@ class Event(object):
         self.update_time(0)
 
     def __call__(self, *args, **kwargs):
-        print("{}: {} on {}".format(self.time, self.name, self.entity))
+        datetime = timestamp_to_datetime(self.time)
+        print("{}: {} on {}".format(datetime, self.name, self.entity))
         return self.function(self.entity, *args, **kwargs)
 
     @property

@@ -23,8 +23,9 @@ Make entities have only one scheduled event ever? Nah
 
   
 * Decisions taken
+** Client knowledge with respect to rides and restaurants
 - Clients first go to each location before figuring out whether they can actually ride or no. For example, they'll decide to go to some ride and get there before finding out their members don't satisfy the height requirement. After this, this attraction will go in a "cant_ride" list of places which won't be traversed a second time once all others have been visited.
-  - Same for restaurants?
+  1. Same for restaurants. They'll try visiting a restaurant before finding out if it's full or not or if they haven't visited the necessary ride. T
 * Planning
 ** EXTERNAL EVENTS
 Entities should be able to respond to these
@@ -234,10 +235,10 @@ ConditionalEvent(client, ride, LeaveQueue, )
 ** Thursday
 *** DONE World state accessible from all entities
     - State "DONE"       from "WORKING"    [2018-05-24 Thu 14:03]
-*** TODO Management mockup
-All workers have a manager who gets requests for operators/technicians/cleaners and, well, /manages/ the logistics.
 *** DONE File IO
     - State "DONE"       from "WORKING"    [2018-05-24 Thu 18:52]
+*** TODO Management mockup
+All workers have a manager who gets requests for operators/technicians/cleaners and, well, /manages/ the logistics.
 *** TODO Implement Clients and actions
 Defer complicated things for later
 ** Friday

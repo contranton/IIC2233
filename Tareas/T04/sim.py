@@ -1,5 +1,5 @@
 import bisect
-from misc_lib import Singleton
+from misc_lib import Singleton, timestamp_to_datetime, timestamp_to_time
 
 
 class Scheduler(metaclass=Singleton):
@@ -34,7 +34,7 @@ class Scheduler(metaclass=Singleton):
                 raise Exception("Invalid Scheduling. Can't define "
                                 "both a 'time' and a 'delta'")
             sched_time = time
-        else:
+        elif delta:
             sched_time = self.time + delta
 
         event.update_time(sched_time)
@@ -48,6 +48,11 @@ class Scheduler(metaclass=Singleton):
     def cancel_event(self, event):
         # TODO: Log this
         self.event_list.remove(event)
+
+    @property
+    def time_string(self):
+        return timestamp_to_datetime(self.time)
+
 
 
 class Simulation(metaclass=Singleton):
@@ -64,13 +69,11 @@ class Simulation(metaclass=Singleton):
             # Get all next events that ocurr at the same time
             events = self.schedule.next_simultaneous_events()
 
-            # Run the events and get their resulting new events, if any
-            new_events = [event() for event in events]
+            # Execute em
+            [event() for event in events]
 
-            # Filters 'None' return values
-            new_events = list(filter(lambda x: x, new_events))
+            # Run conditional events
 
-            # Schedule the new events
-            if new_events and any(new_events):
-                for new_event, delta in new_events[0]:
-                    self.schedule(new_event, delta)
+    @property
+    def time(self):
+        return timestamp_to_time(self.schedule.time)
