@@ -4,7 +4,7 @@ from misc_lib import Logger, timestamp_to_datetime
 class Event(object):
 
     logger = Logger()
-    
+
     def __init__(self, name, entity, function):
         self.name = name
         self.entity = entity
@@ -13,7 +13,7 @@ class Event(object):
 
     def __call__(self, *args, **kwargs):
         datetime = timestamp_to_datetime(self.time)
-        print("{}: {} on {}".format(datetime, self.name, self.entity))
+        print("{}: {:<40} on {}".format(datetime, self.name, self.entity))
         return self.function(self.entity, *args, **kwargs)
 
     @property
@@ -29,3 +29,10 @@ class Event(object):
     def __repr__(self):
         s = "Event({}, {}, {})"
         return s.format(self.name, self.time, self.entity)
+
+def schedule_initial_events():
+    from events.client_events import schedule_arrivals
+    from events.external_events import schedule_external_events
+
+    schedule_arrivals()
+    schedule_external_events()

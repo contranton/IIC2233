@@ -54,10 +54,10 @@ class Scheduler(metaclass=Singleton):
         return timestamp_to_datetime(self.time)
 
 
-
 class Simulation(metaclass=Singleton):
     def __init__(self):
         self.schedule = Scheduler()
+        self.iteration = 0
 
     def run(self):
         while self.schedule.event_list:

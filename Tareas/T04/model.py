@@ -1,6 +1,6 @@
-from collections import namedtuple
+from copy import deepcopy
 
-from misc_lib import Singleton
+from misc_lib import Singleton, Logger
 from fileio import get_restaurants, get_attractions
 from sim import Simulation
 
@@ -32,12 +32,10 @@ class Nebiland(metaclass=Singleton):
 
     _restaurants = list(get_restaurants())
     _attractions = list(get_attractions())
+    Logger().all_rides = deepcopy(_attractions)
     _clients = {}
 
     __counter = _counter()
-
-    def get_valid_restaurants(self, attraction_list):
-        pass
 
     def client_enters(self, name, num_children):
         # Returns a client id that the client keeps. A sort of ticket.
@@ -69,6 +67,16 @@ class Nebiland(metaclass=Singleton):
     @property
     def closing_time_today(self):
         return Simulation().time.day * 60 * 24 + 19 * 60
+
+    def any_valid_restaurants(self, rides_set):
+        return len(self.get_valid_restaurants(rides_set)) > 0
+    
+    def get_valid_restaurants(self, rides_set):
+        return list(filter(lambda x: x.rides & rides_set, self._restaurants))
+
+    @property
+    def attractions_by_queue_length(self):
+        return sorted(deepcopy(self._attractions), key=lambda a: len(a.queue))
 
 
 class World(metaclass=Singleton):

@@ -1,9 +1,13 @@
-from world import IWorld
-from misc_lib import Singleton
-
 from random import normalvariate, expovariate, uniform
+from collections import deque
 
 from faker import Faker
+
+from world import IWorld
+from misc_lib import Singleton
+from fileio import get_associations
+
+
 fkr = Faker()
 
 
@@ -13,7 +17,7 @@ class Entity:
 
 class WorkerManager(metaclass=Singleton):
     workers = []
-    
+
 
 class Client(Entity):
     def __init__(self):
@@ -23,13 +27,15 @@ class Client(Entity):
         self._nausea = 0
         self._budget = 0
 
-        
-        self.height = normalvariate(170, 8)
-        self.has_left = False
+        self._height = normalvariate(170, 8)
         self._children = []
 
-        self.client_id = None
+        self.rides_ridden = set()
 
+        self.cant_ride_list = []
+        self.client_id = None
+        self.has_left = False
+        self.got_on = False
 
     def __repr__(self):
         return "Client({})".format(self.name)
@@ -39,8 +45,12 @@ class Client(Entity):
         self._children.append(child)
 
     @property
+    def children(self):
+        return [c.name for c in self._children]
+
+    @property
     def patience(self):
-        return normalvariate(10+30*self._energy, 5)
+        return int(normalvariate(10+30*self._energy, 5))
 
     @property
     def budget(self):
@@ -61,6 +71,13 @@ class Client(Entity):
     @property
     def _all_hungers(self):
         return [self._hunger] + [c._hunger for c in self._children]
+
+    @property
+    def _all_heights(self):
+        return [self._height] + [c._height for c in self._children]
+    
+    def any_height_below(self, height):
+        return any(map(lambda x: x < height, self._all_heights))
 
     @property
     def minimum_energy(self):
@@ -87,7 +104,7 @@ class Child(Entity):
         self._nausea = 0
         self._budget = 0
 
-        self.height = normalvariate(120, 15)
+        self._height = normalvariate(120, 15)
         self.adult = None
 
 
@@ -108,6 +125,8 @@ class Attraction(Entity):
         self.min_height = int(min_height)
         self.dirt_limit = int(dirt_limit)
         self.min_height = int(min_height)
+
+        self.queue = deque()
 
     @property
     def time_failures(self):
@@ -130,6 +149,9 @@ class Restaurant(Entity):
         self.adult_cost = int(adult_cost)
         self.child_cost = int(child_cost)
         self.max_duration = int(max_duration)
+
+        self.rides = {ride for restaurant, ride in get_associations()
+                      if restaurant == self.id}
 
     @property
     def time_cooking_adult(self):

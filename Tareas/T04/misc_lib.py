@@ -11,7 +11,17 @@ class Singleton(type):
 
 
 class Logger(metaclass=Singleton):
-    pass
+    """Data class that aggregates the different statistics required by
+    the simulationn
+    """
+    all_clients = []
+    all_rides = []
+    school_day_profits = []
+    people_left_due_to_events = []
+
+    num_left_by_lack_of_energy = 0
+    num_ruziland_failures = 0
+    num_people_couldnt_eat = 0
 
 
 _day_map = ["Lunes", "Martes", "Miercoles",

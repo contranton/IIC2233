@@ -1,7 +1,9 @@
 from sim import Simulation
-from events.client_events import schedule_arrivals
+from events import schedule_initial_events
+
+DEBUG = 1
 
 if __name__ == '__main__':
     import pdb
-    schedule_arrivals()
+    schedule_initial_events()
     Simulation().run()
