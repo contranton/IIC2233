@@ -22,7 +22,7 @@ def schedule_rainy_day():
 def begin_rainy_day(world):
     world.raining = True
     event_end = Event("EndRainyDay", World(), end_rainy_day)
-    Simulation().schedule(event_end, time=int(expovariate(1/20)*60*24))
+    Simulation().schedule(event_end, delta=60*24)
 
 
 def end_rainy_day(world):

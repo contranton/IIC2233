@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, deque
 
 
 class Singleton(type):
@@ -23,6 +23,34 @@ class Logger(metaclass=Singleton):
     num_ruziland_failures = 0
     num_people_couldnt_eat = 0
 
+    message_list = deque()
+
+    PRINT = False
+
+    __format = "{:<10} | {:<20} | {:<40} | {:<30} | {}"
+
+    def __init__(self):
+        s = "{0}\n{1:^150}\n{0}\n".format("="*150, "N E B I L A N D")
+        self.log(s)
+        self.table_log("Iteration", "Datetime",
+                       "Event", "Entity Affected", "Extra Info")
+        self.log("-"*150)
+
+    def table_log(self, iteration, dt, name, entity, extra):
+        s = self.__format.format(iteration, dt, name, entity, extra)
+        self.log(s)
+
+    def log(self, string):
+        if self.PRINT:
+            print(string)
+        self.message_list.append(string)
+
+    def write(self):
+        with open("log.txt", 'w') as f:
+            for message in self.message_list:
+                f.write(message + "\n")
+        
+
 
 _day_map = ["Lunes", "Martes", "Miercoles",
             "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -42,6 +70,7 @@ def datetime_to_time(day, time):
 
 
 time_nt = namedtuple("Time", "day hour minute")
+time_nt.raw = lambda t: t.day*60*24 + t.hour*60 + t.minute
 
 
 def timestamp_to_time(timestamp):
@@ -54,5 +83,9 @@ def timestamp_to_time(timestamp):
 
 def timestamp_to_datetime(timestamp):
     t = timestamp_to_time(timestamp)
-    day = _day_map[t.day]
+    try:
+        day = _day_map[t.day]
+    except:
+        print("ERROR: A given date is way invalid. Check it out")
+        import pdb; pdb.set_trace()
     return "{:<10}@ {:0>2}:{:0>2}".format(day, t.hour, t.minute)

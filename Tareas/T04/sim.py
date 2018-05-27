@@ -1,5 +1,6 @@
 import bisect
-from misc_lib import Singleton, timestamp_to_datetime, timestamp_to_time
+from misc_lib import (Singleton, timestamp_to_datetime,
+                      timestamp_to_time, Logger)
 
 
 class Scheduler(metaclass=Singleton):
@@ -8,6 +9,7 @@ class Scheduler(metaclass=Singleton):
         self._event_times = []
         self.time = 0
         self.conditionals = []
+        self.obsoletable = []
 
     def __call__(self, *args, **kwargs):
         self.schedule(*args, **kwargs)
@@ -27,7 +29,7 @@ class Scheduler(metaclass=Singleton):
         return (self.next_event() for i in range(index))
 
     def schedule(self, event, time=None, delta=None,
-                 obsolete_if=None):
+                 obsolete_if=None, condition=None):
         sched_time = self.time
         if time:
             if delta:
@@ -37,17 +39,39 @@ class Scheduler(metaclass=Singleton):
         elif delta:
             sched_time = self.time + delta
 
+        if sched_time > self.max_time:
+            print("WARNING: Tried to schedule event {} at time {} which is "
+                  "past the maximum time {}. Ignoring.".format(
+                      event, sched_time, self.max_time))
+            return
+
+        # Conditional events don't depend on time
+        if condition:
+            self.conditionals.append((event, condition))
+            return
+
+        # Time-dependent events
         event.update_time(sched_time)
         index = bisect.bisect(self._event_times, event.time)
         self.event_list.insert(index, event)
         self._event_times.insert(index, event.time)
 
         if obsolete_if:
-            self.conditionals.append((event, obsolete_if))
+            self.obsoletable.append((event, obsolete_if))
 
     def cancel_event(self, event):
         # TODO: Log this
+        Logger().log("{} was cancelled".format(event))
         self.event_list.remove(event)
+
+    def execute_conditional(self, event, cond):
+        event.update_time(self.time)
+        event()
+        self.conditionals.remove((event, cond))
+
+    @property
+    def max_time(self):
+        return 7*60*24 + 23*60 + 59
 
     @property
     def time_string(self):
@@ -62,7 +86,7 @@ class Simulation(metaclass=Singleton):
     def run(self):
         while self.schedule.event_list:
             # Discard obsolete events
-            for event, cond in self.schedule.conditionals:
+            for event, cond in self.schedule.obsoletable:
                 if cond(event.entity):
                     self.schedule.cancel_event(event)
 
@@ -73,6 +97,9 @@ class Simulation(metaclass=Singleton):
             [event() for event in events]
 
             # Run conditional events
+            for event, cond in self.schedule.conditionals:
+                if cond():
+                    self.schedule.execute_conditional(event, cond)
 
     @property
     def time(self):
