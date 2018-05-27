@@ -12,6 +12,9 @@ from params import (PARK_OPERATORS_AT_GATE, PARK_CLEANERS_PER_RIDE,
 
 
 def _counter():
+    """
+    Generator that yields incremental subsequent values
+    """
     i = 0
     while True:
         yield i
@@ -20,7 +23,8 @@ def _counter():
 
 class _ClientEntry(object):
     """
-    Documentation for _ClientEntry
+    Compacted description of a client used inside Nebiland for
+    bookkeeping purposes
     """
     def __init__(self, name, children, entered, exited):
         self.name = name
@@ -35,7 +39,7 @@ def _manage(foo):
     """
     Decorator for methods in WorkerManager or Ticket which trigger a
     system update, i.e. sending off workers and updating the order
-    queue
+    queue.
     """
     def _(*args):
         WorkerManager().update_orders()
@@ -48,6 +52,12 @@ class Ticket:
     id = 0
 
     def __init__(self, ride):
+        """
+        Ticket used for managing requests to clean or fix rides. It must
+        be kept by an event callback to periodically check its
+        'activated' statem upon which it's understood that the request
+        has been processed and is being acted on by the manager.
+        """
         Ticket.id += 1
         self.id = Ticket.id
         self.activated = False
@@ -55,29 +65,46 @@ class Ticket:
         self.ride = ride
 
     def __call__(self):
-        if self.activated:
-            print("TICKET %i ACTIVATED" % self.id)
-            #self.activated = False
-            return True
-        return False
+        """
+        Simplifies checking the state. Returns a bool
+        """
+        return self.activated
 
     def activate(self):
+        """
+        Activate the ticket, signifying that the manager has assigned a
+        worker to the task
+        """
         self.activated = True
-        self.ride.out_of_service()
 
     def assign_worker(self, worker):
+        """
+        Assign a worker to the ticket
+        """
         self.worker = worker
         self.worker.busy = True
 
     @_manage
     def done(self):
+        """
+        Called upon completion of the cleaning/fixing task. Frees up
+        worker and restores services.
+        """
         self.ride.back_in_service()
         self.worker.busy = False
 
 
 class WorkerManager(metaclass=Singleton):
-
+    """
+    Manages the park's workers, giving them orders through a ticket
+    system
+    """
     def populate(self, num_rides):
+        """
+        Create workers according to the given number of rides. A sort of
+        __init__ I implemented before figuring out there was no issue
+        in using them with the singleton pattern xd
+        """
         self.operators = [Worker()
                           for i in range(num_rides + PARK_OPERATORS_AT_GATE)]
         self.ride_workers = {
@@ -93,6 +120,11 @@ class WorkerManager(metaclass=Singleton):
         }
 
     def update_orders(self):
+        """
+        Main method for assigning the next task to the next free
+        worker. The _manage decorator is used to force this method to
+        update and move the simulation forward
+        """
         # Assign orders
 
         for worker_type, order_queue in self.orders.items():
@@ -107,13 +139,23 @@ class WorkerManager(metaclass=Singleton):
 
     @_manage
     def make_job_ticket(self, ride, type_):
+        """
+        Return a ticket for the request of type 'type_' on the given
+        ride. Ticket must be checked for processing status.
+        """
         t = Ticket(ride)
         self.orders[type_].appendleft(t)
         return t
 
     @property
     def _all_workers(self):
-        return [self.operators] + [*list(self.ride_workers.values())]
+        """
+        Returns flattened list of all workers managed. Used to schedule in
+        batch.  All praise to
+        https://stackoverflow.com/questions/952914/making-a-flat-list-out-of-list-of-lists-in-python
+        """
+        return [item for sub in [self.operators] +
+                list(self.ride_workers.values()) for item in sub]
 
 
 class Nebiland(metaclass=Singleton):
@@ -132,6 +174,9 @@ class Nebiland(metaclass=Singleton):
     manager.populate(len(attractions))
 
     def client_enters(self, name, num_children):
+        """
+        Registers entry of a client and their children to the park
+        """
         # Returns a client id that the client keeps. A sort of ticket.
         c_id = next(self.__counter)
         self._clients[c_id] = \
@@ -142,30 +187,48 @@ class Nebiland(metaclass=Singleton):
         return c_id
 
     def client_exits(self, c_id):
+        """
+        Registers exit of a client and their group
+        """
         registry = self._clients[c_id]
         registry.exited = Simulation().time
         registry.in_park = False
 
     def add_ticket(self, ride, type_):
+        """
+        Public-ish interface to the manager's ticket creator. Generates a
+        ticket for a 'clean' or 'fix' request on 'ride'
+        """
         ticket = self.manager.make_job_ticket(ride, type_)
         return ticket
 
     @property
     def num_rides(self):
+        """
+        Number of total rides
+        """
         return len(self.attractions)
 
     @property
     def _capacity(self):
+        """
+        Maximum capacity of the park
+        """
         return sum(map(lambda a: a.capacity, self.attractions)) *\
             PARK_TOTAL_CAPACITY_FACTOR
 
     @property
     def _clients_in_park(self):
+        """
+        Number of clients currently inside park
+        """
         return len(list(filter(lambda c: c.in_park, self._clients.values())))
 
-    @property
-    def has_capacity(self):
-        return self._capacity > self._clients_in_park
+    def has_capacity(self, group_size):
+        """
+        Returns True if there's enough space for new_clients in the park
+        """
+        return self._capacity > self._clients_in_park + group_size
 
     @property
     def closing_time_today(self):

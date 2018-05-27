@@ -1,4 +1,4 @@
-from random import normalvariate, expovariate, uniform, random
+from random import normalvariate, expovariate, uniform, random, choices
 from collections import deque
 
 from faker import Faker
@@ -18,7 +18,7 @@ from params import (CLIENT_PATIENCE_MU_OFFSET,
                     CLIENT_HUNGER_INITIAL_UPPER,
                     RUZILAND_FAILURE_RATE_FACTOR,
                     RIDE_MAX_CLEANING_TIME, RESTAURANT_ADULT_PREP,
-                    RESTAURANT_CHILD_PREP)
+                    RESTAURANT_CHILD_PREP, WORKER_LUNCH_TIME_TABLE)
 
 fkr = Faker()
 
@@ -31,17 +31,19 @@ class Entity:
 
 
 class Client(Entity):
-    def __init__(self):
+    def __init__(self, budget, n_children):
         self.name = fkr.name()
         self._energy = 1
         self._hunger = uniform(CLIENT_HUNGER_INITIAL_LOWER,
                                CLIENT_HUNGER_INITIAL_UPPER)
         self._nausea = 0
-        self._budget = 0
+        self._budget = budget
 
         self._height = normalvariate(CLIENT_HEIGHT_ADULT_MU,
                                      CLIENT_HEIGHT_ADULT_SIGMA)
+
         self._children = []
+        [self.add_child(Child()) for i in range(n_children)]
 
         self.rides_ridden = set()
 
@@ -69,6 +71,10 @@ class Client(Entity):
     def children(self):
         return [c.name for c in self._children]
 
+    @property
+    def group_size(self):
+        return 1 + len(self._children)
+    
     @property
     def patience(self):
         return int(normalvariate(
@@ -135,14 +141,17 @@ class Client(Entity):
     def hunger(self, value):
         self._hunger = min(max(value, 0), 1)
 
-    def increase_children_nausea(self, value):
+    def raise_child_nauseas(self, delta):
         for c in self._children:
-            c._nausea = min(c._nausea + value, CLIENT_NAUSEA_MAX)
+            c._nausea = min(max(c._nausea + delta, 0), CLIENT_NAUSEA_MAX)
 
-    def reduce_all_hungers(self, value):
-        self.hunger -= value
+    def raise_child_hungers(self, delta):
         for c in self._children:
-            c._hunger = max(c._hunger - value, 0)
+            c._hunger = min(max(c._hunger + delta, 0), 1)
+
+    def raise_child_energies(self, delta):
+        for c in self._children:
+            c._energy = min(max(c._energy + delta, 0), 1)
 
 
 class Child(Entity):
@@ -164,9 +173,19 @@ class Worker(Entity):
         self.name = fkr.name()
         self.busy = False
 
+        self.lunch_hour = choices(range(10, 19),
+                                  weights=WORKER_LUNCH_TIME_TABLE)[0]
+
     def __repr__(self):
         s = "BUSY" if self.busy else ""
         return s
+
+    def close_down_responsabilities(self):
+        pass
+
+    def open_up_responsabilities(self):
+        pass
+
 
 class Attraction(Entity):
     def __init__(self, id, name, type_, adult_cost, child_cost, capacity,
@@ -203,10 +222,7 @@ class Attraction(Entity):
 
     def start(self):
         from events.client_events import callback_enter_ride
-        from events.park_events import operator_check_ride
-        if not operator_check_ride(self):
-            # Ride must be serviced and can't be ridden right now
-            return
+        from events.park_events import schedule_ride_start
 
         cap = self.capacity
         riders = [self.queue.pop()
@@ -214,6 +230,7 @@ class Attraction(Entity):
         [callback_enter_ride(rider) for rider in riders]
 
         self.time_with_at_least_one_person = 0
+        schedule_ride_start(self)
 
     def can_begin(self):
         if self.closed:
@@ -233,13 +250,17 @@ class Attraction(Entity):
         self._dirt = min(max(value, 0), self.dirt_limit)
 
     @property
+    def costs(self):
+        return (self.adult_cost, self.child_cost)
+
+    @property
     def over_dirt_limit(self):
         return self.dirt > self.dirt_limit
 
     @property
     def failure_rate(self):
         from model import World
-        rate =  1 / (self.capacity * self.duration)
+        rate = 1 / (self.capacity * self.duration)
         if World().ruziland:
             rate *= RUZILAND_FAILURE_RATE_FACTOR
         return rate

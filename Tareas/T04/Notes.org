@@ -248,7 +248,15 @@ All workers have a manager who gets requests for operators/technicians/cleaners 
     Defer complicated things for later
 ** Friday
 *** DONE Implement Workers and actions
-*** TODO WORKING Statistics module
+*** External events
+** Saturday
+*** DONE Parametrize
+*** TODO Make public interfaces for rides and such
+Make it such that calling Nebiland().attractions returns shells of the attractions only with important data. Namedtuples should be useful
+*** TODO Modularize 'entity' file
+*** TODO Reimplement Child and Client as subclasses to be able to manage attributes properly
+** Sunday
+*** TODO [#A] Statistics module
 1) [X] Tiempo promedio de espera en fila de acceso a las atracciones
 2) [X] Promedio de llantos diarios por atracción
 3) [X] Total de personas que se van del parque a causa de perdida de energia
@@ -263,13 +271,9 @@ All workers have a manager who gets requests for operators/technicians/cleaners 
 12) [ ] Promedio de llamados totales a hacer aseo y reparacion por Limpiador y Tecnico respectivamente
 13) [X] Dinero total perdido por el parque en entradas debido a eventos externos
 14) [X] Dinero total no gastado por los visitantes    
-*** External events
-** Saturday
-*** DONE Parametrize
-*** TODO Make public interfaces for rides and such
-Make it such that calling Nebiland().attractions returns shells of the attractions only with important data. Namedtuples should be useful
-*** TODO Modularize 'entity' file
-*** TODO Reimplement Child and Client as subclasses to be able to manage attributes properly
-** Sunday
-*** TODO Documentation ONLY
-    
+*** TODO Documentation
+*** TODO Workers going on breaks
+*** TODO [#A] Operators actually starting rides
+*** TODO [#A] Multiple simulation iterations
+*** TODO [#B] Fix table contents
+*** TODO [#A] Crying

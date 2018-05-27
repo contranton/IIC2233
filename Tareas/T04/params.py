@@ -36,6 +36,11 @@ CLEANER_TRAVEL_TIME = 15
 TECH_FIX_TIME = 20
 TECH_TRAVEL_TIME = 15
 
+# Probability of choosing an hour for lunch break. Starts from the
+# 10:00-10:59 period and ends with the 18:00-18:59 one
+WORKER_LUNCH_TIME_TABLE = [0.05, 0.05, 0.3, 0.2, 0.1, 0.1, 0.05, 0.05,
+                           0.1]
+
 
 #####################
 # Client parameters #
@@ -102,8 +107,16 @@ RESTAURANT_AFTER_RIDE_NAUSEA = 30
 #####################
 
 # Nausea added after riding
-RIDE_CHILD_NAUSEA = 10
-RIDE_ADULT_NAUSEA = 5
+RIDE_CHILD_NAUSEA_DELTA = 10
+RIDE_ADULT_NAUSEA_DELTA = 5
+
+# Energy delta after riding
+RIDE_CHILD_ENERGY_DELTA = -0.05
+RIDE_ADULT_ENERGY_DELTA = -0.15
+
+# Hunger delta after riding
+RIDE_CHILD_HUNGER_DELTA = 0.1
+RIDE_ADULT_HUNGER_DELTA = 0.05
 
 # Dirt added by vomiting
 RIDE_VOMIT_DIRT = 40

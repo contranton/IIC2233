@@ -37,7 +37,7 @@ def schedule_ruziland_invasion():
     # Since each simulation lasts only a week, we can just use a conditional!
     event = Event("BeginRuzilandInvasion", World(), begin_ruziland)
     if random() < 0.5 * 0.25:
-        Simulation().schedule(event, time=uniform(10*60, 14*60 + 30))
+        Simulation().schedule(event, time=int(uniform(10*60, 14*60 + 30)))
 
 
 def begin_ruziland():
