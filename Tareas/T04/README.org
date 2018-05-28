@@ -1,0 +1,34 @@
+* *Tarea 4*, a.k.a., /Nunca más intentaré hacer una tarea en solo 4 días/
+Yeah, advierto de antemano que las 2410 líneas de Python de esta tarea son el producto de noches maratoneadas llenas de cafeína y poco sueño, y por lo tanto esta cuestión \*/gasp/\* no funciona bien xd
+Era mi intención hacerlo todo más claro y bien organizado y menos spaghettificado (y que cumpla los requisitos...) pero RIP :c
+** Importante
+- El programa requiere que exista el subdirectorio "data/" y que contenga los distintos archivos .csv necesarios
+** Librerias Usadas
+- =bisect=
+- =random=
+- =collections=
+- =faker=
+- =functools.partial=
+- =csv=
+- =traceback= y =pdb= solo como herramientas de /debugging/
+** Limitaciones
+- No se logran agendar bien los chequeos y comienzos de las atracciones a través de múltiples días. Por alguna razón, se agenda bien el primer inicio de cada atracción pero luego algo se traga el siguiente evento agendado. A causa de esto, mucha gente no puede ir a los restaurantes y no hace nada más que tomar descansos...
+- No se calculan bien las estadísticas entre múltiples iteraciones de la simulación
+- No se realiza el proceso de visitar todas las atracciones no visitadas antes de visitarlas de nuevo
+** Decisiones tomadas
+- Los clientes conocen los largos de las colas de todas las atracciones (digamos que tienen una especie de app), pero no saben si satisfacen los límites de altura de estas (¿quién anda con huincha para medirse antes de ir a alguna parte?). Por esto, se dirigirán a la atracción a la que desean ir, pero si no satisfacen este límite la atracción se añade a una lista interna de atracciones a las que el cliente no puede ir, y será ignorada por el resto de los tiempos.
+- Similarmente con los restaurantes, los clientes solo conocen las asociaciones entre atracción y restaurante, tal que no intentarán ir a un restaurante a cuya atracción no hayan ido. Sin embargo, no conocen su capacidad, por lo que primero se dirigen al restaurante antes de verificar que pueden entrar.
+- Si en un día Ruziland invade, el tiempo de ocurrencia de la invasión distribuye aleatoriamente entre dos tiempos de borde arbitrarios.
+- El operador revisa (o debería revisar...) las atracciones al fin de cada vuelta, cuando vuelven de un break, o cuando el parque recién abre.
+** Ubicaciones de cada requisito
+- [[entity.py][Definicion de entidades (Cliente, Niño, Atraccion, etc)]]
+- [[model.py:164][FSM del parque]]
+- [[model.py:287][FSM del mundo]]
+- [[events/client_events.py][Eventos relacionados con clientes]]
+- [[events/park_events][Eventos relacionados con el parque]]
+- [[events/external_events.py][Eventos externos]]
+- [[params.py][Parámetros]]
+- [[stats.py][Estadísticas]]
+- [[fileio.py][Manejo de archivos]]
+** Comentarios
+Utilizo una metaclase =Singleton= como una especie de /global/ glorificado para acceder atributos del parque o del mundo. Mi intención era que cualquier clase de este tipo retornara una especie de interfaz pública de los atributos, de tal forma que los eventos y otras funciones pueden leerlos pero no cambiarlos. Por falta de tiempo (/mea maxima culpa/) no pude implementar esto último.
