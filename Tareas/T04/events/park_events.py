@@ -5,23 +5,45 @@ from events import Event
 from sim import Simulation
 from model import Nebiland
 
-from params import TECH_FIX_TIME, TECH_TRAVEL_TIME, PARK_OPEN_TIME
+from params import (TECH_FIX_TIME, TECH_TRAVEL_TIME,
+                    CLEANER_TRAVEL_TIME, PARK_OPEN_TIME,
+                    PARK_CLOSE_TIME)
 
 
 def schedule_initial_park_events():
     """
     Schedules initial ride failures
     """
-    # TODO: Failures only in opening hours man
     for ride in Nebiland().attractions:
-        event = Event("RideFails", ride, ride_call_for_fix)
-        Simulation().schedule(event,
-                              time=PARK_OPEN_TIME.raw() +
-                              Simulation().time.raw() // (60*24) +
-                              int(expovariate(ride.failure_rate)))
+        schedule_ride_failure(ride)
         schedule_ride_start(ride)
 
     schedule_lunch_times()
+
+
+def schedule_ride_failure(ride):
+    event = Event("RideFails", ride, lambda r: r.fail())
+    fail_time = (int(expovariate(ride.failure_rate)) +
+                 Simulation().time.time())
+
+    open_time = PARK_OPEN_TIME.time()
+    close_time = PARK_CLOSE_TIME.time()
+
+    # This only ocurrs on the initial scheduling, I believe. Turns an
+    # event scheduled at 01:04 into one scheduled at 11:04
+    if fail_time < open_time:
+        fail_time += open_time
+
+    # Wraps an event scheduled after opening hours into the opening
+    # hours of the next day
+    if fail_time > close_time:
+        fail_time = fail_time - close_time + open_time
+        fail_time += Simulation().time.day_ts()
+
+    fail_time += Simulation().time.day_ts()
+
+    Simulation().schedule(event, time=fail_time)
+
 
 # Lunch times
 
@@ -31,11 +53,12 @@ def schedule_lunch_times():
     for worker in WorkerManager()._all_workers:
         event = Event("WorkerGoesForLunch", worker, worker_begin_lunch_time)
         # Schedule it for all days
-        for i in range(5):
+        for i in range(7):
             Simulation().schedule(event, time=i*60*24 + worker.lunch_hour*60)
 
 
 def worker_begin_lunch_time(worker):
+    # TODO: Worker must finish what they were doing
     worker.close_down_responsabilities()
     event = Event("WorkerFinishesLunch", worker, worker_end_lunch_time)
     Simulation().schedule(event, delta=59)
@@ -87,10 +110,22 @@ def ride_fixer_fix(ride, ticket):
 
     Schedules end of fix by setting the ticket as done
     """
-    event = Event("FixerFixesRide", ride, lambda e: ticket.done(),
+    foo = partial(ride_finish_fix, ticket=ticket)
+    event = Event("FixerFixesRide", ride, foo,
                   extra_info=lambda: ticket.worker)
     Simulation().schedule(event, delta=TECH_FIX_TIME)
 
+
+def ride_finish_fix(ride, ticket):
+    """
+    Event callback: Fixer has finished fix and sets the work ticket to
+    done.
+
+    Schedules the next ride failure
+    """
+    ticket.done()
+    ride.failed = False
+    schedule_ride_failure(ride)
 
 # Cleaners
 
@@ -138,6 +173,7 @@ def ride_cleaner_clean(ride, ticket):
 
 # Operators
 
+
 def operator_check_ride(ride):
     """
     Event callback: Operator checks the state of the ride before staring.
@@ -147,8 +183,7 @@ def operator_check_ride(ride):
     if ride.over_dirt_limit:
         ride_call_for_clean(ride)
         return False
-    # TODO: WILL RIDE FAIL??
-    if False:
+    if ride.failed:
         ride_call_for_fix(ride)
         return False
     # TODO: Reschedule this
@@ -163,10 +198,27 @@ def schedule_ride_start(ride):
 
     Conditional on the ride's readiness.
     """
+    if not Nebiland().open:
+        return
+
+    # Check the ride and reschedule the next check
     if not operator_check_ride(ride):
         # Ride must be serviced and can't be ridden right now
-        event = Event("CheckRide", ride, schedule_ride_start)
-        Simulation().schedule(event, condition=lambda: not ride.closed)
         return
-    event = Event("RideStarts", ride, lambda r: ride.start())
+
+    # Schedule the beginning
+    event = Event("RideStartsFullCapacity", ride, lambda r: ride.start())
     Simulation().schedule(event, condition=ride.can_begin)
+
+
+def schedule_forced_start(ride):
+    """
+    Schedules forced start of the ride once at least one person is in
+    the queue.
+
+    Obsoletable if ride has already started due to the queue being at
+    least as long as the ride's capacity
+    """
+    event = Event("RideStartTimesUp", ride, lambda r: ride.start())
+    Simulation().schedule(event, delta=ride.max_time,
+                          obsolete_if=lambda r: r.started)

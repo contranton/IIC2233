@@ -3,7 +3,7 @@ Defines various numerical parameters used throughout the
 simulation.
 """
 
-from misc_lib import time_nt
+from misc_lib import Time
 
 ###########################
 # Simulation parameters   #
@@ -11,13 +11,12 @@ from misc_lib import time_nt
 
 SIM_ITERATIONS = 100
 
-
 #####################
 # Park parameters   #
 #####################
 
-PARK_OPEN_TIME = time_nt(0, 10, 0)
-PARK_CLOSE_TIME = time_nt(0, 19, 0)
+PARK_OPEN_TIME = Time(0, 10, 0)
+PARK_CLOSE_TIME = Time(0, 19, 0)
 PARK_OPERATORS_AT_GATE = 3
 
 # Number of operators per number of rides
@@ -74,6 +73,10 @@ CLIENT_VOMIT_CHANCE = 0.6
 CLIENT_VOMIT_SETTLE = 50
 CLIENT_NAUSEA_MAX = 150
 
+# Crying energy loss values
+CLIENT_CRY_ADULT_ENERGY_DELTA = -0.2
+CLIENT_CRY_CHILD_ENERGY_DELTA = -0.1
+
 # Factor multiplied to the group's average hunger
 CLIENT_CHOOSE_RESTAURANT_MULT = 0.3
 
@@ -95,7 +98,7 @@ CLIENT_BREAK_ENERGY = 0.2
 RESTAURANT_ADULT_PREP = 1/6
 RESTAURANT_CHILD_PREP = 1/4
 
-# Hunger and energy changes 
+# Hunger and energy changes
 RESTAURANT_HUNGER_DELTA = -0.06
 RESTAURANT_ENERGY_DELTA = 0.2
 
@@ -127,9 +130,29 @@ RIDE_DIRT_DELTA = 1
 # Maximum cleaning time by cleaners
 RIDE_MAX_CLEANING_TIME = 10
 
-#####################
-# Misc parameters   #
-#####################
+###############################
+# External event parameters   #
+################################
 
+# Minimum children per adult on a school day
 SCHOOL_DAY_MIN_CHILDREN = 10
+
+# Chance that ruziland will invade on a monday
+RUZILAND_CHANCE = 0.25
+
+# Models 'every other monday' probability
+RUZILAND_MONDAY_SKIP = 2
+
+# Ruziland factor by whici to worsen the rides
 RUZILAND_FAILURE_RATE_FACTOR = 2
+
+# Ruziland beginning time limits. Distributes uniformly between the
+# two
+RUZILAND_BEGIN_LOWER = Time(0, 10, 0)
+RUZILAND_BEGIN_UPPER = Time(0, 14, 30)
+
+# Chances of rain in terms of days
+RAIN_RATE = 1/20
+
+# Rain duration
+RAIN_DURATION = Time(1, 0, 0)

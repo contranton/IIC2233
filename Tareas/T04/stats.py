@@ -3,6 +3,11 @@ from misc_lib import Logger
 
 
 def mean(data, key=lambda x: x):
+    """
+    Returns the mean of the given data.
+
+    Key modifies the list if desired
+    """
     L = len(data)
     return sum(map(key, data), key=key)/L
 

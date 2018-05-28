@@ -54,7 +54,7 @@ def client_enter_park(client):
                                           .format(reason), client,
                                           client_cant_enter)
     # Client arrives too late
-    if (Simulation().time.raw() % (60*24)) > PARK_CLOSE_TIME.raw():
+    if (Simulation().time.time()) > PARK_CLOSE_TIME.time():
         event = leave_event("TooLate")
         Simulation().schedule(event)
         return
@@ -92,8 +92,8 @@ def ensure_park_open(client):
     Returns a bool indicating whether the park has closed or
     not. Useful to return prematurely from callbacks
     """
-    if (Simulation().time.raw() % (60*24)) > PARK_CLOSE_TIME.raw():
-        event_leave = Event("ClientLeaveDueToClosing", client, client_leave)
+    if (Simulation().time.time()) >= PARK_CLOSE_TIME.time():
+        event_leave = Event("ClientLeavesDueToClosing", client, client_leave)
         Simulation().schedule(event_leave)
         return False
     return True
@@ -118,6 +118,15 @@ def client_decide_next_action(client):
         if random() < CLIENT_ENERGY_P_MIGHT_LEAVE:
             event = Event("ClientLeavesDueToEnergy", client, client_leave)
             Simulation().schedule(event)
+            return
+
+    # If clients don't have enough budget, leave
+    if client.budget < Nebiland().minimum_budget(client.num_children,
+                                                 client.rides_ridden,
+                                                 client.cant_ride_list):
+        event = Event("ClientLeavesDueToBudget", client, client_leave)
+        Simulation().schedule(event)
+        return
 
     # Randomly choose the next place to go
 
@@ -126,6 +135,7 @@ def client_decide_next_action(client):
 
     # No chance of going to a restaurant if they haven't gone to the
     # necessary ride
+
     restaurant_p = client.average_hunger * CLIENT_CHOOSE_RESTAURANT_MULT
     restaurant_p *= Nebiland().any_valid_restaurants(client.rides_ridden)
 
@@ -135,16 +145,22 @@ def client_decide_next_action(client):
     if p < queue_p:
         # Goto ride
         foo = partial(client_goto_ride, ride=ride)
-        event = Event("ClientGoesToRide", client, foo)
-        Simulation().schedule(event, delta=CLIENT_DECISION_TIME)
+        event = Event("ClientGoesToRide", client, foo,
+                      extra_info=lambda: str(ride))
+        Simulation().schedule(event, delta=CLIENT_DECISION_TIME,
+                              on_open_hours=True)
     elif queue_p < p < queue_p + restaurant_p:
         # Goto restaurant
-        event = Event("ClientGoesToEat", client, client_goto_restaurant)
-        Simulation().schedule(event, delta=CLIENT_DECISION_TIME)
+        event = Event("ClientGoesToRestaurant", client, client_goto_restaurant)
+        Simulation().schedule(event, delta=CLIENT_DECISION_TIME,
+                              on_open_hours=True)
     else:
         # Rest
+        #import pdb; pdb.set_trace()
+        
         event = Event("ClientBeginsBreak", client, client_take_break)
-        Simulation().schedule(event, delta=CLIENT_DECISION_TIME)
+        Simulation().schedule(event, delta=CLIENT_DECISION_TIME,
+                              on_open_hours=True)
 
 
 def client_leave(client):
@@ -180,16 +196,40 @@ def client_goto_restaurant(client):
     valid_restaurants = Nebiland().get_valid_restaurants(client.rides_ridden)
     restaurant = choice(valid_restaurants)
 
+    def forbidden(reason): return Event(
+            "ClientNotAllowedInRestaurant{}"
+            .format(reason), client, client_decide_next_action,
+            extra_info=lambda: str(restaurant))
+
+    if not client.enough_budget(restaurant.costs):
+        event = forbidden("TooExpensive")
+        Simulation().schedule(event)
+        return
+
+    if not restaurant.enough_capacity(client.group_size):
+        event = forbidden("IsFull")
+        Simulation().schedule(event)
+        return
+
+    # Bookkeep entry into restaurant
+    Simulation().schedule(Event("ClientEntersRestaurant", client,
+                                lambda e: None,
+                                extra_info=lambda: str(restaurant)))
+
     # Food preparation
     time_entered = Simulation().time.raw()
     in_restaurant = partial(client_in_restaurant,
                             restaurant=restaurant,
                             time_entered=time_entered)
     event = Event("ClientPreparesFood", client, in_restaurant)
-    Simulation().schedule(event, delta=restaurant.time_cooking_adult)
+    Simulation().schedule(event,
+                          delta=restaurant.time_cooking_adult,
+                          on_open_hours=True)
     for child in client.children:
         event = Event("ChildPreparesFood", child, lambda e: None)
-        Simulation().schedule(event, delta=restaurant.time_cooking_child)
+        Simulation().schedule(event,
+                              delta=restaurant.time_cooking_child,
+                              on_open_hours=True)
 
 
 def client_in_restaurant(client, restaurant, time_entered):
@@ -208,11 +248,19 @@ def client_leave_restaurant(client):
 
     Immediately schedules the next action through client_decide_next_action
     """
+
+    # Possible nausea increase
     if client.just_rode:
         client.nausea += RESTAURANT_AFTER_RIDE_NAUSEA
-        client.increase_children_nausea(RESTAURANT_AFTER_RIDE_NAUSEA)
-    client.raise_all_hungers(RESTAURANT_HUNGER_DELTA)
-    client.raise_all_energies(RESTAURANT_ENERGY_DELTA)
+        client.raise_child_nauseas(RESTAURANT_AFTER_RIDE_NAUSEA)
+
+    # Hunger and energy updates
+    client.hunger += RESTAURANT_HUNGER_DELTA
+    client.energy += RESTAURANT_ENERGY_DELTA
+    client.raise_child_hungers(RESTAURANT_HUNGER_DELTA)
+    client.raise_child_energies(RESTAURANT_ENERGY_DELTA)
+
+    # State changes
     client.willing_to_queue = True
     client.just_rode = False
     client_decide_next_action(client)
@@ -224,8 +272,11 @@ def client_take_break(client):
 
     Schedules end of break
     """
+    if not ensure_park_open(client):
+        return
     event = Event("ClientFinishesBreak", client, client_finish_break)
-    Simulation().schedule(event, delta=CLIENT_BREAK_TIME)
+    Simulation().schedule(event, delta=CLIENT_BREAK_TIME,
+                          on_open_hours=True)
 
 
 def client_finish_break(client):
@@ -238,6 +289,8 @@ def client_finish_break(client):
     client.rest()
     client.willing_to_queue = True
     client.just_rode = False
+    if not ensure_park_open(client):
+        return
     client_decide_next_action(client)
 
 
@@ -248,7 +301,8 @@ def choose_ride(client):
     proportional to their queue length or None if no such ride is
     found.
     """
-    rides = list(Nebiland().attractions_by_queue_length)
+    rides = list(filter(lambda r: r not in client.cant_ride_list,
+                        Nebiland().attractions_by_queue_length))
 
     # Checks if no ride is valid for this group in terms of minimum
     # height or budget
@@ -278,7 +332,8 @@ def client_goto_ride(client, ride):
     foo = partial(client_cant_ride, ride=ride)
 
     def leave_event(reason): return Event("ClientNotAllowedInRide{}"
-                                          .format(reason), client, foo)
+                                          .format(reason), client, foo,
+                                          extra_info=lambda: str(ride))
 
     if not client.any_height_below(ride.min_height):
         event = leave_event("TooShort")
@@ -293,7 +348,8 @@ def client_goto_ride(client, ride):
 
     # Client enters ride queue successfuly
     enter_ride = partial(client_enter_ride_queue, ride=ride)
-    event = Event("ClientEntersQueueForRide", client, enter_ride)
+    event = Event("ClientEntersQueueForRide", client, enter_ride,
+                  extra_info=lambda: str(ride))
     Simulation().schedule(event)
 
 
@@ -310,14 +366,16 @@ def client_enter_ride_queue(client, ride):
     """
     Event callback: Client enteres ride queue.
 
-    Schedules obsoletabe loss of patience and adds client to ride's
+    Schedules obsoletable loss of patience and adds client to ride's
     queue for internal management
     """
     # Schedule conditional event whereby client loses patience
     exit_queue = partial(client_exits_queue, ride=ride)
-    event = Event("ClientLosesPatienceInQueue", client, exit_queue)
+    event = Event("ClientLosesPatienceInQueue", client, exit_queue,
+                  extra_info=lambda: str(ride))
     Simulation().schedule(event, delta=int(client.patience),
-                          obsolete_if=lambda client: client.got_on)
+                          obsolete_if=lambda client: client.got_on,
+                          on_open_hours=True)
 
     ride.add_to_queue(client)
 
@@ -325,21 +383,24 @@ def client_enter_ride_queue(client, ride):
 def callback_enter_ride(client, ride):
     """
     External callback: Client finishes queue and enters the
-    ride. Called only from the ride's queue manager. That is, this
-    CAN'T be scheduled a priori.
+    ride. Called only from the ride's queue manager to ensure everyone
+    finishes at the same time. That is, this CAN'T be scheduled a
+    priori.
 
     Schedules entry to the ride (for bookkeeping purposes) and the
     departure from the ride
     """
     # Log the event of having finished the queue
-    Simulation().schedule(Event("ClientEntersRide", client, lambda e: None))
-    client.got_on = True
+    Simulation().schedule(Event("ClientEntersRide", client, lambda e: None,
+                                extra_info=lambda: str(ride)))
 
-    client.pay_for_ride(ride.costs)
+    client.got_on = True
+    client.pay(ride.costs)
 
     # Schedule getting off the ride
     leave_ride = partial(client_leaves_ride, ride=ride)
-    event = Event("ClientLeavesRide", client, leave_ride)
+    event = Event("ClientLeavesRide", client, leave_ride,
+                  extra_info=lambda: str(ride))
     Simulation().schedule(event, delta=ride.duration)
 
 
@@ -359,12 +420,13 @@ def client_exits_queue(client, ride):
 def client_leaves_ride(client, ride):
     """
     Event callback: Client leaves ride after successfuly riding and its
-    effects are applied, including possible vomiting.
+    effects are applied, including possible vomiting and crying.
 
     Immediately schedules the next action through client_decide_next_action
     """
     # Client changes
     client.just_rode = True
+    client.got_on = False
     client.rides_ridden.add(ride)
     client.nausea += RIDE_ADULT_NAUSEA_DELTA
     client.energy += RIDE_ADULT_ENERGY_DELTA
@@ -374,7 +436,8 @@ def client_leaves_ride(client, ride):
     client.raise_child_hungers(RIDE_CHILD_HUNGER_DELTA)
 
     # Ride changes
-    ride.dirt += RIDE_VOMIT_DIRT * client.num_throw_up
+    n_vomit = client.vomit_and_cry()
+    ride.dirt += RIDE_VOMIT_DIRT * n_vomit
     ride.dirt += RIDE_DIRT_DELTA
 
     # Next action

@@ -1,4 +1,3 @@
-from copy import deepcopy
 from collections import deque
 
 from entity import Worker
@@ -8,7 +7,7 @@ from sim import Simulation
 
 from params import (PARK_OPERATORS_AT_GATE, PARK_CLEANERS_PER_RIDE,
                     PARK_TECHS_PER_RIDE, PARK_TOTAL_CAPACITY_FACTOR,
-                    PARK_CLOSE_TIME)
+                    PARK_CLOSE_TIME, PARK_OPEN_TIME)
 
 
 def _counter():
@@ -51,6 +50,7 @@ def _manage(foo):
 class Ticket:
     id = 0
 
+    @_manage
     def __init__(self, ride):
         """
         Ticket used for managing requests to clean or fix rides. It must
@@ -66,7 +66,7 @@ class Ticket:
 
     def __call__(self):
         """
-        Simplifies checking the state. Returns a bool
+f        Simplifies checking the state. Returns a bool
         """
         return self.activated
 
@@ -127,6 +127,8 @@ class WorkerManager(metaclass=Singleton):
         """
         # Assign orders
 
+        if not Nebiland().open:
+            return
         for worker_type, order_queue in self.orders.items():
             if order_queue:
                 worker = next(filter(lambda f: not f.busy,
@@ -165,7 +167,7 @@ class Nebiland(metaclass=Singleton):
 
     restaurants = list(get_restaurants())
     attractions = list(get_attractions())
-    Logger().all_rides = deepcopy(attractions)
+    Logger().all_rides = attractions
     _clients = {}
 
     __counter = _counter()
@@ -232,14 +234,42 @@ class Nebiland(metaclass=Singleton):
 
     @property
     def closing_time_today(self):
-        return Simulation().time.day * 60 * 24 + PARK_CLOSE_TIME[0] * 60\
-            + PARK_CLOSE_TIME[1]
+        return Simulation().time.day_ts() + PARK_CLOSE_TIME.time()
+
+    @property
+    def open(self):
+        return (PARK_OPEN_TIME.time() <
+                Simulation().time.time() <
+                PARK_CLOSE_TIME.time())
 
     def any_valid_restaurants(self, rides_set):
         return len(self.get_valid_restaurants(rides_set)) > 0
 
     def get_valid_restaurants(self, rides_set):
+        rides_set = {r.id for r in rides_set}
         return list(filter(lambda x: x.rides & rides_set, self.restaurants))
+
+    def minimum_budget(self, n_children, rides_set, cant_ride):
+        """
+        Returns the minimum budget needed to perform any action other than
+        resting given the particular set of rides ridden.
+
+        For example, if a client has enough money to go to a
+        restaurant but the restaurant requires that they go to a ride
+        that's too expensive, the cost associated will be the ride's
+        and not the restaurant's
+        """
+        def tot_cost(costs): return costs[0] + n_children * costs[1]
+        budgets = [100000000]
+        for restaurant in self.restaurants:
+            if not restaurant.rides & rides_set:
+                continue
+            budgets.append(tot_cost(restaurant.costs))
+        for ride in self.attractions:
+            if ride in cant_ride:
+                continue
+            budgets.append(tot_cost(ride.costs))
+        return min(budgets)
 
     @property
     def open_attractions(self):
@@ -247,7 +277,7 @@ class Nebiland(metaclass=Singleton):
 
     @property
     def attractions_by_queue_length(self):
-        return sorted(deepcopy(self.open_attractions),
+        return sorted(self.open_attractions,
                       key=lambda a: len(a.queue))
 
 
@@ -257,3 +287,7 @@ class World(metaclass=Singleton):
     """
     school_day = False
     ruziland = False
+    raining = False
+
+    def __repr__(self):
+        return "World"
