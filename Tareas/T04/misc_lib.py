@@ -35,8 +35,8 @@ class Logger(metaclass=Singleton):
     num_ruziland_failures = 0
     num_people_couldnt_eat = 0
 
-    clean_calls_per_day = {i: 0 for i in range(6)}
-    fix_calls_per_day = {i: 0 for i in range(6)}
+    clean_calls_per_day = {i: 0 for i in range(7)}
+    fix_calls_per_day = {i: 0 for i in range(7)}
 
     message_list = deque()
 

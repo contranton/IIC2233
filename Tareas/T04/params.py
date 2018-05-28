@@ -9,7 +9,7 @@ from misc_lib import Time
 # Simulation parameters   #
 ###########################
 
-SIM_ITERATIONS = 100
+SIM_ITERATIONS = 1
 
 #####################
 # Park parameters   #

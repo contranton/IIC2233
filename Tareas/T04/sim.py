@@ -82,7 +82,7 @@ class Scheduler(metaclass=Singleton):
                       event, sched_time, self.max_time))
             return
 
-        # Conditional events don't depend on time
+        # Conditional events don't depend on time until they're run
         if condition:
             self.conditionals.append((event, condition))
             return

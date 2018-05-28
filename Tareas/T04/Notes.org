@@ -280,3 +280,6 @@ Make it such that calling Nebiland().attractions returns shells of the attractio
 14) [X] Dinero total no gastado por los visitantes    
 *** DONE [#A] Operators actually starting rides
 *** TODO Fix ticket generation for ride fixes
+** Limitations
+- Doesn't calculate some statistics properly through multiple iterations
+- 

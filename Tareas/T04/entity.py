@@ -338,9 +338,11 @@ class Attraction(Entity):
         If queue was empty before, triggers the automated entry to the
         ride after the ride's max_time
         """
+        from events.park_events import schedule_ride_start
         if len(self.queue) == 0:
             self.start_countdown()
         self.queue.appendleft(client)
+        schedule_ride_start(self)
 
     def start_countdown(self):
         """
