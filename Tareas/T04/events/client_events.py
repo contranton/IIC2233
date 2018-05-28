@@ -22,7 +22,7 @@ from params import (PARK_OPEN_TIME, PARK_CLOSE_TIME,
                     RIDE_VOMIT_DIRT, RIDE_DIRT_DELTA,
                     SCHOOL_DAY_MIN_CHILDREN, RIDE_CHILD_ENERGY_DELTA,
                     RIDE_ADULT_ENERGY_DELTA, RIDE_CHILD_HUNGER_DELTA,
-                    RIDE_ADULT_HUNGER_DELTA)
+                    RIDE_ADULT_HUNGER_DELTA, RUZILAND_LEAVE_CHANCE)
 
 
 def schedule_arrivals():
@@ -50,23 +50,33 @@ def client_enter_park(client):
     """
     # Ensures limit and capacity as well as school day restrictions
 
-    def leave_event(reason): return Event("ClientForbiddenEntry{}"
-                                          .format(reason), client,
-                                          client_cant_enter)
+    def leave_event(reason, add=True):
+        if add:
+            Logger().people_left_due_to_events.append(client)
+        return Event("ClientForbiddenEntry{}"
+                     .format(reason), client,
+                     client_cant_enter)
+
     # Client arrives too late
     if (Simulation().time.time()) > PARK_CLOSE_TIME.time():
-        event = leave_event("TooLate")
+        event = leave_event("TooLate", add=False)
         Simulation().schedule(event)
         return
 
     if not Nebiland().has_capacity(client.group_size):
-        event = leave_event("ParkIsFull")
+        event = leave_event("ParkIsFull", add=False)
         Simulation().schedule(event)
         return
 
     # If adult doesn't have enough children during a school day
     if World().school_day and len(client.children) < SCHOOL_DAY_MIN_CHILDREN:
         event = leave_event("TooFewChildrenInSchoolDay")
+        Simulation().schedule(event)
+        return
+
+    # If adult has too many kids on a rain day
+    if World().raining and len(client.children) > 1:
+        event = leave_event("TooManyChildrenInRainDay")
         Simulation().schedule(event)
         return
 
@@ -95,6 +105,7 @@ def ensure_park_open(client):
     if (Simulation().time.time()) >= PARK_CLOSE_TIME.time():
         event_leave = Event("ClientLeavesDueToClosing", client, client_leave)
         Simulation().schedule(event_leave)
+        client.energy_at_exit = client.energy
         return False
     return True
 
@@ -103,6 +114,15 @@ def client_decide_next_action(client):
     """
     Decides what a client will do next and schedules the event accordingly
     """
+
+    # Apply ruziland criterion
+    if World().ruziland and not client.decided_ruziland:
+        if random() < RUZILAND_LEAVE_CHANCE:
+            client.decided_ruziland = True
+            Logger().people_left_due_to_events.append(client)
+            event = Event("ClientLeavesDueToInvasion", client, client_leave)
+            Simulation().schedule(event)
+            return
 
     # If client has left an installation but park has closed, must leave
     if not ensure_park_open(client):
@@ -113,11 +133,15 @@ def client_decide_next_action(client):
     if min_energy <= CLIENT_ENERGY_IMMEDATE_LEAVE_THRESHOLD:
         event = Event("ClientLeavesDueToEnergy", client, client_leave)
         Simulation().schedule(event)
+        Logger().num_left_by_lack_of_energy += 1
+        client.left_due_to_energy = True
         return
     elif client.any_energy_less_than(CLIENT_ENERGY_MIGHT_LEAVE_THRESHOLD):
         if random() < CLIENT_ENERGY_P_MIGHT_LEAVE:
             event = Event("ClientLeavesDueToEnergy", client, client_leave)
             Simulation().schedule(event)
+            Logger().num_left_by_lack_of_energy += 1
+            client.left_due_to_energy = True
             return
 
     # If clients don't have enough budget, leave
@@ -126,6 +150,7 @@ def client_decide_next_action(client):
                                                  client.cant_ride_list):
         event = Event("ClientLeavesDueToBudget", client, client_leave)
         Simulation().schedule(event)
+        client.energy_at_exit = client.energy
         return
 
     # Randomly choose the next place to go
@@ -157,7 +182,7 @@ def client_decide_next_action(client):
     else:
         # Rest
         #import pdb; pdb.set_trace()
-        
+
         event = Event("ClientBeginsBreak", client, client_take_break)
         Simulation().schedule(event, delta=CLIENT_DECISION_TIME,
                               on_open_hours=True)
@@ -196,7 +221,9 @@ def client_goto_restaurant(client):
     valid_restaurants = Nebiland().get_valid_restaurants(client.rides_ridden)
     restaurant = choice(valid_restaurants)
 
-    def forbidden(reason): return Event(
+    def forbidden(reason):
+        Logger().num_people_couldnt_eat += 1
+        return Event(
             "ClientNotAllowedInRestaurant{}"
             .format(reason), client, client_decide_next_action,
             extra_info=lambda: str(restaurant))
@@ -215,6 +242,8 @@ def client_goto_restaurant(client):
     Simulation().schedule(Event("ClientEntersRestaurant", client,
                                 lambda e: None,
                                 extra_info=lambda: str(restaurant)))
+
+    client.enter_restaurant(Simulation().time)
 
     # Food preparation
     time_entered = Simulation().time.raw()
@@ -376,7 +405,7 @@ def client_enter_ride_queue(client, ride):
     Simulation().schedule(event, delta=int(client.patience),
                           obsolete_if=lambda client: client.got_on,
                           on_open_hours=True)
-
+    client.enter_queue(Simulation().time)
     ride.add_to_queue(client)
 
 
@@ -396,6 +425,7 @@ def callback_enter_ride(client, ride):
 
     client.got_on = True
     client.pay(ride.costs)
+    client.left_queue(Simulation().time)
 
     # Schedule getting off the ride
     leave_ride = partial(client_leaves_ride, ride=ride)
@@ -413,6 +443,7 @@ def client_exits_queue(client, ride):
     """
     client.got_on = False
     client.willing_to_queue = False
+    client.left_queue(Simulation().time, bad=True)
     ride.remove_from_queue(client)
     client_decide_next_action(client)
 
@@ -436,7 +467,8 @@ def client_leaves_ride(client, ride):
     client.raise_child_hungers(RIDE_CHILD_HUNGER_DELTA)
 
     # Ride changes
-    n_vomit = client.vomit_and_cry()
+    n_vomit, n_cry = client.vomit_and_cry()
+    ride.cry_num[Simulation().time.day] += n_cry
     ride.dirt += RIDE_VOMIT_DIRT * n_vomit
     ride.dirt += RIDE_DIRT_DELTA
 

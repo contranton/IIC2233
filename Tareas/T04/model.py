@@ -66,10 +66,11 @@ class Ticket:
 
     def __call__(self):
         """
-f        Simplifies checking the state. Returns a bool
+        Simplifies checking the state. Returns a bool
         """
         return self.activated
 
+    @_manage
     def activate(self):
         """
         Activate the ticket, signifying that the manager has assigned a
@@ -174,6 +175,8 @@ class Nebiland(metaclass=Singleton):
 
     manager = WorkerManager()
     manager.populate(len(attractions))
+    for ride, worker in zip(attractions, manager.operators):
+        ride.operator = worker
 
     def client_enters(self, name, num_children):
         """
@@ -238,7 +241,7 @@ class Nebiland(metaclass=Singleton):
 
     @property
     def open(self):
-        return (PARK_OPEN_TIME.time() <
+        return (PARK_OPEN_TIME.time() <=
                 Simulation().time.time() <
                 PARK_CLOSE_TIME.time())
 

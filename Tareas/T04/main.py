@@ -1,6 +1,7 @@
 from sim import Simulation
 from misc_lib import Logger
 from events import schedule_initial_events
+from stats import run_all_stats
 
 DEBUG = 0
 Logger().PRINT = False
@@ -19,4 +20,5 @@ if __name__ == '__main__':
     finally:
         Logger().write()
 
+    run_all_stats()
     # import pdb; pdb.set_trace()

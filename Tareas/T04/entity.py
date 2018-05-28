@@ -20,7 +20,8 @@ from params import (CLIENT_PATIENCE_MU_OFFSET,
                     CLIENT_CRY_CHILD_ENERGY_DELTA,
                     RUZILAND_FAILURE_RATE_FACTOR,
                     RIDE_MAX_CLEANING_TIME, RESTAURANT_ADULT_PREP,
-                    RESTAURANT_CHILD_PREP, WORKER_LUNCH_TIME_TABLE)
+                    RESTAURANT_CHILD_PREP, WORKER_LUNCH_TIME_TABLE,
+                    PARK_CLOSE_TIME, PARK_OPEN_TIME)
 
 fkr = Faker()
 
@@ -101,10 +102,40 @@ class Client(Person):
 
         self.cant_ride_list = []
         self.client_id = None
+
         self.has_left = False
         self.got_on = False
         self.just_rode = False
         self.willing_to_queue = True
+        self.decided_ruziland = False
+        self.energy_at_exit = 0
+        self.left_due_to_energy = False
+
+        self.wasted_times = []
+        self.avg_waiting_time = 0
+        self._entered_queue = None
+
+        self.times_in_restaurants = []
+        self._entered_restaurant = None
+
+    def enter_queue(self, time):
+        self._entered_queue = time
+
+    def left_queue(self, time, bad=False):
+        time = time.raw() - self._entered_queue.raw()
+        self.avg_waiting_time += time
+        self.avg_waiting_time /= 2
+        if bad:
+            self.wasted_times.append(time)
+        self._entered_queue = None
+
+    def enter_restaurant(self, time):
+        self._entered_restaurant = time
+
+    def left_restaurant(self, time):
+        self.times_in_restaurants.append(
+            self._entered_restaurant.raw() - time.raw())
+        self._entered_queue = None
 
     def add_child(self, child):
         """
@@ -117,17 +148,19 @@ class Client(Person):
         """
         Simulate possibility of vomiting and crying for the children
         """
-        num = 0
+        num_vom = 0
+        num_cry = 0
         for p in [self] + [c for c in self._children]:
             if p.nausea > CLIENT_VOMIT_THRESHOLD and\
                random() < CLIENT_VOMIT_CHANCE:
-                num += 1
+                num_vom += 1
                 p.nausea = CLIENT_VOMIT_SETTLE
             elif isinstance(p, Child):
                 if p.cry():
+                    num_cry += 1
                     self.energy += CLIENT_CRY_ADULT_ENERGY_DELTA
                     p.energy += CLIENT_CRY_CHILD_ENERGY_DELTA
-        return num
+        return num_vom, num_cry
 
     def enough_budget(self, costs):
         """
@@ -236,20 +269,21 @@ class Worker(Entity):
         self.name = fkr.name()
         self.busy = False
 
-        self.lunch_hour = choices(range(10, 19),
+        self.lunch_hour = choices(range(PARK_OPEN_TIME.hour,
+                                        PARK_CLOSE_TIME.hour),
                                   weights=WORKER_LUNCH_TIME_TABLE)[0]
 
     def __repr__(self):
         s = ":BUSY" if self.busy else ":FREE"
         return super().__repr__() + s
 
-    def close_down_responsabilities(self):
+    def close_down_responsibilities(self):
         """
         Finalize work actions before going for break
         """
         pass
 
-    def open_up_responsabilities(self):
+    def open_up_responsibilities(self):
         """
         Restart work actions after returning from break
         """
@@ -281,8 +315,16 @@ class Attraction(Entity):
         self.started = False
         self.just_ended = True
 
+        self.total_failures = 0
+        self.times_spent_broken = []
+        self._time_broke = None
+
+        self.operator = None
+
         self._serviced = False
         self._time_begin_oos = 0
+
+        self.cry_num = {i: 0 for i in range(7)}
 
         self.time_with_at_least_one_person = None
 
@@ -341,11 +383,24 @@ class Attraction(Entity):
         else:
             return len(self.queue) >= self.capacity
 
-    def fail(self):
+    def fail(self, time):
         """
         Sets the ride as having failed
         """
+        from model import World
+        from misc_lib import Logger
+        if World().ruziland:
+            Logger().num_ruziland_failures += 1
+        self.total_failures += 1
         self.failed = True
+
+        self._time_broke = time
+
+    def fix(self, time):
+        self.failed = False
+        self.times_spent_broken.append(
+            time.raw() - self._time_broke.raw())
+        self._time_broke = None
 
     @property
     def dirt(self):

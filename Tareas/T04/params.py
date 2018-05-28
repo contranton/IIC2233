@@ -143,8 +143,11 @@ RUZILAND_CHANCE = 0.25
 # Models 'every other monday' probability
 RUZILAND_MONDAY_SKIP = 2
 
-# Ruziland factor by whici to worsen the rides
+# Ruziland factor by which to worsen the rides
 RUZILAND_FAILURE_RATE_FACTOR = 2
+
+# Ruziland chance that a client will leave
+RUZILAND_LEAVE_CHANCE = 0.4
 
 # Ruziland beginning time limits. Distributes uniformly between the
 # two

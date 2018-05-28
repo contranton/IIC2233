@@ -262,7 +262,8 @@ Make it such that calling Nebiland().attractions returns shells of the attractio
 *** DONE Budget
 *** DONE Documentation
 *** DONE [#B] Fix table contents
-*** TODO [#A] Statistics module
+*** DONE Fix lunch times for workers
+*** DONE [#A] Statistics module
 1) [X] Tiempo promedio de espera en fila de acceso a las atracciones
 2) [X] Promedio de llantos diarios por atracción
 3) [X] Total de personas que se van del parque a causa de perdida de energia
@@ -273,8 +274,9 @@ Make it such that calling Nebiland().attractions returns shells of the attractio
 8) [X] Total de personas que no pudieron comer en los restaurantes2
 9) [X] Tiempo promedio que pasa un grupo en un restaurante
 10) [X] Tiempo maximo que una atraccion permanecio en estado Fuera de Servicio
-11) [ ] Tiempo promedio perdido3 por persona en fila de acceso
-12) [ ] Promedio de llamados totales a hacer aseo y reparacion por Limpiador y Tecnico respectivamente
+11) [X] Tiempo promedio perdido3 por persona en fila de acceso
+12) [X] Promedio de llamados totales a hacer aseo y reparacion por Limpiador y Tecnico respectivamente
 13) [X] Dinero total perdido por el parque en entradas debido a eventos externos
 14) [X] Dinero total no gastado por los visitantes    
-*** TODO [#A] Operators actually starting rides
+*** DONE [#A] Operators actually starting rides
+*** TODO Fix ticket generation for ride fixes
