@@ -1,5 +1,5 @@
 * *Tarea 4*, a.k.a., /Nunca más intentaré hacer una tarea en solo 4 días/
-Yeah, advierto de antemano que las 2410 líneas de Python de esta tarea son el producto de noches maratoneadas llenas de cafeína y poco sueño, y por lo tanto esta cuestión --/gasp/-- no funciona bien xd
+Yeah, advierto de antemano que las 2410 líneas de Python de esta tarea son el producto de noches maratoneadas llenas de cafeína y poco sueño, y por lo tanto esta cuestión -- /gasp/ -- no funciona bien xd
 Era mi intención hacerlo todo más claro y bien organizado y menos spaghettificado (y que cumpla los requisitos...) pero RIP :c
 ** Importante
 - El programa requiere que exista el subdirectorio "data/" y que contenga los distintos archivos .csv necesarios
@@ -21,9 +21,14 @@ Era mi intención hacerlo todo más claro y bien organizado y menos spaghettific
 - Si en un día Ruziland invade, el tiempo de ocurrencia de la invasión distribuye aleatoriamente entre dos tiempos de borde arbitrarios.
 - El operador revisa (o debería revisar...) las atracciones al fin de cada vuelta, cuando vuelven de un break, o cuando el parque recién abre.
 ** Ubicaciones de cada requisito
-- [[entity.py][Definicion de entidades (Cliente, Niño, Atraccion, etc)]]
-- [[model.py::164][FSM del parque]]
-- [[model.py::287][FSM del mundo]]
+- Definicion de entidades:
+  - [[entity.py#L86][Clientes]]
+  - [[entity.py#L246][Niños]]
+  - [[entity.py#L264][Trabajadores]]
+  - [[entity.py#L293][Atracciones]]
+  - [[entity.py#L463][Restaurantes]]
+- [[model.py#L164][FSM del parque]]
+- [[model.py#L287][FSM del mundo]]
 - [[events/client_events.py][Eventos relacionados con clientes]]
 - [[events/park_events][Eventos relacionados con el parque]]
 - [[events/external_events.py][Eventos externos]]
