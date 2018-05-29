@@ -1,5 +1,5 @@
 * *Tarea 4*, a.k.a., /Nunca más intentaré hacer una tarea en solo 4 días/
-Yeah, advierto de antemano que las 2410 líneas de Python de esta tarea son el producto de noches maratoneadas llenas de cafeína y poco sueño, y por lo tanto esta cuestión \*/gasp/\* no funciona bien xd
+Yeah, advierto de antemano que las 2410 líneas de Python de esta tarea son el producto de noches maratoneadas llenas de cafeína y poco sueño, y por lo tanto esta cuestión --/gasp/-- no funciona bien xd
 Era mi intención hacerlo todo más claro y bien organizado y menos spaghettificado (y que cumpla los requisitos...) pero RIP :c
 ** Importante
 - El programa requiere que exista el subdirectorio "data/" y que contenga los distintos archivos .csv necesarios
@@ -12,7 +12,7 @@ Era mi intención hacerlo todo más claro y bien organizado y menos spaghettific
 - =csv=
 - =traceback= y =pdb= solo como herramientas de /debugging/
 ** Limitaciones
-- No se logran agendar bien los chequeos y comienzos de las atracciones a través de múltiples días. Por alguna razón, se agenda bien el primer inicio de cada atracción pero luego algo se traga el siguiente evento agendado. A causa de esto, mucha gente no puede ir a los restaurantes y no hace nada más que tomar descansos...
+- No se logran agendar bien los chequeos y comienzos de las atracciones a través de múltiples días. Por alguna razón, se agenda bien el primer inicio de cada atracción pero luego algo se traga el siguiente evento agendado. A causa de esto, mucha gente no puede ir a los restaurantes y no hace nada más que tomar descansos... Además, se intercalan los horarios de algunos eventos extrañamente, como por ejemplo un evento "Domingo" ocurriendo entre múltiples "Lunes". Esto debe deberse a no haber implementado bien los eventos condicionales.
 - No se calculan bien las estadísticas entre múltiples iteraciones de la simulación
 - No se realiza el proceso de visitar todas las atracciones no visitadas antes de visitarlas de nuevo
 ** Decisiones tomadas
@@ -22,8 +22,8 @@ Era mi intención hacerlo todo más claro y bien organizado y menos spaghettific
 - El operador revisa (o debería revisar...) las atracciones al fin de cada vuelta, cuando vuelven de un break, o cuando el parque recién abre.
 ** Ubicaciones de cada requisito
 - [[entity.py][Definicion de entidades (Cliente, Niño, Atraccion, etc)]]
-- [[model.py:164][FSM del parque]]
-- [[model.py:287][FSM del mundo]]
+- [[model.py::164][FSM del parque]]
+- [[model.py::287][FSM del mundo]]
 - [[events/client_events.py][Eventos relacionados con clientes]]
 - [[events/park_events][Eventos relacionados con el parque]]
 - [[events/external_events.py][Eventos externos]]
@@ -31,4 +31,4 @@ Era mi intención hacerlo todo más claro y bien organizado y menos spaghettific
 - [[stats.py][Estadísticas]]
 - [[fileio.py][Manejo de archivos]]
 ** Comentarios
-Utilizo una metaclase =Singleton= como una especie de /global/ glorificado para acceder atributos del parque o del mundo. Mi intención era que cualquier clase de este tipo retornara una especie de interfaz pública de los atributos, de tal forma que los eventos y otras funciones pueden leerlos pero no cambiarlos. Por falta de tiempo (/mea maxima culpa/) no pude implementar esto último.
+   Utilizo una metaclase =Singleton= como una especie de /global/ glorificado para acceder atributos del parque o del mundo. Mi intención era que cualquier clase de este tipo retornara una especie de interfaz pública de los atributos, de tal forma que los eventos y otras funciones pueden leerlos pero no cambiarlos. Por falta de tiempo (/mea maxima culpa/) no pude implementar esto último.
