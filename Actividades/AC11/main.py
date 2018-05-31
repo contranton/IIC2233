@@ -54,13 +54,8 @@ def base64(my_bytes):
     return new_ints
 
 
-def rotleft(hunks):
-    new_hunks = []
-    for hunk in hunks:
-        ba = bytearray()
-        [ba.append(hunk >> 1)]
-        new_hunks.append(ba)
-    return new_hunks
+def rotleft(hunk):
+    return bytearray([hunk[(i-1)%len(hunk)] for i in range(len(hunk))])
 
 
 def merge_files():
@@ -71,16 +66,16 @@ def merge_files():
 
     final_bytearray = bytearray()
     with open(paths["marcianozurdo"], 'rb') as filepep, open("newmarciano64.png", 'rb') as file64:
-        file64 = base64(file64.read())
         for size1, size2, size3, size4 in next_4_sizes():
-            chunk1 = rotleft(filepep.read(size1))
-            chunk2 = file64.read(size2)
-            chunk3 = rotleft(filepep.read(size3))
-            chunk4 = file64.read(size4)
-            final_bytearray.extend(chunk1, chunk2, chunk3, chunk4)
+            chunks = [rotleft(filepep.read(size1)),
+                      file64.read(size2),
+                      rotleft(filepep.read(size3)),
+                      file64.read(size4)]
+            [final_bytearray.extend(chunk) for chunk in chunks]
     with open("resultado.png", 'bw') as f:
         f.write(final_bytearray)
 
 
 if __name__ == '__main__':
-    merge_files()
+    # merge_files()
+    pass
