@@ -51,7 +51,7 @@ def base64(my_bytes):
 
     new_ints = [int("0b" + i, 2) for i in new_ints]
 
-    return new_ints
+    return bytearray(new_ints)
 
 
 def rotleft(hunk):
@@ -72,10 +72,9 @@ def merge_files():
                       rotleft(filepep.read(size3)),
                       file64.read(size4)]
             [final_bytearray.extend(chunk) for chunk in chunks]
-    with open("resultado.png", 'bw') as f:
+    with open("resultado.png", 'wb') as f:
         f.write(final_bytearray)
 
 
 if __name__ == '__main__':
-    # merge_files()
-    pass
+    merge_files()
