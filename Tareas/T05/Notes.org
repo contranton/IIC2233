@@ -1,0 +1,84 @@
+
+* Class Diagram
+#+BEGIN_SRC plantuml :file ClassDiagram.png
+  hide empty members
+  'skinparam Linetype ortho
+  skinparam groupInheritance 3
+
+  namespace Game #AAAABB{
+      class Map{
+          Tile[] tiles;
+      }   
+
+      abstract class Tile{
+          bool solid;
+          vec2 position;
+      }
+
+      class Ground extends Tile
+      class DestructibleWall extends Tile
+      class IndestructibleWall extends Tile
+
+      abstract Entity{
+          vec2 position;
+
+          void look_around(map);
+          void move(vec2 delta);
+      }
+
+      class Character extends Entity{
+          int lives;
+          int speed;
+          int immune_time;
+      }
+
+      abstract class Enemy extends Entity{
+          void auto_move();
+      }
+
+      class NonHostileEnemy extends Enemy
+      class HostileEnemy extends Enemy
+   
+
+      Map *-- Tile
+      Map *-- Enemy
+      Map o-- Character
+      Map <- Entity
+
+      'Tile <|-- Ground
+      'Tile <|-- DestructibleWall
+      'Tile <|-- IndestructibleWall
+
+      'Enemy <|-- NonHostileEnemy
+      'Enemy <|-- HostileEnemy
+
+      'Entity <|-- Character
+      'Entity <|-- Enemy
+
+      
+  }
+
+  namespace GUI #AADDAA{
+
+      note as N1
+      Q Classes are <i>basic</i> wrappers for the backend
+      implementations, only requiring parameters such as <i>position</i>
+      for all objects, and <i>type</i> for objects like enemies, tiles, and
+      powerups.
+      end note
+
+      class MainWindow extends QWidget
+      class QMap extends QWidget
+      class QTile extends QWidget
+      class QPowerup extends QWidget
+      class QCharacter extends QWidget
+      class QCharacterOutGame extends QWidget
+      class QEnemy extends QWidget
+  }
+
+  Game +-- GUI
+#+END_SRC
+
+#+RESULTS:
+[[file:ClassDiagram.png]]
+
