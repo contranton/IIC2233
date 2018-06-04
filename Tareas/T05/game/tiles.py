@@ -1,7 +1,7 @@
 from abc import ABCMeta
 import numpy as np
 
-import game.parameters as params
+import parameters as params
 
 
 class Tile(metaclass=ABCMeta):
@@ -12,10 +12,13 @@ class Tile(metaclass=ABCMeta):
 
     solid = False
     texture = None
-    size = np.array([params.TILE_WIDTH, params.TILE_HEIGHT])
+    size = np.array([params.TILE_SIZE, params.TILE_SIZE])
 
     def __init__(self, position):
         self.position = position
+
+    def __repr__(self):
+        return f"Tile{self.position}"
 
 
 class Ground(Tile):

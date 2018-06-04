@@ -2,12 +2,15 @@
 * Class Diagram
 #+BEGIN_SRC plantuml :file ClassDiagram.png
   hide empty members
-  'skinparam Linetype ortho
+  skinparam Linetype ortho
   skinparam groupInheritance 3
+  skinparam scale 0.2
 
   namespace Game #AAAABB{
       class Map{
           Tile[] tiles;
+          Entity[] entities;
+          Character[] players;
       }   
 
       abstract class Tile{
@@ -22,7 +25,7 @@
       abstract Entity{
           vec2 position;
 
-          void look_around(map);
+          tile[] get_map_solids();
           void move(vec2 delta);
       }
 
@@ -30,6 +33,8 @@
           int lives;
           int speed;
           int immune_time;
+
+          void place_bomb(map);
       }
 
       abstract class Enemy extends Entity{
@@ -61,24 +66,47 @@
   namespace GUI #AADDAA{
 
       note as N1
-      Q Classes are <i>basic</i> wrappers for the backend
-      implementations, only requiring parameters such as <i>position</i>
-      for all objects, and <i>type</i> for objects like enemies, tiles, and
-      powerups.
+      All of these extend either QWidget or QGraphicsItem.
       end note
 
-      class MainWindow extends QWidget
-      class QMap extends QWidget
-      class QTile extends QWidget
-      class QPowerup extends QWidget
-      class QCharacter extends QWidget
-      class QCharacterOutGame extends QWidget
-      class QEnemy extends QWidget
+      class MainWindow
+      class QMap{
+            void up();
+            void left();
+            void right();
+            void down();
+            void place();
+
+            get_game_elements();
+      }
+      class QTile{
+            QPixmap texture;
+      }
+      class QPowerup
+      class QCharacter{
+            Character character;
+            QPixmap texture;
+      }
+      class QDraggableChar{
+            bool active;
+      }   
+
+      QMap *-- QTile
+      QMap *-- QCharacter
+      QMap *-- QEnemy
+      QMap *-- QPowerup
+
+      MainWindow *-- QMap
+      MainWindow *-- QDraggableChar
+
+      MainWindow *-- QScoreWindow
+
   }
 
-  Game +-- GUI
+  'Game +-- GUI
+  Game.Map o-down- GUI.QMap
 #+END_SRC
-
+  
 #+RESULTS:
 [[file:ClassDiagram.png]]
 

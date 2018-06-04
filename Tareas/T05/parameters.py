@@ -16,6 +16,5 @@ IMMUNE_TIME = 1
 # Range of sight for enemies. -1 for infinite
 ENEMY_SIGHT = 5
 
-# Tile dimensions in pixels
-TILE_WIDTH = 10
-TILE_HEIGHT = 10
+# Tile dimensions in pixels. Tiles are always square
+TILE_SIZE = 50

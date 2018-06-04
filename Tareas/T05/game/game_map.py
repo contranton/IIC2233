@@ -19,7 +19,7 @@ class Map:
         """
 
         # Dictionary position: Tile
-        self.tiles = np.array()
+        self.tiles = {}
 
         # Loads map from file
         self.load_map(map_path)
@@ -30,14 +30,19 @@ class Map:
         """
 
         # Read file
-        map_str = np.array()
+        map_str = []
         with open(map_path, 'r') as f:
             for row in f.readlines():
-                map_str.append(row.split(" "))
+                map_str.append(row.strip().split(" "))
 
         # Create Tiles with map position as key
         for i, row in enumerate(map_str):
             for j, tile_str in enumerate(row):
                 pos = (i, j)
+
                 tile_class = self._tile_dict[tile_str]
                 self.tiles[pos] = tile_class(pos)
+ 
+    def get_solids(self):
+        return {k: v for k, v in self.tiles.items() if v.solid}
+
