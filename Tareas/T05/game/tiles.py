@@ -20,6 +20,16 @@ class Tile(metaclass=ABCMeta):
     def __repr__(self):
         return f"Tile{self.position}"
 
+    @property
+    def name(self):
+        return self.__class__.name
+
+    def collide(self, x, y):
+        if any(0 < np.array([x, y]) - self.position < np.array([1, 1])):
+            print(f"Collided with {self}")
+            return True
+        return False
+
 
 class Ground(Tile):
     texture = "ground.png"

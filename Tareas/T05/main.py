@@ -1,19 +1,21 @@
 import sys
-import os.path as path
+import numpy as np
+from collections import defaultdict
 
 from PyQt5.QtWidgets import (QWidget, QApplication, QLabel,
                              QPushButton, QVBoxLayout, QGridLayout,
                              QHBoxLayout, QStackedLayout, QBoxLayout,
                              QGraphicsItem, QGraphicsPixmapItem,
-                             QGraphicsScene, QGraphicsView)
-from PyQt5.QtGui import QPainter, QPixmap, QDrag
+                             QGraphicsScene, QGraphicsView, QGraphicsRectItem)
+from PyQt5.QtGui import QPixmap, QDrag, QTransform, QPen
 
-from PyQt5.QtCore import Qt, QSize, QMimeData, pyqtSignal, QRect, QPointF
+from PyQt5.QtCore import (Qt, QSize, QMimeData, pyqtSignal, QRect,
+                          QPointF, QObject, QEvent, QTimer)
+
 
 from parameters import TILE_SIZE
 from game.game_map import Map
 from game.entities import Character
-from game.tiles import Tile
 
 
 Q_TILE_SIZE = QSize(TILE_SIZE, TILE_SIZE)
@@ -24,47 +26,88 @@ class QTile(QGraphicsPixmapItem):
         """
         pass
         """
-        super().__init__()
-        self.texture = tile.texture
-        self.x, self.y = tile.position
+        pm = QPixmap(f"assets/{tile.texture}").scaled(Q_TILE_SIZE)
+        super().__init__(pm)
+        self.tile_type = tile.name
 
-        self.setPos(QPointF(self.x, self.y))
-        self.setPixmap(QPixmap("assets/{self.texture}"))
+        self.x, self.y = tile.position
+        self.setPos(QPointF(self.x, self.y)*TILE_SIZE)
+
 
 
 class QPlayer(QGraphicsPixmapItem):
 
-    def __init__(self, get_solids_function):
+    state_offsets = {"left": (0, 80),
+                     "right": (0, 80),
+                     "up": (0, 40),
+                     "down": (0, 0),
+                     "die": (0, 120)}
+
+    sprite_element_sizes = np.array([23, 40])
+    
+    def __init__(self, player):
         """
         Graphical player
         """
+        self.state = "down"
+        self.sheet = QPixmap("assets/bomberman.png")
+        self.character = player
         super().__init__()
-        self.setPixmap(QPixmap("assets/bomberman.png"))
-        self.character = Character(get_solids_function)
+        self.setPixmap(self.sheet.copy(0, 0,
+                                       *self.sprite_element_sizes))
 
-    def update(self):
-        self.setPos(*self.char_pos())
-        self.setOffset(10, 10)
+        self._update()
+
+
+    def _update(self):
+        if all(self.char_pos() < 0):
+            self.setVisible(False)
+        else:
+            self.setVisible(True)
+        self.update_pixmap()
+        #print(f"Moving to {self.char_pos()}")
+        pos = (self.char_pos()*TILE_SIZE -
+               self.sprite_element_sizes*[0.5, 1])
+        
+        self.setPos(*pos)
+        
+    def paint(self, painter, *args):
+        rect = self.boundingRect()
+        painter.setPen(QPen(Qt.red, 1))
+        painter.drawRect(rect)
+        super().paint(painter, *args)
+
+    def update_pixmap(self):
+        offs = self.state_offsets[self.state]
+        pm = self.sheet.copy(*offs, *self.sprite_element_sizes)\
+                       .transformed(QTransform().scale(1.5, 1.5))
+        if self.state == "left":
+            pm = pm.transformed(QTransform().scale(-1, 1))
+        self.setPixmap(pm)
 
     def char_pos(self):
-        return (self.character.position*TILE_SIZE)
+        return (self.character.position)
 
     def _move(self, dx, dy):
         collision_object = self.character.move(dx, dy)
         if collision_object:
             print(collision_object)
-        self.update()
+        self._update()
 
     def up(self):
+        self.state = "up"
         self._move(0, -1)
 
     def right(self):
+        self.state = "right"
         self._move(1, 0)
 
     def down(self):
+        self.state = "down"
         self._move(0, 1)
 
     def left(self):
+        self.state = "left"
         self._move(-1, 0)
 
     def lay_bomb(self):
@@ -72,45 +115,34 @@ class QPlayer(QGraphicsPixmapItem):
 
     def place(self, pos):
         self.character.init_position(pos)
+        self._update()
 
 
 class QMap(QGraphicsScene):
-    def __init__(self, map_):
+    def __init__(self, view_size, map_):
         """
         """
         super().__init__()
+
         self._map = map_
         # Graphics Scene to hold tiles and entities
+        self.setSceneRect(0, 0, TILE_SIZE, TILE_SIZE)
         self.setObjectName("Game self")
 
         self.tiles = [QTile(tile) for tile in map_.tiles.values()]
         for qtile in self.tiles:
             self.addItem(qtile)
 
-        self.p1 = QPlayer(self._map.get_solids)
-        self.p2 = QPlayer(self._map.get_solids)
+        self.p1 = QPlayer(Character(self._map.get_solids))
+        self.p2 = QPlayer(Character(self._map.get_solids))
 
         self.addItem(self.p1)
         self.addItem(self.p2)
 
         self.entities = []
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().text() == "char":
-            event.acceptProposedAction()
 
-    def dropEvent(self, event):
-        event.acceptProposedAction()
-        # print(f"Player dropped at {event.pos()}")
-        pos = event.pos() / TILE_SIZE
-        self.p1.place([pos.x(), pos.y()])
-
-    def handleCollision(self, tile):
-        print(tile)
-
-
-
-class QMapHolder(QWidget):
+class QMapHolder(QGraphicsView):
     def __init__(self, map_):
         """
         DOC
@@ -119,13 +151,67 @@ class QMapHolder(QWidget):
 
         self.setFixedSize(Q_TILE_SIZE*15)
         self._map = map_
-        self.scene = QMap(map_)
-        self.view = QGraphicsView(self.scene)
-        layout = QHBoxLayout()
-        layout.addWidget(self.view)
-        self.setLayout(layout)
+
+        self._scene = QMap(self.rect(), map_)
+        self.setScene(self._scene)
+        self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.show()
 
+        # Timer for game time
+        self.startTimer(10)
+
+        self._keys = defaultdict(lambda: lambda: None)
+        self._keys.update({Qt.Key_W:      self._scene.p2.up,
+                           Qt.Key_Up:     self._scene.p1.up,
+                           Qt.Key_A:      self._scene.p2.left,
+                           Qt.Key_Left:   self._scene.p1.left,
+                           Qt.Key_D:      self._scene.p2.right,
+                           Qt.Key_Right:  self._scene.p1.right,
+                           Qt.Key_S:      self._scene.p2.down,
+                           Qt.Key_Down:   self._scene.p1.down,
+                           Qt.Key_F:      self._scene.p2.lay_bomb,
+                           Qt.Key_Space:  self._scene.p1.lay_bomb})
+
+        self._keys_pressed = defaultdict(bool)
+
+    def dragEnterEvent(self, event):
+        print("HELLO")
+        if event.mimeData().text() == "char":
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        event.acceptProposedAction()
+
+        pos = event.pos()/TILE_SIZE
+        print(f"Player dropped at {pos}")
+        self._scene.p1.place([pos.x(), pos.y()])
+
+    def dragMoveEvent(self, event):
+        # Must override this to change QGraphicsScene's default
+        # drag-and-drop behavior
+        event.acceptProposedAction()
+
+    def handleCollision(self, tile):
+        print(tile)
+
+    def mousePressEvent(self, event):
+        print(self.mapToScene(event.pos()))
+
+    def keyPressEvent(self, event):
+        key = event.key()
+
+        if key in self._keys:
+            self._keys_pressed[key] = True
+
+    def keyReleaseEvent(self, event):
+        key = event.key()
+        if self._keys_pressed[key]:
+            self._keys_pressed[key] = False
+
+    def timerEvent(self, event):
+        keys = (k for (k, p) in self._keys_pressed.items() if p)
+        for k in keys:
+            self._keys[k]()
 
 class QDraggableChar(QWidget):
     def __init__(self):
@@ -157,8 +243,10 @@ class MainWindow(QWidget):
         super(MainWindow, self).__init__()
         self.setWindowTitle("C o d e   W i t h   F i r e")
         self.setObjectName("Main window")
+
+        # Game window
         self.game_holder = QMapHolder(Map("mapa.txt"))
-        self.game_map = self.game_holder.scene
+        self.game_map = self.game_holder.scene()
 
         # Main horizontal layout
         layout = QHBoxLayout(self)
@@ -175,26 +263,34 @@ class MainWindow(QWidget):
         sublayout.addWidget(QDraggableChar())
         sublayout.addStretch()
 
-        # Set layours
+        # Set layouts
         layout.addLayout(sublayout)
         self.setLayout(layout)
         self.show()
 
-        # Functions called on key presses
-        self._key_map = {Qt.Key_Escape: self.close,
-                         Qt.Key_W:      self.game_map.p2.up,
-                         Qt.Key_Up:     self.game_map.p1.up,
-                         Qt.Key_A:      self.game_map.p2.left,
-                         Qt.Key_Left:   self.game_map.p1.left,
-                         Qt.Key_D:      self.game_map.p2.right,
-                         Qt.Key_Right:  self.game_map.p1.right,
-                         Qt.Key_S:      self.game_map.p2.down,
-                         Qt.Key_Down:   self.game_map.p1.down,
-                         Qt.Key_F:      self.game_map.p2.lay_bomb,
-                         Qt.Key_Space:  self.game_map.p1.lay_bomb}
+        # Event filter to ignore QGraphicsView Arrow key consumption
+        self.game_holder.installEventFilter(self)
+        #self.installEventFilter(self)
 
+        # Functions called on key presses
+        self._key_map = {Qt.Key_Escape: self.close}
         self._ctrl_key_map = {Qt.Key_P:  self.pause,
                               Qt.Key_E:  self.close}
+        
+    def eventFilter(self, source, event):
+        """
+        Event Filter used to prevent consumption of arrow keys by the
+        QGraphicsView.
+
+        Adapted from
+        http://www.qtcentre.org/threads/25487-Detect-Arrow-Keys
+        """
+        if event.type() == QEvent.KeyPress and\
+           event.key() not in self.game_holder._keys:
+            self.keyPressEvent(event)
+            return True
+        else:
+            return super().eventFilter(self, event)
 
     def keyPressEvent(self, event):
         key_dict = self._key_map

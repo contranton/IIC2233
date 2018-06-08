@@ -24,7 +24,7 @@ class Entity:
         Must receive a positional argument to place the player in the map.
         """
         self.position = np.array(vec2)
-        print(self.position)
+        print(f"New position set to {self.position}")
 
     def move(self, dx, dy):
         # Negative position means player hasn't been set on map
@@ -36,21 +36,21 @@ class Entity:
         dx, dy = dx*scale, dy*scale
         new = self.position + np.array([dx, dy]) * self.velocity
 
-        print(new)
         # Check for collisions
         if self.can_clip:
             self.position = new
             return
         else:
             # TODO: Colission checking
-            # self.position = new
-            blocks = list(self.get_solids().items())
-            # Returns tuple or other datathingy with position and tile
-            # object. This allows the QPlayer to emit the
-            # corresponding colission signal
-            block = blocks[0][1]
+            #import pdb; pdb.set_trace()
 
-            return block
+            try:
+                block = self.get_solids()[tuple(new.astype(int))]
+                print(f"COllided with {block}")
+            except KeyError:
+                # No collision
+                self.position = new
+                return
 
 
 class Character(Entity):

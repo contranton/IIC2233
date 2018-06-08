@@ -18,7 +18,8 @@ class Map:
         the map.txt file.
         """
 
-        # Dictionary position: Tile
+        # Dictionary of the form:
+        # position(i, j): Tile
         self.tiles = {}
 
         # Loads map from file

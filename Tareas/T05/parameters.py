@@ -1,5 +1,5 @@
 # Number of pixels moved per tick
-SPEED = 10
+SPEED = 2
 
 # Number of lives
 LIVES = 3

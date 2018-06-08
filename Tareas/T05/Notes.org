@@ -110,3 +110,14 @@
 #+RESULTS:
 [[file:ClassDiagram.png]]
 
+* Objectives
+
+** TODO Colissions
+** TODO Threading with QTimers
+
+** TODO Enemies
+
+** TODO Smooth movement
+
+** TODO Animation
+
