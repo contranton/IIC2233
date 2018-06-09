@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+from itertools import chain
 from collections import defaultdict
 
 from PyQt5.QtWidgets import (QWidget, QApplication, QLabel,
@@ -9,7 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QLabel,
                              QGraphicsScene, QGraphicsView, QGraphicsRectItem)
 from PyQt5.QtGui import QPixmap, QDrag, QTransform, QPen
 
-from PyQt5.QtCore import (Qt, QSize, QMimeData, pyqtSignal, QRect,
+from PyQt5.QtCore import (Qt, QSize, QMimeData, pyqtSignal, QRect, QPoint,
                           QPointF, QObject, QEvent, QTimer)
 
 
@@ -34,7 +35,6 @@ class QTile(QGraphicsPixmapItem):
         self.setPos(QPointF(self.x, self.y)*TILE_SIZE)
 
 
-
 class QPlayer(QGraphicsPixmapItem):
 
     state_offsets = {"left": (0, 80),
@@ -44,7 +44,7 @@ class QPlayer(QGraphicsPixmapItem):
                      "die": (0, 120)}
 
     sprite_element_sizes = np.array([23, 40])
-    
+
     def __init__(self, player):
         """
         Graphical player
@@ -53,11 +53,20 @@ class QPlayer(QGraphicsPixmapItem):
         self.sheet = QPixmap("assets/bomberman.png")
         self.character = player
         super().__init__()
-        self.setPixmap(self.sheet.copy(0, 0,
-                                       *self.sprite_element_sizes))
+        self.setPixmap(
+            self.sheet.copy(0, 0, *self.sprite_element_sizes)
+        )
 
         self._update()
 
+    @property
+    def bounding_size(self):
+        return np.array([self.boundingRect().width(),
+                         self.boundingRect().height()])
+
+    @property
+    def origin(self):
+        return self.char_pos()*TILE_SIZE
 
     def _update(self):
         if all(self.char_pos() < 0):
@@ -65,17 +74,20 @@ class QPlayer(QGraphicsPixmapItem):
         else:
             self.setVisible(True)
         self.update_pixmap()
-        #print(f"Moving to {self.char_pos()}")
-        pos = (self.char_pos()*TILE_SIZE -
-               self.sprite_element_sizes*[0.5, 1])
-        
-        self.setPos(*pos)
-        
+
+        self.setPos(*self.origin)
+
     def paint(self, painter, *args):
-        rect = self.boundingRect()
-        painter.setPen(QPen(Qt.red, 1))
-        painter.drawRect(rect)
+        # Draw pixmap
         super().paint(painter, *args)
+
+        # Draw bounding rectangle
+        painter.setPen(QPen(Qt.red, 1))
+        painter.drawRect(self.boundingRect())
+
+        # Draw origin
+        painter.setPen(QPen(Qt.green, 2))
+        painter.drawPoint(self.mapFromScene(*self.char_pos()))
 
     def update_pixmap(self):
         offs = self.state_offsets[self.state]
@@ -89,9 +101,7 @@ class QPlayer(QGraphicsPixmapItem):
         return (self.character.position)
 
     def _move(self, dx, dy):
-        collision_object = self.character.move(dx, dy)
-        if collision_object:
-            print(collision_object)
+        self.character.move(dx, dy)
         self._update()
 
     def up(self):
@@ -111,11 +121,43 @@ class QPlayer(QGraphicsPixmapItem):
         self._move(-1, 0)
 
     def lay_bomb(self):
-        pass
+        self.character.place_bomb()
+        return "HII"
 
     def place(self, pos):
         self.character.init_position(pos)
         self._update()
+
+
+class QEnemy(QGraphicsPixmapItem):
+
+    def __init__(self):
+        super(QEnemy, self).__init__()
+        self.sheet = QPixmap("assets/monster.png")
+        self.setPixmap(self.sheet.copy(19, 25, 23, 29))
+
+
+class QBomb(QGraphicsPixmapItem):
+
+    sprite_stages = [(146, 9, 14, 24),
+                     (162, 9, 14, 24),
+                     (178, 9, 14, 24)]
+
+    def __init__(self, bomb, parent, *args):
+        super().__init__(*args)
+        self.parent = parent
+        self.sheet = QPixmap("assets/bomberman.png")
+        self.setPixmap(self.sheet.copy(*self.sprite_stages[0]))
+        self.bomb = bomb
+
+        self._update()
+
+    def _update(self):
+        self.setPos(*self.bomb.position*TILE_SIZE)
+
+    def explode(self):
+        print("Boom")
+        self.parent.removeItem(self)
 
 
 class QMap(QGraphicsScene):
@@ -133,13 +175,20 @@ class QMap(QGraphicsScene):
         for qtile in self.tiles:
             self.addItem(qtile)
 
-        self.p1 = QPlayer(Character(self._map.get_solids))
-        self.p2 = QPlayer(Character(self._map.get_solids))
+        self.p1 = QPlayer(self._map.p1)
+        self.p2 = QPlayer(self._map.p2)
+
+        self._map.bomb_laid_signal.connect(self.make_bomb)
 
         self.addItem(self.p1)
         self.addItem(self.p2)
 
         self.entities = []
+
+    def make_bomb(self, bomb):
+        item = QBomb(bomb, parent=self)
+        self.addItem(item)
+        bomb.explode_signal.connect(item.explode)
 
 
 class QMapHolder(QGraphicsView):
@@ -160,6 +209,9 @@ class QMapHolder(QGraphicsView):
         # Timer for game time
         self.startTimer(10)
 
+        # Default value is a callable that returns None. These are the
+        # 'holdable' keys such as those used for continuous movement
+        # motion
         self._keys = defaultdict(lambda: lambda: None)
         self._keys.update({Qt.Key_W:      self._scene.p2.up,
                            Qt.Key_Up:     self._scene.p1.up,
@@ -168,11 +220,21 @@ class QMapHolder(QGraphicsView):
                            Qt.Key_D:      self._scene.p2.right,
                            Qt.Key_Right:  self._scene.p1.right,
                            Qt.Key_S:      self._scene.p2.down,
-                           Qt.Key_Down:   self._scene.p1.down,
-                           Qt.Key_F:      self._scene.p2.lay_bomb,
-                           Qt.Key_Space:  self._scene.p1.lay_bomb})
+                           Qt.Key_Down:   self._scene.p1.down})
 
+        # These are keys that execute as typical key events do, i.e.,
+        # execute once, and start repeating only after a short delay
+        self._one_shot_keys = defaultdict(lambda: lambda: None)
+        self._one_shot_keys.update({Qt.Key_F:      self._scene.p2.lay_bomb,
+                                    Qt.Key_Space:  self._scene.p1.lay_bomb})
+
+        # Utility dict used for managing continuous key events
         self._keys_pressed = defaultdict(bool)
+
+        # Utility set used for the event filter so as to prevent
+        # consumption of unused events by this widget
+        self.all_keys = {k for k in chain(self._keys.keys(),
+                                          self._one_shot_keys.keys())}
 
     def dragEnterEvent(self, event):
         print("HELLO")
@@ -200,6 +262,10 @@ class QMapHolder(QGraphicsView):
     def keyPressEvent(self, event):
         key = event.key()
 
+        # Keys that aren't assosciated with 'continuous' functions
+        self._one_shot_keys[key]()
+
+        # Continuously active functions
         if key in self._keys:
             self._keys_pressed[key] = True
 
@@ -212,6 +278,7 @@ class QMapHolder(QGraphicsView):
         keys = (k for (k, p) in self._keys_pressed.items() if p)
         for k in keys:
             self._keys[k]()
+
 
 class QDraggableChar(QWidget):
     def __init__(self):
@@ -237,10 +304,10 @@ class QDraggableChar(QWidget):
             drag.exec()
 
 
-class MainWindow(QWidget):
+class GameWindow(QWidget):
 
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super().__init__()
         self.setWindowTitle("C o d e   W i t h   F i r e")
         self.setObjectName("Main window")
 
@@ -266,17 +333,15 @@ class MainWindow(QWidget):
         # Set layouts
         layout.addLayout(sublayout)
         self.setLayout(layout)
-        self.show()
 
         # Event filter to ignore QGraphicsView Arrow key consumption
         self.game_holder.installEventFilter(self)
-        #self.installEventFilter(self)
 
         # Functions called on key presses
         self._key_map = {Qt.Key_Escape: self.close}
         self._ctrl_key_map = {Qt.Key_P:  self.pause,
                               Qt.Key_E:  self.close}
-        
+
     def eventFilter(self, source, event):
         """
         Event Filter used to prevent consumption of arrow keys by the
@@ -286,7 +351,7 @@ class MainWindow(QWidget):
         http://www.qtcentre.org/threads/25487-Detect-Arrow-Keys
         """
         if event.type() == QEvent.KeyPress and\
-           event.key() not in self.game_holder._keys:
+           event.key() not in self.game_holder.all_keys:
             self.keyPressEvent(event)
             return True
         else:
@@ -310,6 +375,44 @@ class MainWindow(QWidget):
 
     def pause(self):
         pass
+
+class MainWindow(QWidget):
+
+    def __init__(self):
+        """
+    
+        """
+        super().__init__()
+
+        layout = QVBoxLayout()
+        
+        layout.addWidget(QLabel("<b>Welcome to CODE WITH FIRE</b>"))
+        bt1 = QPushButton("Single Player")
+        bt2 = QPushButton("Two Players")
+        bt3 = QPushButton("Scores")
+        bt4 = QPushButton("Exit")
+        bt1.pressed.connect(self.play_single)
+        bt2.pressed.connect(self.play_double)
+        bt3.pressed.connect(self.scores_menu)
+        bt4.pressed.connect(self.close)
+        layout.addWidget(bt1)
+        layout.addWidget(bt2)
+        layout.addWidget(bt3)
+        layout.addWidget(bt4)
+
+        self.setLayout(layout)
+        self.show()
+
+    def scores_menu(self):
+        pass
+
+    def play_single(self):
+        self.hide()
+        GameWindow().show()
+
+    def play_double(self):
+        self.hide()
+        GameWindow().show()
 
 
 if __name__ == '__main__':

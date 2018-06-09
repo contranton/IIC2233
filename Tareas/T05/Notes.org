@@ -112,12 +112,21 @@
 
 * Objectives
 
-** TODO Colissions
+** DONE Smooth movement
+   
+** DONE Colissions
+
 ** TODO Threading with QTimers
 
-** TODO Enemies
-
-** TODO Smooth movement
+** TODO [#A] Enemies
 
 ** TODO Animation
 
+** TODO Movable bombs
+
+** TODO [#C] Main menu and scores
+
+** TODO [#B] Enemy generation
+* Decisions
+- Implemented Game using QGraphicsScene and QGraphicsItems
+- Collisions are based on the bottom half of the sprite's bounding box
