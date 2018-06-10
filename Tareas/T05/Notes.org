@@ -124,17 +124,18 @@
 
 ** DONE Unify into QEntity and QMobileEntity classes
 
-** TODO [#A] Main menu and scores
+** TODO Main menu and scores
+Player 3 & 4 shouldn't happen
 
-** TODO [#B] Implement tile explosions
+** TODO [#A] Implement tile explosions
+
+** TODO [#B] Powerups
 
 ** TODO [#C] Fix enemy movement
 
 ** TODO Movable bombs
 
 ** TODO Difficulty increase
-
-** TODO Powerups
 * Decisions
 - Implemented Game using QGraphicsScene and QGraphicsItems
 - Collisions are based on the bottom half of the sprite's bounding box

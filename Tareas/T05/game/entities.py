@@ -122,14 +122,14 @@ class Character(Entity):
     
     collidable = True
 
-    def __init__(self, *args):
+    def __init__(self, num, name, *args):
         """
         Main character class that handles player logic
         """
         super().__init__(*args)
 
-        self.num = self.__num
-        Character.__num += 1
+        self.num = num
+        self.name = name
 
         self.score = 0
 

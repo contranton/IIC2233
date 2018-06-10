@@ -24,7 +24,7 @@ class Map(QObject):
     powerup_placed_signal = pyqtSignal(Powerup)
     new_enemy_signal = pyqtSignal(Enemy)
 
-    def __init__(self, map_path):
+    def __init__(self, map_path, names):
         """
         Holder for all tiles with their coordinates
 
@@ -46,8 +46,8 @@ class Map(QObject):
         self.map_changed = True
 
         # Players contained in map
-        self.p1 = Character(self.get_collidable)
-        self.p2 = Character(self.get_collidable)
+        self.p1 = Character(1, names[0], self.get_collidable)
+        self.p2 = Character(2, names[1], self.get_collidable)
         for p in (self.p1, self.p2):
             p.place_bomb_signal.connect(self.place_bomb)
             p.bomb_num_increase.connect(self.increase_max_bombs)

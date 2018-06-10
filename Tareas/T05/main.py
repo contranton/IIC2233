@@ -6,7 +6,7 @@ from collections import defaultdict
 from PyQt5.QtWidgets import (QWidget, QApplication, QLabel,
                              QPushButton, QVBoxLayout, QHBoxLayout,
                              QGraphicsPixmapItem, QGraphicsScene,
-                             QGraphicsView)
+                             QGraphicsView, QTextEdit)
 from PyQt5.QtGui import QPixmap, QDrag, QTransform, QPen
 
 from PyQt5.QtCore import (Qt, QSize, QMimeData, pyqtSignal, QRectF,
@@ -35,6 +35,7 @@ class QTile(QGraphicsPixmapItem):
 
     def explode(self):
         pass
+
 
 class QEntity(QGraphicsPixmapItem):
 
@@ -411,8 +412,8 @@ class QLives(QWidget):
 
 
 class QScore(QLabel):
-    def __init__(self, p_num):
-        self.template = f"<b>Player {p_num}'s score:</b> "
+    def __init__(self, name):
+        self.template = f"<b>{name}'s score:</b> "
         super().__init__(self.template)
         self.update_score(0)
 
@@ -429,7 +430,7 @@ class QPlayerInfo(QWidget):
         lives = QLives()
         player.lives_changed.connect(lives.update_lives)
         layout.addWidget(lives)
-        label = QScore(player.num)
+        label = QScore(player)
         player.score_changed.connect(label.update_score)
         layout.addWidget(label)
         layout.addWidget(QDraggableChar(player.num))
@@ -441,13 +442,13 @@ class GameWindow(QWidget):
 
     closed_signal = pyqtSignal()
 
-    def __init__(self, multiplayer):
+    def __init__(self, multiplayer, names):
         super().__init__()
         self.setWindowTitle("C o d e   W i t h   F i r e")
         self.setObjectName("Main window")
 
         # Game window
-        self.game_holder = QMapHolder(Map("mapa.txt"))
+        self.game_holder = QMapHolder(Map("mapa.txt", names))
         self.game_map = self.game_holder.scene()
 
         # Main horizontal layout
@@ -467,7 +468,7 @@ class GameWindow(QWidget):
         layout.addLayout(sublayout)
         self.setLayout(layout)
 
-        # Event filter to ignore QGraphicsView Arrow key consumption
+        # Event filter to ignore QGraphicsView Arrow key conansumption
         self.game_holder.installEventFilter(self)
 
         # Functions called on key presses
@@ -516,6 +517,40 @@ class GameWindow(QWidget):
         super().close()
 
 
+class QNameWindow(QWidget):
+    def __init__(self, refocus_foo, multiplayer=False):
+        """
+
+        """
+        super().__init__()
+        self.mult = multiplayer
+        self.refocus_foo = refocus_foo
+
+        self.text_fields = [QTextEdit(f"Player{i+1}") for i in range(2)]
+
+        vdiv = QVBoxLayout()
+        hdiv = QHBoxLayout()
+        for i in range(1 + 1*multiplayer):
+            print(i)
+            subvdiv = QVBoxLayout()
+            subvdiv.addWidget(QLabel(f"Name of player {i}"))
+            subvdiv.addWidget(self.text_fields[i])
+            hdiv.addLayout(subvdiv)
+        vdiv.addLayout(hdiv)
+        self.btn = QPushButton("Start Game")
+        self.btn.pressed.connect(self.on_press)
+        vdiv.addWidget(self.btn)
+
+        self.setLayout(vdiv)
+
+        self.show()
+
+    def on_press(self):
+        self.hide()
+        names = [t.toPlainText() for t in self.text_fields]
+        self.game = GameWindow(self.mult, names)
+        self.game.closed_signal.connect(self.refocus_foo)
+
 class MainWindow(QWidget):
 
     def __init__(self):
@@ -545,13 +580,11 @@ class MainWindow(QWidget):
 
     def play_single(self):
         self.hide()
-        self.game = GameWindow(multiplayer=False)
-        self.game.closed_signal.connect(self.refocus)
+        self.name_window = QNameWindow(self.refocus, multiplayer=False)
 
     def play_double(self):
         self.hide()
-        self.game = GameWindow(multiplayer=True)
-        self.game.closed_signal.connect(self.refocus)
+        self.name_window = QNameWindow(self.refocus, multiplayer=True)
 
     def refocus(self):
         self.show()
@@ -559,5 +592,5 @@ class MainWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    win = GameWindow(True)
+    win = MainWindow()
     sys.exit(app.exec())
