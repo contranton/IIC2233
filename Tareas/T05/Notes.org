@@ -116,17 +116,24 @@
    
 ** DONE Colissions
 
-** TODO Threading with QTimers
+** DONE Animation
+
+** DONE Threading with QTimers
+
+** DONE Enemy generation
+
+** DONE Unify into QEntity and QMobileEntity classes
 
 ** TODO [#A] Enemies
-
-** TODO Animation
 
 ** TODO Movable bombs
 
 ** TODO [#C] Main menu and scores
 
-** TODO [#B] Enemy generation
+** TODO Difficulty increase
+
+** TODO Powerups
 * Decisions
 - Implemented Game using QGraphicsScene and QGraphicsItems
 - Collisions are based on the bottom half of the sprite's bounding box
+- Explosions extend to the very end but it's a matter of changing the function all_empty_tiles_in_sight to add a max number to change this.

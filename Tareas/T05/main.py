@@ -4,19 +4,17 @@ from itertools import chain
 from collections import defaultdict
 
 from PyQt5.QtWidgets import (QWidget, QApplication, QLabel,
-                             QPushButton, QVBoxLayout, QGridLayout,
-                             QHBoxLayout, QStackedLayout, QBoxLayout,
-                             QGraphicsItem, QGraphicsPixmapItem,
-                             QGraphicsScene, QGraphicsView, QGraphicsRectItem)
+                             QPushButton, QVBoxLayout, QHBoxLayout,
+                             QGraphicsPixmapItem, QGraphicsScene,
+                             QGraphicsView)
 from PyQt5.QtGui import QPixmap, QDrag, QTransform, QPen
 
-from PyQt5.QtCore import (Qt, QSize, QMimeData, pyqtSignal, QRect, QPoint,
-                          QPointF, QObject, QEvent, QTimer)
+from PyQt5.QtCore import (Qt, QSize, QMimeData, pyqtSignal, QRectF,
+                          QPointF, QEvent, QTimer, QPoint)
 
 
-from parameters import TILE_SIZE
+from parameters import TILE_SIZE, ANIM_SPEED, TICK_RATE
 from game.game_map import Map
-from game.entities import Character
 
 
 Q_TILE_SIZE = QSize(TILE_SIZE, TILE_SIZE)
@@ -29,35 +27,53 @@ class QTile(QGraphicsPixmapItem):
         """
         pm = QPixmap(f"assets/{tile.texture}").scaled(Q_TILE_SIZE)
         super().__init__(pm)
-        self.tile_type = tile.name
+        self.tile = tile
+        self.tile.exploded_signal.connect(self.explode)
 
         self.x, self.y = tile.position
         self.setPos(QPointF(self.x, self.y)*TILE_SIZE)
 
+    def explode(self):
+        pass
 
-class QPlayer(QGraphicsPixmapItem):
+class QEntity(QGraphicsPixmapItem):
 
-    state_offsets = {"left": (0, 80),
-                     "right": (0, 80),
-                     "up": (0, 40),
-                     "down": (0, 0),
-                     "die": (0, 120)}
+    # Dictionary that contains the list of rectangles inside the
+    # spritesheet that correspond to different frames of a single
+    # state
+    state_offsets = {"default": [(0, 0, 1, 1)]}
 
-    sprite_element_sizes = np.array([23, 40])
+    flipped = ["left"]
 
-    def __init__(self, player):
-        """
-        Graphical player
-        """
-        self.state = "down"
-        self.sheet = QPixmap("assets/bomberman.png")
-        self.character = player
+    # Path to the image file
+    texture = ""
+
+    def __init__(self, entity, parent=None):
         super().__init__()
-        self.setPixmap(
-            self.sheet.copy(0, 0, *self.sprite_element_sizes)
-        )
+        self.parent = parent
 
-        self._update()
+        self.entity = entity
+        self.sheet = QPixmap(self.texture)
+        self.state = "default"
+
+        self.opacity = 1
+        self.setPixmap(self.sheet.copy(*self.state_offsets["default"][0]))
+
+        self.frame = 0
+        self.timer = QTimer()
+        self.timer.start(1000/ANIM_SPEED)
+        self.timer.timeout.connect(self.timerEvent)
+
+    def timerEvent(self):
+        self.frame += 1
+        self.setPos(*self.origin)
+
+    def boundingRect(self):
+        return QRectF(0, 0, TILE_SIZE, TILE_SIZE)
+
+    @property
+    def pos(self):
+        return self.entity.position
 
     @property
     def bounding_size(self):
@@ -66,19 +82,12 @@ class QPlayer(QGraphicsPixmapItem):
 
     @property
     def origin(self):
-        return self.char_pos()*TILE_SIZE
-
-    def _update(self):
-        if all(self.char_pos() < 0):
-            self.setVisible(False)
-        else:
-            self.setVisible(True)
-        self.update_pixmap()
-
-        self.setPos(*self.origin)
+        return self.pos*TILE_SIZE - self.bounding_size/2
 
     def paint(self, painter, *args):
         # Draw pixmap
+        # TODO: Fix sprite falling out of the bounding box
+        painter.setOpacity(self.opacity)
         super().paint(painter, *args)
 
         # Draw bounding rectangle
@@ -87,21 +96,52 @@ class QPlayer(QGraphicsPixmapItem):
 
         # Draw origin
         painter.setPen(QPen(Qt.green, 2))
-        painter.drawPoint(self.mapFromScene(*self.char_pos()))
+        painter.drawPoint(self.mapFromScene(*self.pos))
 
     def update_pixmap(self):
-        offs = self.state_offsets[self.state]
-        pm = self.sheet.copy(*offs, *self.sprite_element_sizes)\
-                       .transformed(QTransform().scale(1.5, 1.5))
+        # Tuple containing coordinates for each state animation
+        subsheet = self.state_offsets[self.state]
+        offs = subsheet[self.frame % len(subsheet)]
+
+        # Get pixmap from aquired coordinate
+        sprite_size = TILE_SIZE * self.entity.size
+        pm = self.sheet.copy(*offs).scaled(*sprite_size)
+
+        # Reflect the left state
         if self.state == "left":
             pm = pm.transformed(QTransform().scale(-1, 1))
-        self.setPixmap(pm)
 
-    def char_pos(self):
-        return (self.character.position)
+        # Assign
+        self.setPixmap(pm)
+        self.setOffset(*sprite_size*[0.5, 0])
+
+
+class QPlayer(QEntity):
+
+    state_offsets = {"left":  [(6 + 21*i, 84, 20, 31) for i in range(5)],
+                     "right": [(6 + 21*i, 84, 20, 31) for i in range(5)],
+                     "up":    [(7 + 21*i, 47, 16, 28) for i in range(5)],
+                     "down":  [(7 + 21*i,  4, 16, 32) for i in range(5)],
+                     "die":   [(5 + 29*i, 120, 24, 40) for i in range(7)],
+                     "default": [(49, 8, 18, 32)]}
+
+    texture = "assets/bomberman.png"
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.entity.invincible_signal.connect(self.invincible)
+
+    def _update(self):
+        if all(self.pos < 0):
+            self.setVisible(False)
+        else:
+            self.setVisible(True)
+        self.update_pixmap()
+
+        self.setPos(*self.origin)
 
     def _move(self, dx, dy):
-        self.character.move(dx, dy)
+        self.entity.move(dx, dy)
         self._update()
 
     def up(self):
@@ -120,21 +160,33 @@ class QPlayer(QGraphicsPixmapItem):
         self.state = "left"
         self._move(-1, 0)
 
+    def invincible(self, is_set):
+        if is_set:
+            self.opacity = 0.25
+        else:
+            self.opacity = 1
+        super().update()
+
     def lay_bomb(self):
-        self.character.place_bomb()
+        self.entity.place_bomb()
         return "HII"
 
     def place(self, pos):
-        self.character.init_position(pos)
+        self.entity.init_position(pos)
         self._update()
 
 
-class QEnemy(QGraphicsPixmapItem):
+class QEnemy(QEntity):
 
-    def __init__(self):
-        super(QEnemy, self).__init__()
-        self.sheet = QPixmap("assets/monster.png")
-        self.setPixmap(self.sheet.copy(19, 25, 23, 29))
+    state_offsets = {"default": [(19, 25, 23, 29)]}
+    texture = "assets/monster.png"
+
+    def timerEvent(self):
+        super().timerEvent()
+        self.entity.auto_move()
+
+    def delete(self):
+        self.parent.removeItem(self)
 
 
 class QBomb(QGraphicsPixmapItem):
@@ -147,15 +199,19 @@ class QBomb(QGraphicsPixmapItem):
         super().__init__(*args)
         self.parent = parent
         self.sheet = QPixmap("assets/bomberman.png")
-        self.setPixmap(self.sheet.copy(*self.sprite_stages[0]))
         self.bomb = bomb
 
-        self._update()
+        self.timer = QTimer()
+        self.timer.start(TICK_RATE)
+        self.timer.timeout.connect(self.timerEvent)
 
-    def _update(self):
+    def timerEvent(self):
+        pm = self.sheet.copy(*self.sprite_stages[0])
+        pm = pm.transformed(QTransform().scale(2, 2))
+        self.setPixmap(pm)
         self.setPos(*self.bomb.position*TILE_SIZE)
 
-    def explode(self):
+    def delete(self):
         print("Boom")
         self.parent.removeItem(self)
 
@@ -179,6 +235,7 @@ class QMap(QGraphicsScene):
         self.p2 = QPlayer(self._map.p2)
 
         self._map.bomb_laid_signal.connect(self.make_bomb)
+        self._map.new_enemy_signal.connect(self.make_enemy)
 
         self.addItem(self.p1)
         self.addItem(self.p2)
@@ -188,7 +245,51 @@ class QMap(QGraphicsScene):
     def make_bomb(self, bomb):
         item = QBomb(bomb, parent=self)
         self.addItem(item)
-        bomb.explode_signal.connect(item.explode)
+        bomb.explode_signal.connect(item.delete)
+
+    def make_enemy(self, enemy):
+        item = QEnemy(enemy, parent=self)
+        self.addItem(item)
+        enemy.dead.connect(item.delete)
+
+
+class QHeart(QLabel):
+    def __init__(self, num):
+        super(QHeart, self).__init__()
+        self.num = num
+        self.sheet = QPixmap("assets/life_hearts.png")
+        self.setFixedSize(50, 50)
+        self.setText("A heart")
+        self.alive()
+
+    def alive(self):
+        self.setPixmap(self.sheet.copy(0, 0, 50, 50))
+
+    def dead(self):
+        self.setPixmap(self.sheet.copy(50, 0, 50, 50))
+
+    def update(self, num):
+        if self.num < num:
+            self.alive()
+        else:
+            self.dead()
+
+
+class QLives(QWidget):
+
+    update_signal = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__()
+        self.layout = QHBoxLayout()
+        for i in range(3):
+            heart = QHeart(i)
+            self.update_signal.connect(heart.update)
+            self.layout.addWidget(heart)
+        self.setLayout(self.layout)
+
+    def update_lives(self, num):
+        self.update_signal.emit(num)
 
 
 class QMapHolder(QGraphicsView):
@@ -207,7 +308,7 @@ class QMapHolder(QGraphicsView):
         self.show()
 
         # Timer for game time
-        self.startTimer(10)
+        self.startTimer(TICK_RATE)
 
         # Default value is a callable that returns None. These are the
         # 'holdable' keys such as those used for continuous movement
@@ -300,11 +401,16 @@ class QDraggableChar(QWidget):
 
             drag = QDrag(self)
             drag.setMimeData(data)
-            drag.setPixmap(QPixmap("assets/nukeman.png"))
+            pixmap = QPixmap("assets/bomberman3d.png")\
+                     .transformed(QTransform().scale(-0.15, 0.15))
+            drag.setPixmap(pixmap)
+            drag.setHotSpot(QPoint(self.width()/4, self.height()))
             drag.exec()
 
 
 class GameWindow(QWidget):
+
+    closed_signal = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -323,6 +429,10 @@ class GameWindow(QWidget):
         # Vertical sublayout
         sublayout = QVBoxLayout(self)
         sublayout.setObjectName("Right vertical div")
+        lives = QLives()
+        self.game_map._map.p1.lives_changed.connect(lives.update_lives)
+        sublayout.addWidget(lives)
+        sublayout.addWidget(QLabel("<b>THIS IS WHERE THE SCORE GOES</b>"))
         sublayout.addStretch()
         sublayout.addWidget(QLabel("WELCOME TO <i><b>NOT</b></i>&nbsp;"
                                    " BOMBERMAN!"))
@@ -341,6 +451,8 @@ class GameWindow(QWidget):
         self._key_map = {Qt.Key_Escape: self.close}
         self._ctrl_key_map = {Qt.Key_P:  self.pause,
                               Qt.Key_E:  self.close}
+
+        self.show()
 
     def eventFilter(self, source, event):
         """
@@ -376,16 +488,18 @@ class GameWindow(QWidget):
     def pause(self):
         pass
 
+    def close(self):
+        self.closed_signal.emit()
+        super().close()
+
+
 class MainWindow(QWidget):
 
     def __init__(self):
-        """
-    
-        """
         super().__init__()
 
         layout = QVBoxLayout()
-        
+
         layout.addWidget(QLabel("<b>Welcome to CODE WITH FIRE</b>"))
         bt1 = QPushButton("Single Player")
         bt2 = QPushButton("Two Players")
@@ -408,14 +522,19 @@ class MainWindow(QWidget):
 
     def play_single(self):
         self.hide()
-        GameWindow().show()
+        self.game = GameWindow()
+        self.game.closed_signal.connect(self.refocus)
 
     def play_double(self):
         self.hide()
-        GameWindow().show()
+        self.game = GameWindow()
+        self.game.closed_signal.connect(self.refocus)
+
+    def refocus(self):
+        self.show()
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    win = MainWindow()
+    win = GameWindow()
     sys.exit(app.exec())

@@ -1,10 +1,12 @@
-from abc import ABCMeta
+from PyQt5.QtCore import QObject, pyqtSignal
+
 import numpy as np
 
 import parameters as params
+from game.entities import Powerup
 
 
-class Tile(metaclass=ABCMeta):
+class Tile(QObject):
     """
     Abstract Object representing a unique tile in a map.  Subclasses
     implement different textures and behaviors for different tiles.
@@ -12,9 +14,14 @@ class Tile(metaclass=ABCMeta):
 
     solid = False
     texture = None
+    breakable = False
     size = np.array([params.TILE_SIZE, params.TILE_SIZE])
 
+    collided = pyqtSignal()
+    exploded_signal = pyqtSignal()
+
     def __init__(self, position):
+        super().__init__()
         self.position = position
 
     def __repr__(self):
@@ -24,12 +31,8 @@ class Tile(metaclass=ABCMeta):
     def name(self):
         return self.__class__.name
 
-    def collide(self, x, y):
-        if any(0 < np.array([x, y]) - self.position < np.array([1, 1])):
-            print(f"Collided with {self}")
-            return True
-        return False
-
+    def explode(self):
+        self.exploded_signal.emit()
 
 class Ground(Tile):
     texture = "ground.png"
@@ -37,9 +40,15 @@ class Ground(Tile):
 
 class DestructibleWall(Tile):
     solid = True
+    breakable = True
     texture = "destructible_wall.png"
+
+    def explode(self):
+        self.exploded_signal.emit()
+        return Powerup(self.position)
 
 
 class IndestructibleWall(Tile):
     solid = True
     texture = "indestructible_wall.png"
+
