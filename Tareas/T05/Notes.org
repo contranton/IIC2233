@@ -124,11 +124,13 @@
 
 ** DONE Unify into QEntity and QMobileEntity classes
 
-** TODO [#A] Enemies
+** TODO [#A] Main menu and scores
+
+** TODO [#B] Implement tile explosions
+
+** TODO [#C] Fix enemy movement
 
 ** TODO Movable bombs
-
-** TODO [#C] Main menu and scores
 
 ** TODO Difficulty increase
 

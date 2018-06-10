@@ -274,24 +274,6 @@ class QHeart(QLabel):
         else:
             self.dead()
 
-
-class QLives(QWidget):
-
-    update_signal = pyqtSignal(int)
-
-    def __init__(self):
-        super().__init__()
-        self.layout = QHBoxLayout()
-        for i in range(3):
-            heart = QHeart(i)
-            self.update_signal.connect(heart.update)
-            self.layout.addWidget(heart)
-        self.setLayout(self.layout)
-
-    def update_lives(self, num):
-        self.update_signal.emit(num)
-
-
 class QMapHolder(QGraphicsView):
     def __init__(self, map_):
         """
@@ -339,7 +321,7 @@ class QMapHolder(QGraphicsView):
 
     def dragEnterEvent(self, event):
         print("HELLO")
-        if event.mimeData().text() == "char":
+        if event.mimeData().text() in "12":
             event.acceptProposedAction()
 
     def dropEvent(self, event):
@@ -347,7 +329,8 @@ class QMapHolder(QGraphicsView):
 
         pos = event.pos()/TILE_SIZE
         print(f"Player dropped at {pos}")
-        self._scene.p1.place([pos.x(), pos.y()])
+        player = {"1": self._scene.p1, "2": self._scene.p2}
+        player[event.mimeData().text()].place([pos.x(), pos.y()])
 
     def dragMoveEvent(self, event):
         # Must override this to change QGraphicsScene's default
@@ -382,7 +365,7 @@ class QMapHolder(QGraphicsView):
 
 
 class QDraggableChar(QWidget):
-    def __init__(self):
+    def __init__(self, num):
         """
         """
         super().__init__()
@@ -391,13 +374,15 @@ class QDraggableChar(QWidget):
         layout.addWidget(QLabel("DRAG ME"))
         self.setLayout(layout)
 
+        self.num = num
+
     def mousePressEvent(self, event):
         # Tips from http://doc.qt.io/qt-5/dnd.html
 
         if(event.button() == Qt.LeftButton):
             print("Draggin")
             data = QMimeData()
-            data.setText("char")
+            data.setText(f"{self.num}")
 
             drag = QDrag(self)
             drag.setMimeData(data)
@@ -408,11 +393,55 @@ class QDraggableChar(QWidget):
             drag.exec()
 
 
+class QLives(QWidget):
+
+    update_signal = pyqtSignal(int)
+
+    def __init__(self):
+        super().__init__()
+        self.layout = QHBoxLayout()
+        for i in range(3):
+            heart = QHeart(i)
+            self.update_signal.connect(heart.update)
+            self.layout.addWidget(heart)
+        self.setLayout(self.layout)
+
+    def update_lives(self, num):
+        self.update_signal.emit(num)
+
+
+class QScore(QLabel):
+    def __init__(self, p_num):
+        self.template = f"<b>Player {p_num}'s score:</b> "
+        super().__init__(self.template)
+        self.update_score(0)
+
+    def update_score(self, num):
+        self.setText(f"{self.template} {num}")
+
+
+class QPlayerInfo(QWidget):
+
+    def __init__(self, player):
+        super().__init__()
+
+        layout = QVBoxLayout(self)
+        lives = QLives()
+        player.lives_changed.connect(lives.update_lives)
+        layout.addWidget(lives)
+        label = QScore(player.num)
+        player.score_changed.connect(label.update_score)
+        layout.addWidget(label)
+        layout.addWidget(QDraggableChar(player.num))
+
+        self.setLayout(layout)
+
+
 class GameWindow(QWidget):
 
     closed_signal = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, multiplayer):
         super().__init__()
         self.setWindowTitle("C o d e   W i t h   F i r e")
         self.setObjectName("Main window")
@@ -426,18 +455,12 @@ class GameWindow(QWidget):
         layout.setObjectName("Horizontal div")
         layout.addWidget(self.game_holder)
 
-        # Vertical sublayout
         sublayout = QVBoxLayout(self)
-        sublayout.setObjectName("Right vertical div")
-        lives = QLives()
-        self.game_map._map.p1.lives_changed.connect(lives.update_lives)
-        sublayout.addWidget(lives)
-        sublayout.addWidget(QLabel("<b>THIS IS WHERE THE SCORE GOES</b>"))
         sublayout.addStretch()
-        sublayout.addWidget(QLabel("WELCOME TO <i><b>NOT</b></i>&nbsp;"
-                                   " BOMBERMAN!"))
-        sublayout.addStretch()
-        sublayout.addWidget(QDraggableChar())
+        sublayout.addWidget(QPlayerInfo(self.game_map._map.p1))
+        if multiplayer:
+            sublayout.addStretch()
+            sublayout.addWidget(QPlayerInfo(self.game_map._map.p2))
         sublayout.addStretch()
 
         # Set layouts
@@ -522,12 +545,12 @@ class MainWindow(QWidget):
 
     def play_single(self):
         self.hide()
-        self.game = GameWindow()
+        self.game = GameWindow(multiplayer=False)
         self.game.closed_signal.connect(self.refocus)
 
     def play_double(self):
         self.hide()
-        self.game = GameWindow()
+        self.game = GameWindow(multiplayer=True)
         self.game.closed_signal.connect(self.refocus)
 
     def refocus(self):
@@ -536,5 +559,5 @@ class MainWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    win = GameWindow()
+    win = GameWindow(True)
     sys.exit(app.exec())

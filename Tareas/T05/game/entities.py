@@ -116,6 +116,7 @@ class Character(Entity):
     place_bomb_signal = pyqtSignal(Bomb)
     lives_changed = pyqtSignal(int)
     invincible_signal = pyqtSignal(bool)
+    score_changed = pyqtSignal(int)
 
     bomb_num_increase = pyqtSignal()
     
@@ -129,6 +130,8 @@ class Character(Entity):
 
         self.num = self.__num
         Character.__num += 1
+
+        self.score = 0
 
         self.lives = params.LIVES
         self.speed = params.SPEED
