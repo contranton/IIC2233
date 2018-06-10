@@ -96,17 +96,24 @@ class QEntity(QGraphicsPixmapItem):
         self.state = "default"
 
         self.opacity = 1
-        self.setPixmap(self.sheet.copy(*self.state_offsets["default"][0]))
 
         self.frame = 0
-        self.timer = QTimer()
-        self.timer.start(1000/ANIM_SPEED)
-        self.timer.timeout.connect(self.timerEvent)
+        self.tickTimer = QTimer()
+        self.tickTimer.start(TICK_RATE)
+        self.tickTimer.timeout.connect(self.tickTimerEvent)
 
-    def timerEvent(self):
+        self.animTimer = QTimer()
+        self.animTimer.start(1000/ANIM_SPEED)
+        self.animTimer.timeout.connect(self.animTimerEvent)
+
+        #self.update_pixmap()
+
+    def animTimerEvent(self):
         self.frame += 1
-        self.setPos(*self.origin)
 
+    def tickTimerEvent(self):
+        pass
+    
     def boundingRect(self):
         return QRectF(0, 0, TILE_SIZE, TILE_SIZE)
 
@@ -130,12 +137,12 @@ class QEntity(QGraphicsPixmapItem):
         super().paint(painter, *args)
 
         # Draw bounding rectangle
-        painter.setPen(QPen(Qt.red, 1))
-        painter.drawRect(self.boundingRect())
+        #painter.setPen(QPen(Qt.red, 1))
+        #painter.drawRect(self.boundingRect())
 
         # Draw origin
-        painter.setPen(QPen(Qt.green, 2))
-        painter.drawPoint(self.mapFromScene(*self.pos))
+        #painter.setPen(QPen(Qt.green, 2))
+        #painter.drawPoint(self.mapFromScene(*self.pos))
 
     def update_pixmap(self):
         # Tuple containing coordinates for each state animation
@@ -168,6 +175,7 @@ class QPlayer(QEntity):
 
     def __init__(self, *args):
         super().__init__(*args)
+        self._update()
         self.entity.invincible_signal.connect(self.invincible)
 
     def _update(self):
@@ -220,9 +228,11 @@ class QEnemy(QEntity):
     state_offsets = {"default": [(19, 25, 23, 29)]}
     texture = "assets/monster.png"
 
-    def timerEvent(self):
-        super().timerEvent()
+    def tickTimerEvent(self):
+        super().tickTimerEvent()
         self.entity.auto_move()
+        self.update_pixmap()
+        self.setPos(*self.origin)
 
     def delete(self):
         self.parent.removeItem(self)
@@ -393,6 +403,7 @@ class QMapHolder(QGraphicsView):
         event.acceptProposedAction()
 
         pos = event.pos()/TILE_SIZE
+        
         if self._map.tiles[(pos.x(), pos.y())].solid:
             return
         print(f"Player dropped at {pos}")

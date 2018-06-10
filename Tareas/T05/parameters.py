@@ -23,8 +23,11 @@ MAX_ENEMIES = 3
 # Range of sight for enemies. -1 for infinite
 ENEMY_SIGHT = 5
 
-# Enemy speed
-ENEMY_SPEED = 1.2
+# Enemy speed in terms of tiles per second
+ENEMY_SPEED = 2
+
+# Enemy time spent along a single direction
+ENEMY_DIRECTION_TIME = 2
 
 # Uniform distribution parameters for docile enemies in seconds
 ENEMY_DOCILE_A = 5

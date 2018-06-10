@@ -40,7 +40,7 @@ class Entity(QObject):
         Must receive a positional argument to place the player in the map.
         """
         # TODO: Shift to non solid block
-        pos = np.array(vec2).astype(int)# + self.size/2 - [0, 0.01]
+        pos = np.array(vec2).astype(int) + self.size/2# - [0, 0.01]
         self.position = pos
 
     def move(self, dx, dy):
@@ -209,33 +209,21 @@ class Enemy(Entity, QTimer):
         "docstring"
         super().__init__(*args)
         self.lives = 1
+        self.velocity = params.ENEMY_SPEED
         self.init_position(location)
+        print(self.position)
 
         self.direction = None
-        self.choose_direction()
+        self.startTimer(1000*params.ENEMY_DIRECTION_TIME)
+        self.timerEvent(None)
 
-        self.collided.connect(self.choose_direction)
-
-    def find_direction(self):
-        np.random.shuffle(self.directions)
-        for direction in self.directions:
-            new = tuple((self.position + direction).astype(int))
-
-            if not self.get_collidable()[0][new]:
-                return direction
-
-        # If we couldn't find a direction it's cus we've been blocked,
-        # so return the same direction to allow the game to continue
-        # and check again in the next collision event
-        return self.direction
-
-    def choose_direction(self):
-        self.direction = self.find_direction()
+    def timerEvent(self, event):
+        self.direction = choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
 
     def auto_move(self):
         """
-        Walks in a straight line until collision. This is the default
-        behavior
+        Walks in a straight direction for some time before randomly
+        choosing the next one
         """
         self.move(*self.direction)
 

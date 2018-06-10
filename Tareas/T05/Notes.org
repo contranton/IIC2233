@@ -139,8 +139,6 @@ Player 3 & 4 shouldn't happen
 ** TODO End game on No lives left
 ** TODO Hostile enemy -- Vision Range
 
-** TODO Detect all collisions -- Including MAP EDGES
-
 ** TODO Point addition:
 - Enemies
 - Seconds
@@ -149,6 +147,7 @@ Player 3 & 4 shouldn't happen
 ** TODO Player rankings
 ** TODO Pause game
 
+** TODO Detect all collisions -- Including MAP EDGES
 ** TODO Remove 'parent' arg in QBomb, QEnemy, QPowerup
 * Decisions
 - Implemented Game using QGraphicsScene and QGraphicsItems
