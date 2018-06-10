@@ -6,8 +6,7 @@ from random import uniform, expovariate, sample, choice
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 
 
-from game.tiles import (Ground, DestructibleWall,
-                        IndestructibleWall)
+from game.tiles import make_tile, Ground
 from game.entities import (Character, HostileEnemy, Enemy, Bomb, Powerup)
 from parameters import (ENEMY_DOCILE_A, ENEMY_DOCILE_B,
                         ENEMY_HOSTILE_LAMBDA, ENEMY_SPAWN_CLEARANCE,
@@ -16,9 +15,6 @@ from parameters import (ENEMY_DOCILE_A, ENEMY_DOCILE_B,
 
 class Map(QObject):
 
-    _tile_dict = {"0": Ground,
-                  "P": DestructibleWall,
-                  "X": IndestructibleWall}
 
     bomb_laid_signal = pyqtSignal(Bomb)
     powerup_placed_signal = pyqtSignal(Powerup)
@@ -145,24 +141,17 @@ class Map(QObject):
         for i, row in enumerate(map_str):
             for j, tile_str in enumerate(row):
                 pos = (i, j)
+                tile = make_tile(tile_str, pos)
+                tile.exploded_signal.connect(self.change_tile)
+                self.tiles[pos] = tile
 
-                tile_class = self._tile_dict[tile_str]
-                tile = tile_class(pos)
-                tile.exploded_signal.connect(self.remove_tile_slot)
-                self.tiles[pos] = tile_class(pos)
-
-    def remove_tile_slot(self):
+    def change_tile(self):
         tile = self.sender()
-        import pdb; pdb.set_trace()
-
-        try:
-            self.tiles[tile.position] = Ground(tile.position)
-        except:
-            input("Couldn't delete tile")
-            import pdb; pdb.set_trace()
+        self.map_changed = True
+        self.tiles[tile.position].change(Ground)
 
     def all_empty_tiles_in_sight(self, pos):
-        tiles = [self.tiles[tuple(pos)]]
+        tiles = [self.tiles[tuple(pos.astype(int))]]
         for direction in [(-1, 0), (1, 0), (0, 1), (0, -1)]:
             collided = False
             current = pos
@@ -183,8 +172,8 @@ class Map(QObject):
         """
         # Update solid blocks only if a bomb has destroyed a block
         if self.map_changed:
-            self.solids.update({k: v for k, v in self.tiles.items()
-                                if v.solid})
+            self.solids.update({k: (v if v.solid else None)
+                                for k, v in self.tiles.items()})
             self.map_changed = False
 
         # Get solid-like entities
@@ -207,11 +196,20 @@ class Map(QObject):
         
         bomb = self.sender()
         pos = bomb.position.astype(int)
+        self.map_changed = True
         for tile in self.all_empty_tiles_in_sight(pos):
             powerup = tile.explode()
-
-            # Powerups only appear when a block has been broken
             if powerup:
+                print("Powerup has been created")
+                powerup.taken.connect(self.remove_powerup)
                 self.powerup_placed_signal.emit(powerup)
                 self.entities.append(powerup)
-                self.map_changed = True
+
+    def remove_powerup(self):
+        sender = self.sender()
+        try:
+            self.entities.remove(sender)
+        except:
+            input("Something has gone terribly wrong")
+            import pdb; pdb.set_trace()
+            

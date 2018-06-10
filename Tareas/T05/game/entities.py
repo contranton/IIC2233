@@ -68,12 +68,12 @@ class Entity(QObject):
             solid = solids[c]
             entity = entities[c]
             if solid:
-                solid.collided.emit()
                 self.collided.emit()
+                solid.collided.emit()
                 return solid
             elif entity and self != entity:
-                entity.collided.emit()
                 self.collided.emit()
+                entity.collided.emit()
                 return entity
         # No collision
         self.position = new
@@ -141,6 +141,12 @@ class Character(Entity):
         self.invincible_timer.setSingleShot(True)
         self.invincible_timer.timeout.connect(self.end_invincibility)
 
+        self.powerup_defuns = {"bomb":       self.powerup_bombs,
+                               "life":       self.powerup_life,
+                               "speed":      self.powerup_speed,
+                               "superspeed": self.powerup_superspeed,
+                               "juggernaut": self.powerup_juggernaut}
+
     def __repr__(self):
         return f"Player(#{self.num}, {self.lives} lives)"
 
@@ -153,7 +159,7 @@ class Character(Entity):
 
     def end_invincibility(self):
         self.invincible_signal.emit(False)
-    
+
     def place_bomb(self):
         bomb = Bomb(self.num, self.position, self.get_collidable)
         self.place_bomb_signal.emit(bomb)
@@ -241,8 +247,19 @@ class HostileEnemy(Enemy):
 
 class Powerup(Entity):
     collidable = True
+    taken = pyqtSignal()
     types = ["bomb", "life", "speed", "superspeed", "juggernaut"]
 
-    def __init__(self, *args):
+    def __init__(self, pos, *args):
         super().__init__(*args)
-        self.powerup_type = choice(self.types)[0]
+        self.init_position(pos)
+        self.powerup_type = choice(self.types)
+        self.collided.connect(self.assign_powerup)
+
+    def assign_powerup(self):
+        sender = self.sender()
+        import pdb; pdb.set_trace()
+        
+        if isinstance(sender, Character):
+            sender.powerup_defuns[self.powerup_type]()
+            self.taken.emit()

@@ -5,7 +5,7 @@ TICK_RATE = 10
 SPEED = 2
 
 # Number of lives
-LIVES = 3
+LIVES = 2
 
 # Time an explosion persists on screen in s
 EXPLOSION_TIME = 2
@@ -18,7 +18,7 @@ IMMUNE_TIME = 2
 
 # Maximum default number of enemies on screen at any time. This may
 # vary in-game when difficulty increases
-MAX_ENEMIES = 1
+MAX_ENEMIES = 3
 
 # Range of sight for enemies. -1 for infinite
 ENEMY_SIGHT = 5

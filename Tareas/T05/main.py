@@ -7,13 +7,13 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QLabel,
                              QPushButton, QVBoxLayout, QHBoxLayout,
                              QGraphicsPixmapItem, QGraphicsScene,
                              QGraphicsView, QTextEdit)
-from PyQt5.QtGui import QPixmap, QDrag, QTransform, QPen
+from PyQt5.QtGui import QPixmap, QDrag, QTransform, QPen, QColor
 
 from PyQt5.QtCore import (Qt, QSize, QMimeData, pyqtSignal, QRectF,
                           QPointF, QEvent, QTimer, QPoint)
 
 
-from parameters import TILE_SIZE, ANIM_SPEED, TICK_RATE
+from parameters import TILE_SIZE, ANIM_SPEED, TICK_RATE, EXPLOSION_TIME, LIVES
 from game.game_map import Map
 
 
@@ -21,20 +21,58 @@ Q_TILE_SIZE = QSize(TILE_SIZE, TILE_SIZE)
 
 
 class QTile(QGraphicsPixmapItem):
+
+    explosion_texture = "assets/boom.png"
+    explosion_frames = [(128*j, 128*i, 128, 128) for i in range(8)
+                        for j in range(8)]
+
     def __init__(self, tile):
         """
         pass
         """
-        pm = QPixmap(f"assets/{tile.texture}").scaled(Q_TILE_SIZE)
-        super().__init__(pm)
+        super().__init__()
         self.tile = tile
         self.tile.exploded_signal.connect(self.explode)
+        self.update_pixmap()
 
         self.x, self.y = tile.position
         self.setPos(QPointF(self.x, self.y)*TILE_SIZE)
 
+        # For explosion animation
+        self.expl_sheet = QPixmap(self.explosion_texture)
+        self.exploded = False
+        self.num_frames = len(self.explosion_frames)
+
+        self.frame = 0
+        self.anim_timer = QTimer()
+        self.anim_timer.timeout.connect(self.increase_frame)
+
+    def update_pixmap(self):
+        pm = QPixmap(f"assets/{self.tile.texture}").scaled(Q_TILE_SIZE)
+        self.setPixmap(pm)
+
+    def paint(self, painter, *args):
+        super().paint(painter, *args)
+        if self.exploded:
+            boom = self.expl_sheet.copy(*self.explosion_frames[self.frame])
+            #boom = boom.transformed(QTransform().scale(5, 5))
+            painter.fillRect(0, 0, TILE_SIZE, TILE_SIZE, QColor(128, 0, 0, 128))
+            painter.drawPixmap(0, 0, TILE_SIZE, TILE_SIZE, boom)
+
     def explode(self):
-        pass
+        self.exploded = True
+        print("Updating tile {tile}")
+        self.update_pixmap()
+        self.frame = 0
+        self.anim_timer.start(1000*EXPLOSION_TIME/self.num_frames)
+
+    def increase_frame(self):
+        self.update()
+        if self.frame >= self.num_frames - 1:
+            self.exploded = False
+            self.anim_timer.stop()
+        else:
+            self.frame += 1
 
 
 class QEntity(QGraphicsPixmapItem):
@@ -213,7 +251,24 @@ class QBomb(QGraphicsPixmapItem):
         self.setPos(*self.bomb.position*TILE_SIZE)
 
     def delete(self):
-        print("Boom")
+        self.parent.removeItem(self)
+
+class QPowerup(QGraphicsPixmapItem):
+
+    def __init__(self, powerup, parent):
+        """
+
+        """
+        super().__init__()
+        self.parent = parent
+        self.powerup = powerup
+        self.sheet = QPixmap(f"assets/{powerup.powerup_type}.png")\
+                             .scaled(Q_TILE_SIZE)
+        self.setPixmap(self.sheet)
+        self.setPos(*self.powerup.position*TILE_SIZE)
+
+
+    def delete(self):
         self.parent.removeItem(self)
 
 
@@ -237,6 +292,7 @@ class QMap(QGraphicsScene):
 
         self._map.bomb_laid_signal.connect(self.make_bomb)
         self._map.new_enemy_signal.connect(self.make_enemy)
+        self._map.powerup_placed_signal.connect(self.make_powerup)
 
         self.addItem(self.p1)
         self.addItem(self.p2)
@@ -253,21 +309,29 @@ class QMap(QGraphicsScene):
         self.addItem(item)
         enemy.dead.connect(item.delete)
 
+    def make_powerup(self, powerup):
+        item = QPowerup(powerup, parent=self)
+        self.addItem(item)
+        powerup.taken.connect(item.delete)
+
 
 class QHeart(QLabel):
     def __init__(self, num):
         super(QHeart, self).__init__()
         self.num = num
         self.sheet = QPixmap("assets/life_hearts.png")
-        self.setFixedSize(50, 50)
+        self.size = 200/LIVES
+        self.setFixedSize(self.size, self.size)
         self.setText("A heart")
         self.alive()
 
     def alive(self):
-        self.setPixmap(self.sheet.copy(0, 0, 50, 50))
+        self.setPixmap(self.sheet.copy(0, 0, 50, 50)
+                       .scaled(self.size, self.size))
 
     def dead(self):
-        self.setPixmap(self.sheet.copy(50, 0, 50, 50))
+        self.setPixmap(self.sheet.copy(50, 0, 50, 50)
+                       .scaled(self.size, self.size))
 
     def update(self, num):
         if self.num < num:
@@ -329,6 +393,8 @@ class QMapHolder(QGraphicsView):
         event.acceptProposedAction()
 
         pos = event.pos()/TILE_SIZE
+        if self._map.tiles[(pos.x(), pos.y())].solid:
+            return
         print(f"Player dropped at {pos}")
         player = {"1": self._scene.p1, "2": self._scene.p2}
         player[event.mimeData().text()].place([pos.x(), pos.y()])
@@ -401,10 +467,11 @@ class QLives(QWidget):
     def __init__(self):
         super().__init__()
         self.layout = QHBoxLayout()
-        for i in range(3):
+        for i in range(LIVES):
             heart = QHeart(i)
             self.update_signal.connect(heart.update)
             self.layout.addWidget(heart)
+        self.setFixedWidth(200)
         self.setLayout(self.layout)
 
     def update_lives(self, num):
@@ -551,6 +618,7 @@ class QNameWindow(QWidget):
         self.game = GameWindow(self.mult, names)
         self.game.closed_signal.connect(self.refocus_foo)
 
+
 class MainWindow(QWidget):
 
     def __init__(self):
@@ -592,5 +660,6 @@ class MainWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    win = MainWindow()
+    #win = MainWindow()
+    win = GameWindow(False, ["Player1", ""])
     sys.exit(app.exec())

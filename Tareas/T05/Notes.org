@@ -124,18 +124,32 @@
 
 ** DONE Unify into QEntity and QMobileEntity classes
 
-** TODO Main menu and scores
+** DONE Main menu and scores
 Player 3 & 4 shouldn't happen
 
-** TODO [#A] Implement tile explosions
+** DONE Implement tile explosions
+** DONE Parametric number of lives
+** DONE Get nearest empty spot for drop-in
 
 ** TODO [#B] Powerups
-
 ** TODO [#C] Fix enemy movement
-
 ** TODO Movable bombs
 
 ** TODO Difficulty increase
+** TODO End game on No lives left
+** TODO Hostile enemy -- Vision Range
+
+** TODO Detect all collisions -- Including MAP EDGES
+
+** TODO Point addition:
+- Enemies
+- Seconds
+- Walls
+
+** TODO Player rankings
+** TODO Pause game
+
+** TODO Remove 'parent' arg in QBomb, QEnemy, QPowerup
 * Decisions
 - Implemented Game using QGraphicsScene and QGraphicsItems
 - Collisions are based on the bottom half of the sprite's bounding box
