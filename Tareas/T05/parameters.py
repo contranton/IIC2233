@@ -5,7 +5,7 @@ TICK_RATE = 10
 SPEED = 2
 
 # Number of lives
-LIVES = 1
+LIVES = 3
 
 # Score past which difficulty increases
 DIFFICULT_SCORE = 30
