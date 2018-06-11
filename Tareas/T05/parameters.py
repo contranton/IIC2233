@@ -7,6 +7,18 @@ SPEED = 2
 # Number of lives
 LIVES = 2
 
+# Superspeed duration in s
+SUPERSPEED_TIME = 10
+
+# Superspeed speed multiplier
+SUPERSPEED = 3
+
+# Juggernaut time
+JUGGERNAUT_TIME = 5
+
+# Speed increaser multiplier
+SPEED_MULTIPLIER = 1.25
+
 # Time an explosion persists on screen in s
 EXPLOSION_TIME = 2
 

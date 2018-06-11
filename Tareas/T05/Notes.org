@@ -130,9 +130,9 @@ Player 3 & 4 shouldn't happen
 ** DONE Implement tile explosions
 ** DONE Parametric number of lives
 ** DONE Get nearest empty spot for drop-in
+** DONE Powerups
+** DONE Fix enemy movement
 
-** TODO [#B] Powerups
-** TODO [#C] Fix enemy movement
 ** TODO Movable bombs
 
 ** TODO Difficulty increase

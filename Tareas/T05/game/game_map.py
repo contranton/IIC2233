@@ -164,7 +164,8 @@ class Map(QObject):
         self.tiles[tile.position].change(Ground)
 
     def all_empty_tiles_in_sight(self, pos):
-        tiles = [self.tiles[tuple(pos.astype(int))]]
+        pos = pos.astype(int)
+        tiles = [self.tiles[tuple(pos)]]
         for direction in [(-1, 0), (1, 0), (0, 1), (0, -1)]:
             collided = False
             current = pos
@@ -201,6 +202,8 @@ class Map(QObject):
         bomb.explode_signal.connect(self.bomb_explode)
         bomb.collided.connect(self.bomb_push)
         self.bomb_laid_signal.emit(bomb)
+        self.entities.append(bomb)
+        self.everything[bomb.id] = bomb
 
     def bomb_push(self, id_):
         pusher = self.everything[id_]
@@ -216,7 +219,7 @@ class Map(QObject):
 
             # Only care about the direction. Remember our coordinates
             # are origin top-left!
-            delta = np.sign(delta) * [1, -1]
+            delta = np.sign(delta)
 
             bomb.direction = delta
 
@@ -225,6 +228,8 @@ class Map(QObject):
         self.__active_bombs -= 1
 
         bomb = self.sender()
+        self.entities.remove(bomb)
+
         pos = bomb.position.astype(int)
         self.map_changed = True
         for tile in self.all_empty_tiles_in_sight(pos):

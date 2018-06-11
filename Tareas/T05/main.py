@@ -19,6 +19,8 @@ from game.game_map import Map
 
 Q_TILE_SIZE = QSize(TILE_SIZE, TILE_SIZE)
 
+PAUSED = False
+
 
 class QTile(QGraphicsPixmapItem):
 
@@ -238,23 +240,19 @@ class QEnemy(QEntity):
         self.parent.removeItem(self)
 
 
-class QBomb(QGraphicsPixmapItem):
+class QBomb(QEntity):
 
     sprite_stages = [(146, 9, 14, 24),
                      (162, 9, 14, 24),
                      (178, 9, 14, 24)]
 
     def __init__(self, bomb, parent, *args):
-        super().__init__(*args)
+        super().__init__(bomb, *args)
         self.parent = parent
         self.sheet = QPixmap("assets/bomberman.png")
         self.bomb = bomb
 
-        self.timer = QTimer()
-        self.timer.start(TICK_RATE)
-        self.timer.timeout.connect(self.timerEvent)
-
-    def timerEvent(self):
+    def tickTimerEvent(self):
         pm = self.sheet.copy(*self.sprite_stages[0])
         pm = pm.transformed(QTransform().scale(2, 2))
         self.setPixmap(pm)
@@ -403,13 +401,13 @@ class QMapHolder(QGraphicsView):
     def dropEvent(self, event):
         event.acceptProposedAction()
 
-        pos = event.pos()/TILE_SIZE
+        pos = np.array([event.pos().x(), event.pos().y()])//TILE_SIZE
         
-        if self._map.tiles[(pos.x(), pos.y())].solid:
+        if self._map.tiles[tuple(pos)].solid:
             return
         print(f"Player dropped at {pos}")
         player = {"1": self._scene.p1, "2": self._scene.p2}
-        player[event.mimeData().text()].place([pos.x(), pos.y()])
+        player[event.mimeData().text()].place(pos)
 
     def dragMoveEvent(self, event):
         # Must override this to change QGraphicsScene's default
@@ -420,7 +418,7 @@ class QMapHolder(QGraphicsView):
         print(tile)
 
     def mousePressEvent(self, event):
-        print(self.mapToScene(event.pos()))
+        print(event.pos())
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -468,7 +466,7 @@ class QDraggableChar(QWidget):
             pixmap = QPixmap("assets/bomberman3d.png")\
                      .transformed(QTransform().scale(-0.15, 0.15))
             drag.setPixmap(pixmap)
-            drag.setHotSpot(QPoint(self.width()/4, self.height()))
+            #drag.setHotSpot(QPoint(self.width()/4, self.height()))
             drag.exec()
 
 
@@ -589,7 +587,8 @@ class GameWindow(QWidget):
             pass
 
     def pause(self):
-        pass
+        global PAUSE
+        PAUSE = not PAUSE
 
     def close(self):
         self.closed_signal.emit()

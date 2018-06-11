@@ -40,11 +40,7 @@ class Entity(QObject):
         self.get_collidable = get_collidables_function
 
     def init_position(self, vec2):
-        """
-        Must receive a positional argument to place the player in the map.
-        """
-        # TODO: Shift to non solid block
-        pos = np.array(vec2).astype(int) + self.size/2# - [0, 0.01]
+        pos = np.array(vec2).astype(int) + [0.5, 0.5]# + self.size/2# - [0, 0.01]
         self.position = pos
 
     def solid_corners(self, pos=None):
@@ -101,11 +97,14 @@ class Entity(QObject):
             # No collision
             self.position = new
             return None
+        else:
+            # To denote that we've collided. Used only in the bomb
+            return True
 
 
 class Bomb(QTimer, Entity):
 
-    collidable=True
+    collidable = False
     explode_signal = pyqtSignal()
     collided = pyqtSignal(int)
 
@@ -117,14 +116,28 @@ class Bomb(QTimer, Entity):
         Bomb.__num += 1
 
         self.player_placed = player_num
-        self.init_position(pos)
-        print(self.position)
+        self.init_position(pos.astype(int))
         self.setSingleShot(True)
         self.start(params.EXPLOSION_TIME * 1000)
+
+        # Used for preventing player from getting stuck
+        self.has_cleared = False
+        self.release_timer = QTimer()
+        self.release_timer.start()
 
         # Parameters for pushing it around
         self.moving = False
         self.direction = [0, 0]
+
+    def move(self, *args):
+        if not self.has_cleared:
+            crashed = super().move(*args)
+            print(crashed)
+            if not crashed:
+                print("Clearin")
+                self.has_cleared = True
+                self.collidable = True
+                self.move = super().move
 
     def timerEvent(self, *args):
         self.explode_signal.emit()
@@ -189,7 +202,7 @@ class Character(Entity):
         self.invincible_signal.emit(False)
 
     def place_bomb(self):
-        bomb = Bomb(self.num, self.position, self.get_collidable)
+        bomb = Bomb(self.num, np.floor(self.position), self.get_collidable)
         self.place_bomb_signal.emit(bomb)
 
     def lose_health(self, other):
@@ -207,19 +220,20 @@ class Character(Entity):
         self.bomb_num_increase.emit()
 
     def powerup_speed(self):
-        self.velocity *= 1.25
+        self.velocity *= params.SPEED_MULTIPLIER
 
     def powerup_superspeed(self):
-        def end(self):
-            self.velocity /= 3
-        self.velocity *= 3
-        timer = QTimer()
-        timer.setSingleShot(True)
-        timer.timeout.connect(end)
-        timer.start(10)
+        self.velocity *= params.SUPERSPEED
+        self._timer = QTimer()
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self.end_superspeed)
+        self._timer.start(params.SUPERSPEED_TIME*1000)
+
+    def end_superspeed(self):
+        self.velocity /= params.SUPERSPEED
 
     def powerup_juggernaut(self):
-        self.begin_invincibility(5)
+        self.begin_invincibility(params.JUGGERNAUT_TIME)
 
 
 class Enemy(Entity, QTimer):
