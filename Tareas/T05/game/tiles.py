@@ -1,4 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+from random import random
 
 import numpy as np
 
@@ -32,7 +33,7 @@ class TileFacade(QObject):
     def __repr__(self):
         return f"F{self.tile}"
 
-        
+
 class Tile(QObject):
     """
     Abstract-ish Object representing a unique tile in a map.
@@ -44,7 +45,7 @@ class Tile(QObject):
     this class or the subclasses. This is to allow for dynamic tile
     changes throughout the game.
     """
-    
+
     solid = False
     texture = None
     breakable = False
@@ -55,7 +56,7 @@ class Tile(QObject):
 
     def __init__(self, position):
         """
-        
+
         """
         super().__init__()
 
@@ -75,18 +76,20 @@ class Tile(QObject):
         if isinstance(other, TileFacade):
             return self == other.tile
         return super().__cmp__(self, other)
-    
-    
+
     @property
     def name(self):
         return self.__class__.name
 
     def explode(self):
+        print(f"{self}")
         self.explosion = True
+        self.solid = True
         self.exploded_signal.emit()
         self.explosion_timer.start(params.EXPLOSION_TIME)
 
     def end_explode(self):
+        self.solid = False
         self.explosion = False
 
 
@@ -103,7 +106,8 @@ class DestructibleWall(Tile):
 
     def explode(self):
         super().explode()
-        return Powerup(self.position, None)
+        if random() < params.POWERUP_P:
+            return Powerup(self.position, None)
 
 
 class IndestructibleWall(Tile):

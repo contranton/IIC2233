@@ -5,7 +5,13 @@ TICK_RATE = 10
 SPEED = 2
 
 # Number of lives
-LIVES = 2
+LIVES = 1
+
+# Score past which difficulty increases
+DIFFICULT_SCORE = 30
+
+# Probability of powerup
+POWERUP_P = 0.3
 
 # Superspeed duration in s
 SUPERSPEED_TIME = 10

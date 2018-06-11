@@ -115,7 +115,7 @@ class QEntity(QGraphicsPixmapItem):
 
     def tickTimerEvent(self):
         pass
-    
+
     def boundingRect(self):
         return QRectF(0, 0, TILE_SIZE, TILE_SIZE)
 
@@ -227,8 +227,12 @@ class QPlayer(QEntity):
 
 class QEnemy(QEntity):
 
-    state_offsets = {"default": [(19, 25, 23, 29)]}
+    state_offsets = {"default": [(17 + 64*i, 81, 33, 37) for i in range(5)]}
     texture = "assets/monster.png"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sheet = QPixmap(self.entity.texture)
 
     def tickTimerEvent(self):
         super().tickTimerEvent()
@@ -282,6 +286,7 @@ class QPowerup(QGraphicsPixmapItem):
 
 
 class QMap(QGraphicsScene):
+
     def __init__(self, view_size, map_):
         """
         """
@@ -402,7 +407,7 @@ class QMapHolder(QGraphicsView):
         event.acceptProposedAction()
 
         pos = np.array([event.pos().x(), event.pos().y()])//TILE_SIZE
-        
+
         if self._map.tiles[tuple(pos)].solid:
             return
         print(f"Player dropped at {pos}")
@@ -525,6 +530,7 @@ class GameWindow(QWidget):
         self.setObjectName("Main window")
 
         # Game window
+        self.multiplayer = multiplayer
         self.game_holder = QMapHolder(Map("mapa.txt", names))
         self.game_map = self.game_holder.scene()
 
@@ -540,6 +546,10 @@ class GameWindow(QWidget):
             sublayout.addStretch()
             sublayout.addWidget(QPlayerInfo(self.game_map._map.p2))
         sublayout.addStretch()
+
+        # End game screen
+        self.is_finished = False
+        self.game_map._map.finished.connect(self.finish_game)
 
         # Set layouts
         layout.addLayout(sublayout)
@@ -594,6 +604,54 @@ class GameWindow(QWidget):
         self.closed_signal.emit()
         super().close()
 
+    def finish_game(self):
+        if not self.is_finished:
+            self.closed_signal.emit()
+            super().close()
+            if self.multiplayer:
+                p1, p2 = self.game_map.p1.entity, self.game_map.p2.entity
+                winner = p1 if p1.lives > p2.lives else p2
+                self._win = QWinMultiScreen(winner, self.close)
+            else:
+                p1 = self.game_map.p1.entity
+                self._win = QLoseScreen(p1, self.close)
+            self.is_finished = True
+
+
+class QLoseScreen(QWidget):
+    def __init__(self, winner, callback):
+        super().__init__()
+        self.callback = callback
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel(f"{winner.name} has lost! Better luck"
+                                f" next time :/"))
+        btn = QPushButton("Continue")
+        btn.pressed.connect(self.foo)
+        layout.addWidget(btn)
+        self.setLayout(layout)
+        self.show()
+
+    def foo(self):
+        self.hide()
+        self.callback()
+
+class QWinMultiScreen(QWidget):
+    def __init__(self, winner, callback):
+        super().__init__()
+        self.callback = callback
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel(f"{winner.name} has won the game! "
+                                f"Congratulations!\nYour score is "
+                                f"{winner.score}"))
+        btn = QPushButton("Continue")
+        btn.pressed.connect(self.foo)
+        layout.addWidget(btn)
+        self.setLayout(layout)
+        self.show()
+
+    def foo(self):
+        self.hide()
+        self.callback()
 
 class QNameWindow(QWidget):
     def __init__(self, refocus_foo, multiplayer=False):
@@ -671,6 +729,6 @@ class MainWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    #win = MainWindow()
-    win = GameWindow(False, ["Player1", ""])
+    win = MainWindow()
+    #win = GameWindow(False, ["Player1", ""])
     sys.exit(app.exec())

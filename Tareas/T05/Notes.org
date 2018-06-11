@@ -133,13 +133,13 @@ Player 3 & 4 shouldn't happen
 ** DONE Powerups
 ** DONE Fix enemy movement
 
-** TODO Movable bombs
+** DONE Movable bombs
 
-** TODO Difficulty increase
+** DONE Difficulty increase
+** DONE Hostile enemy -- Vision Range
 ** TODO End game on No lives left
-** TODO Hostile enemy -- Vision Range
 
-** TODO Point addition:
+** DONE Point addition:
 - Enemies
 - Seconds
 - Walls

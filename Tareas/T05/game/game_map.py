@@ -7,7 +7,8 @@ from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 
 
 from game.tiles import make_tile, Ground
-from game.entities import (Character, HostileEnemy, Enemy, Bomb, Powerup, Entity)
+from game.entities import (Character, HostileEnemy, Enemy, Bomb,
+                           Powerup, Entity)
 from parameters import (ENEMY_DOCILE_A, ENEMY_DOCILE_B,
                         ENEMY_HOSTILE_LAMBDA, ENEMY_SPAWN_CLEARANCE,
                         MAX_ENEMIES)
@@ -20,6 +21,8 @@ class Map(QObject):
     powerup_placed_signal = pyqtSignal(Powerup)
     new_enemy_signal = pyqtSignal(Enemy)
 
+    finished = pyqtSignal()
+    
     # Dictionary with ids of all tiles and important entities used for
     # some particularly pesky signals
     everything = {}
@@ -52,6 +55,7 @@ class Map(QObject):
             p.place_bomb_signal.connect(self.place_bomb)
             p.bomb_num_increase.connect(self.increase_max_bombs)
             p.collided.connect(self.player_collide)
+            p.died_signal.connect(self.finish)
             self.everything[p.id] = p
 
         self.entities = [self.p1, self.p2]
@@ -95,12 +99,14 @@ class Map(QObject):
         return list(map(tuple, valid))
 
     def start_enemy_timers(self):
+        from game.entities import DIFFICULT
+        p = 0.5 if DIFFICULT else 1
         if not self._docile_enemy_timer.isActive():
             self._docile_enemy_timer.start(uniform(ENEMY_DOCILE_A,
-                                                   ENEMY_DOCILE_B)*1000)
+                                                   ENEMY_DOCILE_B)*1000*p)
         if not self._hostile_enemy_timer.isActive():
             self._hostile_enemy_timer.start(
-                expovariate(1/ENEMY_HOSTILE_LAMBDA)*1000
+                expovariate(1/ENEMY_HOSTILE_LAMBDA)*1000*p
             )
 
     @property
@@ -126,7 +132,7 @@ class Map(QObject):
         self._create_enemy(Enemy)
 
     def create_hostile_enemy(self):
-        self._create_enemy(Enemy)
+        self._create_enemy(HostileEnemy)
 
     def enemy_dead(self):
         enemy = self.sender()
@@ -168,14 +174,15 @@ class Map(QObject):
         tiles = [self.tiles[tuple(pos)]]
         for direction in [(-1, 0), (1, 0), (0, 1), (0, -1)]:
             collided = False
-            current = pos
+            current = pos.copy()
+            
             while not collided:
                 current += direction
                 tile = self.tiles[tuple(current)]
                 if tile.solid:
                     collided = True
                     if not tile.breakable:
-                        break
+                        continue
                 tiles.append(tile)
         return tiles
 
@@ -260,3 +267,6 @@ class Map(QObject):
         except:
             input("Something has gone terribly wrong")
             import pdb; pdb.set_trace()
+
+    def finish(self):
+        self.finished.emit()

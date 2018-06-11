@@ -6,6 +6,9 @@ from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 import parameters as params
 
 
+DIFFICULT = False
+
+
 class Entity(QObject):
 
     can_clip = False
@@ -38,6 +41,8 @@ class Entity(QObject):
 
         # Function that returns a map's solid blocks
         self.get_collidable = get_collidables_function
+
+        self.lives = 0
 
     def init_position(self, vec2):
         pos = np.array(vec2).astype(int) + [0.5, 0.5]# + self.size/2# - [0, 0.01]
@@ -74,6 +79,8 @@ class Entity(QObject):
             if solid:
                 self.collided.emit(solid.id)
                 solid.collided.emit(self.id)
+                if solid.explosion:
+                    self.lose_life()
                 return solid
         # Using this to not skip any collision checks when multiple
         # entities collide
@@ -101,6 +108,8 @@ class Entity(QObject):
             # To denote that we've collided. Used only in the bomb
             return True
 
+    def lose_life(self):
+        self.lives = max(self.lives - 1, 0)
 
 class Bomb(QTimer, Entity):
 
@@ -159,6 +168,8 @@ class Character(Entity):
     invincible_signal = pyqtSignal(bool)
     score_changed = pyqtSignal(int)
 
+    died_signal = pyqtSignal()
+    
     bomb_num_increase = pyqtSignal()
 
     collidable = True
@@ -182,6 +193,12 @@ class Character(Entity):
         self.invincible_timer.setSingleShot(True)
         self.invincible_timer.timeout.connect(self.end_invincibility)
 
+        self.score_timer = QTimer()
+        self.score_timer.timeout.connect(self.increase_score)
+        self.score_timer.start(1000)
+
+        self.in_difficult = False
+
         self.powerup_defuns = {"bomb":       self.powerup_bombs,
                                "life":       self.powerup_life,
                                "speed":      self.powerup_speed,
@@ -193,6 +210,13 @@ class Character(Entity):
 
     def __str__(self):
         return f"Player#{self.num}"
+
+    def increase_score(self, value=1):
+        global DIFFICULT
+        self.score += value
+        if self.score > params.DIFFICULT_SCORE and not DIFFICULT:
+            DIFFICULT = True
+        self.score_changed.emit(self.score)
 
     def begin_invincibility(self, time):
         self.invincible_timer.start(time*1000)
@@ -210,11 +234,14 @@ class Character(Entity):
             self.lives = max(0, self.lives - 1)
             self.lives_changed.emit(self.lives)
             self.begin_invincibility(params.IMMUNE_TIME)
+        if self.lives == 0:
+            self.died_signal.emit()
 
     # Powerups
 
     def powerup_life(self):
         self.lives = min(self.lives + 1, params.LIVES)
+        self.lives_changed.emit()
 
     def powerup_bombs(self):
         self.bomb_num_increase.emit()
@@ -240,6 +267,7 @@ class Enemy(Entity, QTimer):
 
     collidable = True
     velocity = params.ENEMY_SPEED
+    texture = "assets/monster.png"
 
     dead = pyqtSignal()
 
@@ -247,13 +275,24 @@ class Enemy(Entity, QTimer):
         "docstring"
         super().__init__(*args)
         self.lives = 1
-        self.velocity = params.ENEMY_SPEED
+        self._velocity = params.ENEMY_SPEED
         self.init_position(location)
         print(self.position)
 
         self.direction = None
         self.startTimer(1000*params.ENEMY_DIRECTION_TIME)
         self.timerEvent(None)
+
+    @property
+    def velocity(self):
+        if not DIFFICULT:
+            return self._velocity
+        else:
+            return self._velocity * 1.5
+
+    @velocity.setter
+    def velocity(self, val):
+        self._velocity = val
 
     def timerEvent(self, event):
         self.direction = choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
@@ -267,8 +306,27 @@ class Enemy(Entity, QTimer):
 
 
 class HostileEnemy(Enemy):
+
+    texture = "assets/monsterred.png"
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.direction = self.find_direction()
+        
+    def find_direction(self):
+        solids, entities = self.get_collidable()
+        players = list(filter(lambda x: isinstance(x, Character), entities))
+        player = choice(players)
+        if (player.position.astype(int) == self.position.astype(int)).any():
+            delta = player.position - self.position
+            if (delta < params.ENEMY_SIGHT).any():
+                return np.sign(delta)
+        return [0, 0]
+
     def auto_move(self):
-        pass
+        self.move(*self.direction)
+        
 
 
 class Powerup(Entity):
