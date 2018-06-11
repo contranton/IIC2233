@@ -7,8 +7,14 @@ from game.entities import Powerup
 
 
 class TileFacade(QObject):
+
+    id = 1
+
     def __init__(self, tile_type, position):
         super().__init__()
+        self.id = TileFacade.id
+        TileFacade.id += 1
+
         self.position = position
         self.change(tile_type)
 
@@ -44,7 +50,7 @@ class Tile(QObject):
     breakable = False
     size = np.array([params.TILE_SIZE, params.TILE_SIZE])
 
-    collided = pyqtSignal()
+    collided = pyqtSignal(int)
     exploded_signal = pyqtSignal()
 
     def __init__(self, position):

@@ -11,15 +11,19 @@ class Entity(QObject):
     can_clip = False
 
     collidable = False
-    collided = pyqtSignal()
+    collided = pyqtSignal(int)
 
     directions = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]])
+
+    id = 1
 
     def __init__(self, get_collidables_function):
         """
         A generic entity that moves in the map.
         """
         super().__init__()
+        self.id = Entity.id
+        Entity.id += 1
 
         # Negative position indicates being outside of the map.  It's
         # also super far away so that it doesn't get interpreted as
@@ -43,6 +47,10 @@ class Entity(QObject):
         pos = np.array(vec2).astype(int) + self.size/2# - [0, 0.01]
         self.position = pos
 
+    def solid_corners(self, pos=None):
+        pos = self.position if pos is None else pos
+        return pos + self.size*self.bounds
+
     def move(self, dx, dy):
 
         # Negative position means player hasn't been set on map
@@ -55,34 +63,51 @@ class Entity(QObject):
         new = self.position + dpos * self.velocity
 
         # Corners used for rectangular collision checking
-        corners = (new + self.size*self.bounds).astype(int)
+        corners = self.solid_corners(new)
 
         if self.can_clip:
             self.position = new
             return None
-        
+
         # Check for collisions
         # For each corner of our bounding rect
-        for c in map(tuple, corners):
-            solids, entities = self.get_collidable()
-            solid = solids[c]
-            entity = entities[c]
+        solids, entities = self.get_collidable()
+        for c in corners:
+            # Gets solid at corner location
+            solid = solids[tuple(c.astype(int))]
             if solid:
-                self.collided.emit()
-                solid.collided.emit()
+                self.collided.emit(solid.id)
+                solid.collided.emit(self.id)
                 return solid
-            elif entity and self != entity:
-                self.collided.emit()
-                entity.collided.emit()
-                return entity
-        # No collision
-        self.position = new
-        return None
+        # Using this to not skip any collision checks when multiple
+        # entities collide
+        crashed = False
+        # Collide with non-tile-size entities
+        for entity in entities:
+            if entity == self:
+                continue
+            # Adapted from
+            # https://stackoverflow.com/questions/27152904/calculate-overlapped-area-between-two-rectangles
+            # Because I don't know how to think xd
+            others = entity.solid_corners()
+            a, b = corners, others
+            dx = min(a[3][0], b[3][0]) - max(a[0][0], b[0][0])
+            dy = min(a[3][1], b[3][1]) - max(a[0][1], b[0][1])
+            if dx >= 0 and dy >= 0:
+                self.collided.emit(entity.id)
+                entity.collided.emit(self.id)
+                crashed = True
+        if not crashed:
+            # No collision
+            self.position = new
+            return None
 
 
 class Bomb(QTimer, Entity):
 
+    collidable=True
     explode_signal = pyqtSignal()
+    collided = pyqtSignal(int)
 
     __num = 0
 
@@ -97,13 +122,16 @@ class Bomb(QTimer, Entity):
         self.setSingleShot(True)
         self.start(params.EXPLOSION_TIME * 1000)
 
+        # Parameters for pushing it around
+        self.moving = False
+        self.direction = [0, 0]
+
     def timerEvent(self, *args):
         self.explode_signal.emit()
         self.stop()
 
-    def pushed(self, pusher_pos):
-        delta = self.position - pusher_pos
-        return delta
+    def update(self):
+        self.move(*self.direction)
 
     def __repr__(self):
         return f"Bomb{self.num}"
@@ -119,7 +147,7 @@ class Character(Entity):
     score_changed = pyqtSignal(int)
 
     bomb_num_increase = pyqtSignal()
-    
+
     collidable = True
 
     def __init__(self, num, name, *args):
@@ -164,18 +192,14 @@ class Character(Entity):
         bomb = Bomb(self.num, self.position, self.get_collidable)
         self.place_bomb_signal.emit(bomb)
 
-    def move(self, *args):
-        collided = super().move(*args)
-        if not collided:
-            return
-        elif (isinstance(collided, Enemy) and not
-              self.invincible_timer.isActive()):
-            self.lives -= 1
+    def lose_health(self, other):
+        if isinstance(other, Enemy) and not self.invincible_timer.isActive():
+            self.lives = max(0, self.lives - 1)
             self.lives_changed.emit(self.lives)
             self.begin_invincibility(params.IMMUNE_TIME)
 
     # Powerups
-            
+
     def powerup_life(self):
         self.lives = min(self.lives + 1, params.LIVES)
 
@@ -242,12 +266,3 @@ class Powerup(Entity):
         super().__init__(*args)
         self.init_position(pos)
         self.powerup_type = choice(self.types)
-        self.collided.connect(self.assign_powerup)
-
-    def assign_powerup(self):
-        sender = self.sender()
-        import pdb; pdb.set_trace()
-        
-        if isinstance(sender, Character):
-            sender.powerup_defuns[self.powerup_type]()
-            self.taken.emit()

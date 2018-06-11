@@ -258,6 +258,7 @@ class QBomb(QGraphicsPixmapItem):
         pm = self.sheet.copy(*self.sprite_stages[0])
         pm = pm.transformed(QTransform().scale(2, 2))
         self.setPixmap(pm)
+        self.bomb.update()
         self.setPos(*self.bomb.position*TILE_SIZE)
 
     def delete(self):

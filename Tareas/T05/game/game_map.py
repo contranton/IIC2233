@@ -7,7 +7,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 
 
 from game.tiles import make_tile, Ground
-from game.entities import (Character, HostileEnemy, Enemy, Bomb, Powerup)
+from game.entities import (Character, HostileEnemy, Enemy, Bomb, Powerup, Entity)
 from parameters import (ENEMY_DOCILE_A, ENEMY_DOCILE_B,
                         ENEMY_HOSTILE_LAMBDA, ENEMY_SPAWN_CLEARANCE,
                         MAX_ENEMIES)
@@ -19,6 +19,10 @@ class Map(QObject):
     bomb_laid_signal = pyqtSignal(Bomb)
     powerup_placed_signal = pyqtSignal(Powerup)
     new_enemy_signal = pyqtSignal(Enemy)
+
+    # Dictionary with ids of all tiles and important entities used for
+    # some particularly pesky signals
+    everything = {}
 
     def __init__(self, map_path, names):
         """
@@ -47,8 +51,10 @@ class Map(QObject):
         for p in (self.p1, self.p2):
             p.place_bomb_signal.connect(self.place_bomb)
             p.bomb_num_increase.connect(self.increase_max_bombs)
+            p.collided.connect(self.player_collide)
+            self.everything[p.id] = p
 
-        self.entities = []
+        self.entities = [self.p1, self.p2]
         self.__active_bombs = 0
         self.max_bombs = 1
         self.max_enemies = MAX_ENEMIES
@@ -62,6 +68,11 @@ class Map(QObject):
         self._hostile_enemy_timer.timeout.connect(self.create_hostile_enemy)
 
         self.start_enemy_timers()
+
+    def player_collide(self, id_):
+        player = self.sender()
+        other = self.everything[id_]
+        player.lose_health(other)
 
     def increase_max_bombs(self):
         self.max_bombs += 1
@@ -105,6 +116,7 @@ class Map(QObject):
         enemy.dead.connect(self.enemy_dead)
 
         self.entities.append(enemy)
+        self.everything[enemy.id] = enemy
         print("enemy created")
 
         self.new_enemy_signal.emit(enemy)
@@ -144,6 +156,7 @@ class Map(QObject):
                 tile = make_tile(tile_str, pos)
                 tile.exploded_signal.connect(self.change_tile)
                 self.tiles[pos] = tile
+                self.everything[tile.id] = tile
 
     def change_tile(self):
         tile = self.sender()
@@ -177,10 +190,7 @@ class Map(QObject):
             self.map_changed = False
 
         # Get solid-like entities
-        collidables = defaultdict(lambda: None)
-        collidables.update({tuple(e.position.astype(int)): e
-                            for e in self.entities
-                            if e.collidable})
+        collidables = [e for e in self.entities if e.collidable]
         return (self.solids, collidables)
 
     def place_bomb(self, bomb):
@@ -189,21 +199,54 @@ class Map(QObject):
 
         self.__active_bombs += 1
         bomb.explode_signal.connect(self.bomb_explode)
+        bomb.collided.connect(self.bomb_push)
         self.bomb_laid_signal.emit(bomb)
 
+    def bomb_push(self, id_):
+        pusher = self.everything[id_]
+        bomb = self.sender()
+        
+        if isinstance(pusher, Entity):
+            bomb.moving = True
+
+            delta = bomb.position - pusher.position
+
+            # Keep only the maximum value
+            delta[np.abs(delta) < np.max(np.abs(delta))] = 0
+
+            # Only care about the direction. Remember our coordinates
+            # are origin top-left!
+            delta = np.sign(delta) * [1, -1]
+
+            bomb.direction = delta
+
+        
     def bomb_explode(self):
         self.__active_bombs -= 1
-        
+
         bomb = self.sender()
         pos = bomb.position.astype(int)
         self.map_changed = True
         for tile in self.all_empty_tiles_in_sight(pos):
             powerup = tile.explode()
             if powerup:
-                print("Powerup has been created")
-                powerup.taken.connect(self.remove_powerup)
-                self.powerup_placed_signal.emit(powerup)
-                self.entities.append(powerup)
+                self.create_powerup(powerup)
+
+    def create_powerup(self, powerup):
+        print("Powerup has been created")
+        powerup.taken.connect(self.remove_powerup)
+        powerup.collided.connect(self.assign_powerup)
+        self.powerup_placed_signal.emit(powerup)
+        self.entities.append(powerup)
+
+    # Slot
+    def assign_powerup(self, id_):
+        sender = self.everything[id_]
+        powerup = self.sender()
+
+        if isinstance(sender, Character):
+            sender.powerup_defuns[powerup.powerup_type]()
+            powerup.taken.emit()
 
     def remove_powerup(self):
         sender = self.sender()
@@ -212,4 +255,3 @@ class Map(QObject):
         except:
             input("Something has gone terribly wrong")
             import pdb; pdb.set_trace()
-            
