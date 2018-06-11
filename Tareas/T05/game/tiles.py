@@ -82,7 +82,6 @@ class Tile(QObject):
         return self.__class__.name
 
     def explode(self):
-        print(f"{self}")
         self.explosion = True
         self.solid = True
         self.exploded_signal.emit()

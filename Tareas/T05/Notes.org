@@ -137,7 +137,7 @@ Player 3 & 4 shouldn't happen
 
 ** DONE Difficulty increase
 ** DONE Hostile enemy -- Vision Range
-** TODO End game on No lives left
+** DONE End game on No lives left
 
 ** DONE Point addition:
 - Enemies

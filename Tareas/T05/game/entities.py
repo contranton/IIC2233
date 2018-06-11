@@ -52,6 +52,9 @@ class Entity(QObject):
         pos = self.position if pos is None else pos
         return pos + self.size*self.bounds
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}"
+    
     def move(self, dx, dy):
 
         # Negative position means player hasn't been set on map
@@ -77,6 +80,7 @@ class Entity(QObject):
             # Gets solid at corner location
             solid = solids[tuple(c.astype(int))]
             if solid:
+                print(f"{self} collided with {solid}")
                 self.collided.emit(solid.id)
                 solid.collided.emit(self.id)
                 if solid.explosion:
@@ -97,6 +101,7 @@ class Entity(QObject):
             dx = min(a[3][0], b[3][0]) - max(a[0][0], b[0][0])
             dy = min(a[3][1], b[3][1]) - max(a[0][1], b[0][1])
             if dx >= 0 and dy >= 0:
+                print(f"{self} collided with {entity}")
                 self.collided.emit(entity.id)
                 entity.collided.emit(self.id)
                 crashed = True
