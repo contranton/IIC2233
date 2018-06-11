@@ -1,0 +1,75 @@
+* Tarea 5 - Javier Contreras
+O, /este cabrón nunca aprende a partir sus tareas con anticipación/.
+
+** Comentarios Generales
+
+Pls pls pls revisen el commit HASH, cuyo unico cambio es que incorpora los assets que olvide des-ignorar para la entrega.
+
+Es posible que al terminar una partida salga un menu parpadeando infinitas veces mostrando quien ganó. Deberia no pasar pero en caso de que lo haga lo unico que se puede hacer es matar al programa a la fea.
+
+** Como usar el programa
+Corre =main.py=. Los menús deberían guiarte intuitivamente al juego.
+Para comenzar este, arrastra el texto que dice "DRAG ME" al mapa para ingresar al personaje y jugar con las teclas especificadas en el enunciado.
+** Cosas no logradas
+A excepción de lo listado acá, todo en la tarea /debería/ funcionar bien.
+1. Explosiones no hacen daño. Teóricamente implementé esto pero algo se me enredó con las señales mandadas y no se actualiza el estado de los bloques "explotados"
+2. Al explotar por primera vez se muestra correctamente la explosión en la pantalla, pero para explosiones siguientes no se muestra. Dunno why.
+3. Las bombas no aparecen perfectamente centradas en la posición del personaje.
+4. Las bombas son golpeadas accidentalmente muy temprano al momento en que el personaje sale de su bounding box por lo que moverse siquiera un poco puede hacer que se vayan a un lado indeseado. Pero hey, al menos se mueven :D
+5. Dormir
+6. No se implementan los rankings de puntaje. Se obtiene el puntaje de los ganadores pero no hay con que compararlos y no se guarda nada
+7. Los enemigos hostiles por alguna razón no ejecutan su función de observar sus alrededores
+8. Rango de visión no se incorporó
+9. No hay botones de salida o de pausa durante el juego pero funcionan los keybindings
+10. No funciona la pausa
+11. Juego no espera a comenzar antes de haber arrastrado el jugador al mapa
+12. Puntaje no se suma al matar enemigos o destuir puntajes. Requeria guardar en cada instancia de bomba la id del jugador que la coloco pero se me paso de largo xd
+13. El espacio del que se arrastra el jugador solo dice "DRAG ME" y no posee la imagen apropiada
+14. Enemigos hostiles perciben con sus spidey senses al jugador, no estan limitados por los obstáculos.
+    
+** Implementación de requisitos
+*** Requisitos principales
+**** 2.1 Personaje principal
+- Movimiento del jugador
+  - Backend para revisar colisiones [[game/entities.py#L58][Link]]
+  - Frontend para recibir teclas [[main.py#L428][Teclas]] e [[main.py#L192][Interfaz con jugador]]
+- Vidas
+  - En backend [[game/entities.py#L237][Link]]
+  - En frontend [[main.py#L332][Link]]
+- Bombas
+  - En backend [[game/entities.py#119][Link]]
+  - En frontend [[main.py#L247][Link]]
+**** 2.2 Enemigos
+- En Backend [[game/entities.py#L271][Normales]], [[game/entities.py#L313][Hostiles]]
+- En frontend [[main.py#228][Link]]
+**** 2.3 Colisiones [[game/entities.py#L76][Link]]
+**** 2.4 Mapa
+- En backend [[game/game_map.py][Link]]
+- En frontend [[main.py#L288][Contenedor]] y [[main.py#L25][Tiles]]
+**** 2.5 Elementos de Juego
+***** Inicio de partida [[main.py#L656][Link]]
+***** Aparicion de enemigos [[game/game_map.py#L101][Link]]
+***** Cambio de stats [[game/entities.py#L292][Link]] y [[game/entities.py#L9][Link]]
+***** Powerups [[game/entities.py#L337][Implementacion]], [[game/tiles.py#L106][Creacion]] y [[main.py#L269][Frontend]]
+**** 2.6 Puntaje
+Solo se suma puntaje por tiempo [[game/entities.py#L219][aquí]]. El resto, eeh, nop.
+**** 2.7 Interfaz
+Esparcida en todos lados de =main.py=. No alcancé a modularizar bien esto :/
+
+*** Bonuses
+**** Kick the bomb [[game/entities.py#L146][Link]] 
+Implementado eeeh; Las bombas logran moverse hasta que topan y pueden ser empujadas por las entitades, pero está rara la lógica justo cuando el jugador la coloca. 
+**** Multijugador [[game/game_map.py#L52][Link]] 
+     Bien implementado, creo. Se implementa a lo hackery pues aun en modo de un jugador existe el segundo pero lejos del
+*** Señales
+Se usan señales propias en las clases de =entities.py=, =game_map.py=. Para el frontend se utilizan las necesarias para manejo de key inputs, mouse presses y drags, como tambien para conectar los signals del backend a eventos de actualización del frontend
+** Librerias
+
+- PyQt5
+- numpy
+- collections
+- random
+- sys
+- itertools
+- pdb para debugging
+
