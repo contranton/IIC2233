@@ -3,7 +3,7 @@ O, /este cabrón nunca aprende a partir sus tareas con anticipación/.
 
 ** Comentarios Generales
 
-Pls pls pls revisen el commit HASH, cuyo unico cambio es que incorpora los assets que olvide des-ignorar para la entrega.
+Pls pls pls revisen el commit 0d090552438bebc1ea3f7f52d1540528330cec3d, cuyo unico cambio es que incorpora los assets que olvide des-ignorar para la entrega.
 
 Es posible que al terminar una partida salga un menu parpadeando infinitas veces mostrando quien ganó. Deberia no pasar pero en caso de que lo haga lo unico que se puede hacer es matar al programa a la fea.
 
