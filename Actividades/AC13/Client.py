@@ -5,7 +5,8 @@ from threading import Thread
 from time import sleep
 from ventana_principal import MiVentana, QApplication
 
-DEFAULT_HOST = "10.200.42.72"
+# SE DEBE OBTENER ESTA IP A PARTIR DE LA DADA POR EL SERVIDOR
+DEFAULT_HOST = "192.168.43.91"
 DEFAULT_PORT = 3338
 
 
@@ -20,6 +21,8 @@ class Client:
         self.ventana = MiVentana(self.pedir_mover, self.desconectar)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.sock.settimeout(5)
         self.sock.connect((host, port))
 
         self.sock.sendall(dumps({'orden': 'crear'}).encode('utf-8'))

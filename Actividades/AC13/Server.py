@@ -4,9 +4,9 @@ from random import randint
 from threading import Thread
 from time import sleep
 
-DEFAULT_HOST = "192.168.43.91"
-DEFAULT_PORT = 3338
 
+DEFAULT_HOST = socket.gethostbyname('0.0.0.0')
+DEFAULT_PORT = 3338
 
 class Server:
 
@@ -24,11 +24,14 @@ class Server:
         sock.listen()
         self.connections = 0
         while True:
+            client, addr = sock.accept()
             if self.connections < 1:
-                self.connections -= 1
-                client, addr = sock.accept()
+                self.connections += 1
                 print("Connected to ", addr)
-                Thread(target=self.handle_client, args=(client,), daemon=True).run()
+                Thread(target=self.handle_client, args=(client,), daemon=True).start()
+            else:
+                print("Refused connection to ", addr)
+        sock.close()
 
     def handle_client(self, client):
         while True:
