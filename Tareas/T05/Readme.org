@@ -3,9 +3,11 @@ O, /este cabrón nunca aprende a partir sus tareas con anticipación/.
 
 ** Comentarios Generales
 
-Pls pls pls revisen el commit HASH, cuyo unico cambio es que incorpora los assets que olvide des-ignorar para la entrega.
+Pls pls pls revisen el commit [[https://github.com/IIC2233/contranton-iic2233-2018-1/commit/0d090552438bebc1ea3f7f52d1540528330cec3d][ASSETS]] cuyo unico cambio es que incorpora los assets que olvide des-ignorar para la entrega.
 
 Es posible que al terminar una partida salga un menu parpadeando infinitas veces mostrando quien ganó. Deberia no pasar pero en caso de que lo haga lo unico que se puede hacer es matar al programa a la fea.
+
+Uso =defaultdict= en partes del /frontend/ para hacer manejo de keys que han sido pulsados para realizar inputs continuos, y en el mapa para almacenar los solidos en el mapa. No me fijé que el modulo en particular no estaba permitido, pero reimplementar estas cosas sin usar defaultdict es bastante fácil. Para el caso del =defaultdict= en el mapa, esto es insertar valores nulos para todas las coordenadas posibles, y para el frontend, lo mismo pero con todos los valores de =Qt.Key_*= ya que estos serán (ok, idealmente), los únicos valores posibles a ser ingresados.
 
 ** Como usar el programa
 Corre =main.py=. Los menús deberían guiarte intuitivamente al juego.
@@ -60,7 +62,7 @@ Esparcida en todos lados de =main.py=. No alcancé a modularizar bien esto :/
 **** Kick the bomb [[game/entities.py#L146][Link]] 
 Implementado eeeh; Las bombas logran moverse hasta que topan y pueden ser empujadas por las entitades, pero está rara la lógica justo cuando el jugador la coloca. 
 **** Multijugador [[game/game_map.py#L52][Link]] 
-     Bien implementado, creo. Se implementa a lo hackery pues aun en modo de un jugador existe el segundo pero lejos del
+     Bien implementado, creo. Se implementa a lo hackery pues aun estando en modo de un jugador el jugador 2 está presente aunque es incapaz de interactuar con el juego.
 *** Señales
 Se usan señales propias en las clases de =entities.py=, =game_map.py=. Para el frontend se utilizan las necesarias para manejo de key inputs, mouse presses y drags, como tambien para conectar los signals del backend a eventos de actualización del frontend
 ** Librerias
