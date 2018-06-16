@@ -1,0 +1,84 @@
+* MIDI system
+Library for reading and writing midi files
+Must support multiple channels (BONUS)
+MIDINote class
+MIDITrack class
+
+** MIDI specification
+
+*** Chunks
+A MIDI chunk contains a 4 character ASCII type decalaration (by default we have 'MThd' and 'MTrk') followed by a 32-bit length (big endian) specification of the following bytes.
+The standard allows for simple addition of information in future types, so we should be able to ignore the entire chunk if our program doesn't know how to deal with it.
+
+There are *two* types of chunks:
+
+**** Header Chunk
+Always goes at the beginning of the file
+
+Format is:
+| Header Chunk | = |   | type   | length | format | ntrks | division |
+|              |   |   | 'MThd' | 32-bit | 0,1,2  | N     |          |
+
+The following data fields are always 16 bits (i.e., 2 bytes) long
+
+***** Format numbers
+      Format numbers define the overall organization and are specified as follows:
+
+****** Format 0
+       Single multi-channel track
+
+       Header chunk is followed by a single track chunk
+****** Format 1
+       One or more simultaneous tracks
+
+       Used typically for parallel playback
+****** Format 2
+       One ore more sequentially independent single-track patterns
+       
+       Typically used for selection of tracks independent from each other
+***** ntrks
+Number of tracks (always 1 for a format 0 file)
+
+***** division
+Has two formats depending on the most significant bit's value:
+
+****** division[15] = 0
+Rest of the word defines the number of ticks per *quarter note*
+****** division[15] = 1
+       Defines time base in SMTPE time code format which uhhh we won't worry about for now :3
+**** Track Chunk
+These are the same for all formats, and have the form
+| type | length | MTrk event 0 | MTRK event 1 | ... |
+Where type and length are defined as before, and each MTrk event has the form:
+| delta time | event |
+Delta time defines the time in ticks before the event is to be executed. It's variable-length with at least two bytes for non-0 values.
+An event can be either of the following:
+| MIDI event | sysex event | meta event |
+We'll only be concerned with MIDI events, and as such we'll assume constant time signature and tempo of 4/4 and 120 bpm respectively.
+
+The only meta event used is END OF TRACK, with signature =FF 2F 00=
+
+*** Channels
+A MIDI connection can carry 16 channels to allow for 16-voice polyphony
+
+*** MIDI Events
+A typical MIDI event is defined by three words:
+| Message type | Note | Intensity |
+
+For our purposes, we'll only use the Note ON/OFF types. Other messages involve changing parameters such as pressure, program, control, and will have arguments other than note/intensity.
+**** Message Type
+=XXXXnnnn=
+Where XXXX is mapped as follows:
+- 1000: Note OFF
+- 1001: Note ON
+
+And nnnn defines the channel on which to play the note
+
+**** Note
+A byte with MSB=0 (only 128 notes allowed) mapped according to:
+[[./notes.png]]
+
+**** Velocity
+     
+* Interface
+* Web connectivity
