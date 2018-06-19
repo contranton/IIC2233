@@ -6,7 +6,7 @@ import socket
 
 from threading import Thread
 
-from lib.netcode import MessageHandler
+from libT06.netcode import MessageHandler
 from client.gui import MainWindow
 
 HOST = "localhost"

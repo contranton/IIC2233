@@ -6,7 +6,7 @@ import socket
 
 from threading import Thread
 
-from lib.netcode import MessageHandler
+from libT06.netcode import MessageHandler
 from server.midi import get_midis
 
 HOST = socket.gethostbyname('0.0.0.0')
