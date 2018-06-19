@@ -34,7 +34,7 @@ class MIDIFile():
     def __repr__(self):
         return f"MidiFile({len(self.tracks)} tracks)"
 
-    def _to_bytes(self):
+    def to_bytes(self):
         b_type = self.chunk_type
         b_length = self.length
         b_format = int.to_bytes(self.midi_format, 2, 'big')
@@ -228,18 +228,25 @@ def load_midi(file_path):
 
     return midi_file
 
-def test_read_write_midi():
-    for root, dirs, files in os.walk("server/midis"):
-        for file in files:
-            filename = root + "\\" + file
-            with open(filename, 'rb') as f:
-                midi_original = f.read()
-            midi = load_midi(filename)
 
-            if midi._to_bytes() == midi_original:
-                print(f"{file:25} passed")
-            else:
-                print(f"{file:25} passed")
+def test_read_write_midi():
+    for midi, name, path in get_midis():
+        with open(path, 'rb') as f:
+            midi_original = f.read()
+        if midi.to_bytes() == midi_original:
+            print(f"{file:25} passed")
+        else:
+            print(f"{file:25} passed")
+
+
+def get_midis():
+    for root, dirs, files in os.walk("midis"):
+        for name in files:
+            path = root + "\\" + name
+            midi = load_midi(path)
+            print(f"Loaded {name}")
+            yield midi, name, path
+
 
 if __name__ == '__main__':
     test_read_write_midi()

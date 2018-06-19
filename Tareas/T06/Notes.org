@@ -82,3 +82,52 @@ A byte with MSB=0 (only 128 notes allowed) mapped according to:
      
 * Interface
 * Web connectivity
+Client-Server system.
+Max 1024 byte message size
+JSON messages.
+
+#+BEGIN_SRC plantuml :file seqdiagram.png
+
+  == MIDI Selection Menu== 
+
+  group Begin Connection
+        Client -> Server : Connect
+        Server -> Client : List of MIDIs
+  end
+
+  alt Choose Midi
+      Client -> Server : MIDI ID + username
+      Server -> Client : Success + Midi Info
+
+  else Create Midi
+       Client -> Server : Null MIDI ID + midi name + username
+       Server -> Server : Create new MIDI and update list
+       Server -> Client : Success + Empty Midi info
+
+  else Download Midi
+       Client -> Server : MIDI ID
+       Server -> Server : Turn MIDI Object to file
+       Server -> Client : MIDI file
+
+  end
+
+  == Edit MIDI Menu == 
+
+  group Multiple Client Sync
+        Client2 -[#blue]> Server : Push Note Diff to Server
+        Server -> Client2 : Note Diff
+        Server -> Client : Note Diff
+  end
+
+  group Send Diff
+        Client -> Server : Diff JSON
+        Server -> Server : Process JSON and Sync
+  end
+
+
+
+#+END_SRC
+
+#+RESULTS:
+[[file:seqdiagram.png]]
+
