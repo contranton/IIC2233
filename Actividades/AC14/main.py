@@ -14,13 +14,14 @@ def validar_correo(correo):
     :param correo: str
     :return: bool
     """
-    if not re.match('[a-zA-Z0-9].*@[a-zA-Z0-9].*\.[a-zA-Z0-9].*', correo):
+    if not re.match('[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z0-9]+', correo):
         print("Formato invalido")
         return False
 
     try:
-        resp = requests.get(f"http://{correo}")
-    except ConnectionError:
+        domain = re.sub(r'[a-zA-Z0-9].*@', '', correo)
+        resp = requests.get(f"http://{domain}")
+    except requests.exceptions.ConnectionError:
         print("Correo no accesible")
         return False
     if resp.status_code > 400:
