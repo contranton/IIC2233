@@ -1,3 +1,19 @@
+* Headers							     :ignore:
+# -*- mode: org; -*-
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/bigblow/css/htmlize.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/bigblow/css/bigblow.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/bigblow/css/hideshow.css"/>
+
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/bigblow/js/jquery-1.11.0.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/bigblow/js/jquery-ui-1.10.2.min.js"></script>
+
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/bigblow/js/jquery.localscroll-min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/bigblow/js/jquery.scrollTo-1.4.3.1-min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/bigblow/js/jquery.zclip.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/bigblow/js/bigblow.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/bigblow/js/hideshow.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
 * MIDI system
 Library for reading and writing midi files
 Must support multiple channels (BONUS)
@@ -85,7 +101,7 @@ A byte with MSB=0 (only 128 notes allowed) mapped according to:
 Client-Server system.
 Max 1024 byte message size
 JSON messages.
-
+** Diagram
 #+BEGIN_SRC plantuml :file seqdiagram.png
 
   == MIDI Selection Menu== 
@@ -130,4 +146,90 @@ JSON messages.
 
 #+RESULTS:
 [[file:seqdiagram.png]]
+** Message Standard
+*** Header
+JSON field containing attributes of interest:
+- Size of message
+- Descriptor of the content
 
+#+BEGIN_SRC python
+  {'header': {'size': int,
+              'description': str}}
+#+END_SRC
+*** Query from client
+A query is sent from the client and immediately receives an associated response from the server. The format for the client-side request is:
+#+BEGIN_SRC python
+  {"action": str, "data": data}
+#+END_SRC
+Where /action/ encodes the function to be handled by the server and /data/ is an n-tuple containing the necessary arguments. An additional argument, =raw_bytes= is used by the query method to specify whether or not the response should be gotten as raw bytes instead of first being decoded by JSON. TODO: Do this server side
+
+Responses not in bytes have the format:
+#+BEGIN_SRC python
+  {'content_type': str, 'data': Any}
+#+END_SRC
+
+Implemented queries are:
+**** Download song
+Request:
+| Action     | Data       | Raw_Bytes |
+| 'download' | title: str | True      |
+
+Response:
+MIDI file as bytes object
+**** Edit song
+Request:
+| Action | Data                | Raw_Bytes |
+| edit   | username, midi-name | False     |
+
+Response:
+| Content Type | Data |
+| status       | bool | 
+
+After this, server sends three messages:
+| Content Type      | Data                        |
+| connected_in_room | [username1, username2, ...] |
+
+| Content Type | Data                      |
+| chat_initial | [Message1, Message2, ...] |
+(Message class has fields =time=, =sender=, and =content=)
+
+| Content Type  | Data                |
+| notes_initial | [Note1, Note2, ...] |
+(Note class has fields =pitch=, =velocity=, =duration=)
+**** Disconnect
+Request:
+| Action     | Data | Raw_Bytes |
+| disconnect | NA   | NA        | 
+
+Response:
+NA  
+*** Update from server
+These are server messages sent without initial querying from the client and are used to update real-time systems such as the chat, the song list, and the notes (if simultaneous editing were to be implemented).
+
+These messages have the same format as a typical non-bytes server response:
+#+BEGIN_SRC python
+  {'content_type': str, 'data': Any}
+#+END_SRC
+
+Current such messages are:
+**** Update Midis list
+| Content Type | Data                                            |
+| midis_list   | {'edited': [midis...], 'available': [midis...]} |
+**** Update room people
+| Content Type      | Data       |
+| connected_in_room | [names...] |
+**** Update chat
+After chat_initial is sent, all new messages, besides also being added to the messages db, is sent to every active client
+#+BEGIN_SRC python
+  if new_message:
+      msg = get_new_message()
+      for client in connected_clients:
+          send(client, msg)
+      self.messages.append(msg)
+#+END_SRC
+| Content Type | Data |
+| chat_message | Message |
+Where, as before, Message has fields =time=, =username=, =content=
+**** Update Notes (not to be implemented in this version)
+     Would contain a =NoteDiff= to synchronize changes made by other users on the same song.
+     

@@ -1,8 +1,21 @@
 import json
 from math import ceil
+from threading import Lock
 
+import sys
 
 ENCODING = "ascii"
+
+print_lock = Lock()
+def s_print(*args, **kwargs):
+    """
+    Thread-safe print
+
+    https://stackoverflow.com/questions/40356200/python-printing-in-multiple-threads
+    """
+    with print_lock:
+        print(*args, **kwargs)
+        sys.stdout.flush()
 
 
 def error_json(msg):
@@ -11,93 +24,88 @@ def error_json(msg):
 
 class MessageHandler():
     max_size = 2**10
-    min_header_keys = {"size"}
+    min_header_keys = {"size", "type", "description"}
+    accepted_types = {'json', 'midi'}
 
-    def __init__(self, socket):
+    def __init__(self, comm_id, socket):
         """
 
         """
+        self.comm_id = comm_id
         self.socket = socket
 
-    def get_msg(self):
-        failed = False
-        msg = self.socket.recv(self.max_size)
+    def recv(self):
+        """
+        Blocks and receives data. Handles headers by itself.
+
+        Should be running on a loop on its own thread to allow for
+        async listening and querying
+        """
+
+        # Receive header and ensure validity
+        header = self.socket.recv(self.max_size)
+        print(f"Received header '{header}'")
         try:
-            msg = json.loads(msg)
-            if type(msg) != dict or len(msg) == 0:
-                failed = True
+            header = json.loads(header.decode(ENCODING))
         except json.JSONDecodeError:
-            failed = True
+            raise Exception("Invalid header. Must be a JSON")
 
-        if failed:
-            self.socket.send(error_json("Invalid Message"))
-            return None
+        msg_size = header['size']
+        msg_type = header['type']
 
-        return msg
-
-    def get_header(self):
-        # Get header
-        msg = self.get_msg()
-        if not msg:
-            return None
-        if list(msg.keys())[0] != "header":
-            self.socket.send(error_json("First message not a header"))
-            return None
-        header = msg['header']
-        if any((key not in self.min_header_keys for key in header.keys())):
-            self.socket.send(error_json("Invalid header"))
-            return None
-
-        return header
-
-    def make_query(self, action, data):
-        return json.dumps({"action": action, "data": data})\
-                   .encode(ENCODING)
-
-    def make_header(self, size):
-        hdr = {"header": {"size": size}}
-        return json.dumps(hdr).encode(ENCODING)
-
-    def get_chunked_message(self, msg_size):
-        chunks = ceil(msg_size / self.max_size)
+        # Get message in chunks if necessary
         msg = bytearray()
+        chunks = ceil(msg_size / self.max_size)
         for i in range(chunks):
-            msg.extend(self.socket.recv(self.max_size))
-        return msg
+            chunk = self.socket.recv(self.max_size)
+            msg.extend(chunk)
 
-    def send_message(self, msg, raw_bytes=False):
-        # Ensure message is bytes
-        if type(msg) != bytes:
-            if not raw_bytes:
-                msg = json.dumps(msg).encode(ENCODING)
-            else:
-                raise Exception("Must send bytes if raw_bytes=True")
+        # Decode message
+        if msg_type == 'json':
+            msg = json.loads(msg.decode(ENCODING))
+        elif msg_type == 'bytes':
+            pass
+        else:
+            raise Exception(f"Server can't handle message type '{msg_type}'")
 
-        # Send header
-        self.socket.send(self.make_header(len(msg)))
+        return header, msg
 
-        # Found out about memoryview from the Python Cookbook. It lets
-        # us send long streams of data without copying it
-        # unnecessarily!
-        mem_view = memoryview(msg).cast('B')
-        chunks = ceil(len(mem_view) / self.max_size)
+    def send_message(self, msg, msg_type='json', descr=''):
+        """
+        Sends message to connected socket
+        """
+        # Ensure type consistency
+        if msg_type not in self.accepted_types:
+            raise Exception(f"Server can't handle message type '{msg_type}'")
+
+        if msg_type == 'json' and type(msg) != bytes:
+            msg = json.dumps(msg).encode(ENCODING)
+
+        # Create header
+        header = {"size": len(msg),
+                  "type": msg_type,
+                  "descr": descr}
+        print(header)
+        header = json.dumps(header).encode(ENCODING)
+        if len(header) > self.max_size:
+            raise Exception("Header too large")
+
+        # SEND header
+        self.socket.send(header)
+
+        # SEND message in multiple chunks if necessary
+        msg_ptr = memoryview(msg).cast('B')
+        chunks = ceil(len(msg_ptr) / self.max_size)
         for i in range(chunks):
-            mem = mem_view[:self.max_size]
-            mem_view = mem_view[self.max_size:]
-            self.socket.send(mem)
+            chunk = msg_ptr[:self.max_size]
+            msg_ptr = msg_ptr[self.max_size:]
+            self.socket.send(chunk)
 
-    def recv(self, raw_bytes=False):
-        # Recv response
-        header = self.get_header()
-        if not header:
-            return None
-        msg = self.get_chunked_message(header['size'])
-        if not raw_bytes:
-            msg = json.loads(msg)
-        return msg
-
-    def query(self, query, raw_bytes=False):
-        # Send message
-        self.send_message(query)
-        msg = self.recv(raw_bytes)
-        return msg
+    def query(self, action, data):
+        """
+        Standarized request from client. Doesn't return anything as recvs
+        must be handled in a unified place in the client code
+        """
+        query_msg = json.dumps({"action": action, "data": data})\
+                        .encode(ENCODING)
+        self.send_message(query_msg)

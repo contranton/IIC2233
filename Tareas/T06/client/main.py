@@ -4,7 +4,7 @@ sys.path.append("..")
 
 import socket
 
-from threading import Thread
+from threading import Thread, Lock
 
 from libT06.netcode import MessageHandler
 from client.gui import MainWindow
@@ -14,36 +14,64 @@ PORT = 3338
 
 
 class Client():
-    def __init__(self):
-        """
+    counter = 0
 
-        """
-        
+    def __init__(self):
+        Client.counter += 1
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((HOST, PORT))
-        self.socket_handler = MessageHandler(sock)
+        self.socket_handler = MessageHandler(Client.counter, sock)
 
-        #self.gui_thread = Thread(target=MainWindow, daemon=True)
+        self.win = MainWindow(self.socket_handler.query)
+
+        Thread(target=self.listen, daemon=True).start()
 
     def __del__(self):
-        query = self.socket_handler.make_query("disconnect", None)
-        self.socket_handler.query(query)
-        super().__del__(self)
+        try:
+            self.socket_handler.query("disconnect", ("",))
+        except AttributeError:  # Only in case connection has failed
+            return
 
-        
+    def listen(self):
+        """
+        Handles content updates from server
+        """
+        while True:
+            # Blocks until next server update is sent
+            header, msg = self.socket_handler.recv()
+            # Call the appropiate method based on the data
+            msg_type = header['type']
+            if msg_type == 'json':
+                content_type = msg['content_type']
+                data = msg['data']
+                if content_type == 'midis_list':
+                    edited = data['edited']
+                    available = data['available']
+                    self.win.update_midis(edited_midis=edited,
+                                          available_midis=available)
+                elif content_type == 'connected_in_room':
+                    pass
+                elif content_type == 'chat_initial':
+                    pass
+                elif content_type == 'chat_message':
+                    pass
+            elif msg_type == 'midi':  # msg is midi as bytes
+                title = header['description']  # Song title
+                with open(title, 'wb') as f:
+                    f.write(msg)
+
     def download_midi(self, title):
-        query = self.socket_handler.make_query("download", (title,))
-        midi = self.socket_handler.query(query, raw_bytes=True)
-        with open(title, 'wb') as f:
-            f.write(midi)
+        """Requests the midi file. Response is 'bytes' midi
+        """
+        self.socket_handler.query("download", (title,))
 
 
 if __name__ == '__main__':
     import sys
     from PyQt5.QtWidgets import QApplication
 
-   # app = QApplication(sys.argv)
+    app = QApplication(sys.argv)
+    print("\n"*5)
     client = Client()
-    import pdb; pdb.set_trace()
-
-   # sys.exit(app.exec_())
+    sys.exit(app.exec_())
+    #import pdb; pdb.pm()
