@@ -7,7 +7,7 @@ import socket
 from threading import Thread
 
 from libT06.netcode import MessageHandler
-from server.midi import get_midis
+from server.midi import get_midis, MIDIFile
 
 HOST = socket.gethostbyname('0.0.0.0')
 PORT = 3338
@@ -38,6 +38,10 @@ class MidiDatabase():
     def names(self):
         return list(self.midis.keys())
 
+    def create_midi(self, title):
+        # False as the new midi is now being edited
+        self._midis[title] = (MIDIFile(), False)
+
 
 class Server():
 
@@ -45,7 +49,9 @@ class Server():
         """
 
         """
-        self.action_map = {"download": self.download_midi}
+        self.action_map = {"download": self.download_midi,
+                           "create": self.create_midi,
+                           "edit": self.edit_midi}
         self.db = MidiDatabase()
         print(f"Available midis: {self.db.midis}")
 
@@ -55,6 +61,8 @@ class Server():
         # Running server as a thread lets us kill the program in
         # console without having to shut down the entire console
         Thread(target=self.listen, daemon=True).start()
+
+        self.signed_in_users = []
 
     def __del__(self):
         self.sock.close()
@@ -110,6 +118,43 @@ class Server():
         client_handler.send_message(midi_bytes,
                                     msg_type='midi',
                                     descr=midi_name)
+
+    def edit_midi(self, client_handler, username, title):
+        
+        msg = {"content_type": "edit_response",
+               "data": None}
+        print(title)
+        print(self.db.availables)
+        
+        if username in self.signed_in_users:
+            msg["data"] = {"status": False,
+                           "reason": "Username taken"}
+        else:
+            msg["data"] = {"status": True,
+                           "can_edit": (title in self.db.availables)}
+
+        client_handler.send_message(msg, descr='edit_response')
+        
+    def create_midi(self, client_handler, username, title):
+        """
+        """
+        self.db.create_midi(title)
+
+        msg = {"content_type": "edit_response",
+               "data": None}
+        
+        if username in self.signed_in_users:
+            msg["data"] = {"status": False,
+                           "reason": "Username taken"}
+        elif len(title) < 6:
+            msg["data"] = {"status": False,
+                           "reason": "Title too short"}
+        else:
+            msg["data"] = {"status": True,
+                           "can_edit": True}
+
+        client_handler.send_message(msg, descr='create_response')
+
 
 
 if __name__ == '__main__':

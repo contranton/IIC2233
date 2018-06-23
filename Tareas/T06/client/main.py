@@ -4,7 +4,8 @@ sys.path.append("..")
 
 import socket
 
-from threading import Thread, Lock
+from threading import Thread, Event
+from PyQt5.QtCore import pyqtSignal, QObject
 
 from libT06.netcode import MessageHandler
 from client.gui import MainWindow
@@ -13,18 +14,24 @@ HOST = "localhost"
 PORT = 3338
 
 
-class Client():
+class Client(QObject):
     counter = 0
 
+    signal_song_menu = pyqtSignal(bool)
+    signal_midis_list = pyqtSignal(list, list)
+
     def __init__(self):
+        super().__init__()
         Client.counter += 1
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((HOST, PORT))
         self.socket_handler = MessageHandler(Client.counter, sock)
 
         self.win = MainWindow(self.socket_handler.query)
+        self.signal_midis_list.connect(self.win.update_midis)
+        self.signal_song_menu.connect(self.win.song_menu)
 
-        Thread(target=self.listen, daemon=True).start()
+        Thread(target=self.listen_wrapper, daemon=True).start()
 
     def __del__(self):
         try:
@@ -33,6 +40,14 @@ class Client():
             return
         self.socket_handler.socket.close()
 
+    def listen_wrapper(self):
+        try:
+            self.listen()
+        except Exception:
+            import traceback as tb; tb.print_exc()
+            print(f"ERROR: CLIENT HAS RESTARTED DUE TO EXCEPTION")
+            Thread(target=self.listen_wrapper, daemon=True).start()
+        
     def listen(self):
         """
         Handles content updates from server
@@ -56,8 +71,12 @@ class Client():
         if content_type == 'midis_list':
             edited = data['edited']
             available = data['available']
-            self.win.update_midis(edited_midis=edited,
-                                  available_midis=available)
+            self.signal_midis_list.emit(edited, available)
+        elif content_type == 'edit_response':
+            if not data["status"]:
+                print(data["reason"])
+            else:
+                self.signal_song_menu.emit(data["can_edit"])
         elif content_type == 'connected_in_room':
             pass
         elif content_type == 'chat_initial':

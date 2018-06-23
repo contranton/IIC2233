@@ -16,9 +16,9 @@ class MIDIReaderInvalidFile(Exception):
 
 
 class MIDIFile():
-    def __init__(self, midi_format, n_tracks, time_div):
+    def __init__(self, midi_format=1, time_div=160):
         """
-
+        Container for a MIDI file with multiple simultaneous tracks
         """
         self.chunk_type = 'MThd'.encode('ascii')
         if midi_format == 1:
@@ -26,13 +26,16 @@ class MIDIFile():
         else:
             raise MIDIReaderFormatNotImplemented(
                 "Only MIDI Format 1 supported")
-        self.n_tracks = n_tracks
         self.time_div = time_div
 
         self.tracks = []
 
     def __repr__(self):
         return f"MidiFile({len(self.tracks)} tracks)"
+
+    @property
+    def n_tracks(self):
+        return len(self.tracks)
 
     def to_bytes(self):
         b_type = self.chunk_type
@@ -157,7 +160,7 @@ def load_midi(file_path):
         ntrks = get_int(file.read(2))   # Number of tracks
         divsn = get_int(file.read(2))   # Time division in ticks per 1/4 note
 
-        midi_file = MIDIFile(formt, ntrks, divsn)
+        midi_file = MIDIFile(formt, divsn)
 
         while True:
             # Read tracks until EOF
@@ -231,8 +234,8 @@ def load_midi(file_path):
 
 def test_read_write_midi():
     for midi, name, path in get_midis():
-        with open(path, 'rb') as f:
-            midi_original = f.read()
+        with open(path, 'rb') as file:
+            midi_original = file.read()
         if midi.to_bytes() == midi_original:
             print(f"{file:25} passed")
         else:

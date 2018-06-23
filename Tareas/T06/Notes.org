@@ -147,7 +147,17 @@ JSON messages.
 
 #+RESULTS:
 [[file:seqdiagram.png]]
-** Message Standard NEED TO UPDATE THIS
+** Message Standard
+
+Every communication has the following three messages:
+
+- Header size
+- Header
+- Message
+
+The header size is the number of bytes of the header. Sent as log2(max_size) bytes.
+Header contains information such as the message length in bytes as well as its data type
+
 *** Header
 JSON field containing attributes of interest:
 - Size of message
@@ -191,7 +201,13 @@ Request:
 
 Response:
 | Content Type | Data |
-| status       | bool | 
+| edit_response| response | 
+
+response is a dict with parameters:
+| status | can_edit (optional) |
+
+status specifies if user has been accepted, in terms of either username or new song title.
+can_edit specifies whether or not the user can edit. If True, user's window should show the editing menus whereas if False, they'll be a spectator.
 
 After this, server sends three messages:
 | Content Type      | Data                        |

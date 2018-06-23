@@ -1,5 +1,5 @@
 import json
-from math import ceil
+from math import ceil, log2
 from threading import Lock
 
 import sys
@@ -42,8 +42,12 @@ class MessageHandler():
         async listening and querying
         """
 
-        # Receive header and ensure validity
-        header = self.socket.recv(self.max_size)
+        # RECV header size
+        hdr_size = self.socket.recv(ceil(log2(self.max_size)))
+        hdr_size = int.from_bytes(hdr_size, 'big')
+
+        # RECV header and ensure validity
+        header = self.socket.recv(hdr_size)
         print(f"Received header '{header}'")
         try:
             header = json.loads(header.decode(ENCODING))
@@ -53,7 +57,7 @@ class MessageHandler():
         msg_size = header['size']
         msg_type = header['type']
 
-        # Get message in chunks if necessary
+        # RECV message in chunks if necessary
         msg = bytearray()
         chunks = ceil(msg_size / self.max_size)
         for i in range(chunks):
@@ -89,6 +93,10 @@ class MessageHandler():
         header = json.dumps(header).encode(ENCODING)
         if len(header) > self.max_size:
             raise Exception("Header too large")
+
+        # SEND header size
+        self.socket.send(int.to_bytes(len(header), ceil(log2(self.max_size)),
+                                      'big'))
 
         # SEND header
         self.socket.send(header)

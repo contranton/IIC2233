@@ -9,11 +9,18 @@ class MainWindow(QWidget):
     """
     """
     def __init__(self, query):
-        super().__init__()
 
         # Comms sender for querying server. Recvs are done in the
         # main client routine, never here
         self.query = query
+
+        self.song_titles = []
+
+        self.init_gui()
+
+    def init_gui(self):
+        super().__init__()
+        self.setWindowTitle("PrograBand")
 
         # Layout
         vdiv = QVBoxLayout()
@@ -37,11 +44,13 @@ class MainWindow(QWidget):
 
         edited.addWidget(QLabel("Songs being edited"))
         self.edited = QListWidget()
+        self.edited.clicked.connect(self.buttons_edit)
         edited.addWidget(self.edited)
         song_lists.addLayout(edited)
 
         ready.addWidget(QLabel("Songs available"))
         self.ready = QListWidget()
+        self.ready.clicked.connect(self.buttons_ready)
         ready.addWidget(self.ready)
         song_lists.addLayout(ready)
 
@@ -50,8 +59,10 @@ class MainWindow(QWidget):
         # 4: Actions
         actions = QHBoxLayout()
         self.edit_button = QPushButton("Edit")
+        self.edit_button.setEnabled(False)
         self.edit_button.pressed.connect(self.edit)
         self.download_button = QPushButton("Download")
+        self.download_button.setEnabled(False)
         self.download_button.pressed.connect(self.download)
         actions.addWidget(self.edit_button)
         actions.addWidget(self.download_button)
@@ -61,37 +72,83 @@ class MainWindow(QWidget):
         new_song = QVBoxLayout()
         new_song.addWidget(QLabel("New Song"))
         self.new_song_input = QLineEdit()
+        self.new_song_input.textChanged.connect(self.enable_song_create)
         self.new_song_input.setPlaceholderText("Enter name of the new song...")
-        new_button = QPushButton("Create song")
-        new_button.pressed.connect(self.new_song)
-        new_song.addWidget(new_button)
+        new_song.addWidget(self.new_song_input)
+        self.new_song_button = QPushButton("Create song")
+        self.new_song_button.setEnabled(False)
+        self.new_song_button.pressed.connect(self.create_new_song)
+        new_song.addWidget(self.new_song_button)
         vdiv.addLayout(new_song)
 
         vdiv.setAlignment(Qt.AlignCenter)
         self.setLayout(vdiv)
         self.show()
 
+    def enable_song_create(self):
+        title = self.new_song_input.text()
+        if len(title) < 6 or title in self.song_titles:
+           self.new_song_button.setEnabled(False)
+        else:
+            self.new_song_button.setEnabled(True)
+
+    def buttons_edit(self):
+        """
+        Updates buttons when focus is on songs being edited
+        """
+        self.ready.clearSelection()
+        self.edit_button.setEnabled(True)
+        self.download_button.setEnabled(True)
+        self.edit_button.setText("Spectate")
+
+    def buttons_ready(self):
+        """
+        Updates buttons when focus is on songs not being edited
+        """
+        self.edited.clearSelection()
+        self.edit_button.setText("Edit")
+        self.edit_button.setEnabled(True)
+        self.download_button.setEnabled(True)
+
     def edit(self):
-        #midi =
-        pass
+        username = self.user_text_input.text()
+        # TODO: GET THE SELECTED ITEM FROM BOTH LISTS
+        self.query("edit", username, title)
 
     def download(self):
         title = self.ready.selectedItems()[0].data(0)
         self.query("download", title)
 
-    def new_song(self):
+    def create_new_song(self):
+        username = self.user_text_input.text()
         title = self.new_song_input.text()
-        self.query("create", title)
+        self.query("create", username, title)
 
     def update_midis(self, edited_midis, available_midis):
+        self.song_titles = edited_midis + available_midis
+
         self.edited.clear()
         self.ready.clear()
         self.edited.addItems(edited_midis)
         self.ready.addItems(available_midis)
 
+    def song_menu(self, can_edit):
+        self.__edit_window = EditingWindow(can_edit, self.query)
+        self.__edit_window.closeEvent = self._return_here
+        self.hide()
+
+    def _return_here(self, event):
+        self.show()
+        super().closeEvent(event)
+
 
 class EditingWindow(QWidget):
-    def __init__(self, is_editor):
+    def __init__(self, is_editor, query):
+        self.query = query
+
+        self.init_gui(is_editor)
+
+    def init_gui(self, is_editor):
         super().__init__()
         self.setWindowTitle("Editing Song")
         hdiv = QHBoxLayout()
