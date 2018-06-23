@@ -72,6 +72,7 @@ class MainWindow(QWidget):
         self.show()
 
     def edit(self):
+        #midi =
         pass
 
     def download(self):
@@ -79,7 +80,8 @@ class MainWindow(QWidget):
         self.query("download", title)
 
     def new_song(self):
-        pass
+        title = self.new_song_input.text()
+        self.query("create", title)
 
     def update_midis(self, edited_midis, available_midis):
         self.edited.clear()

@@ -31,7 +31,7 @@ class Client():
             self.socket_handler.query("disconnect", "")
         except AttributeError:  # Only in case connection has failed
             return
-        self.socket_handler.socket.shutdown()
+        self.socket_handler.socket.close()
 
     def listen(self):
         """
@@ -42,26 +42,34 @@ class Client():
             header, msg = self.socket_handler.recv()
             # Call the appropiate method based on the data
             msg_type = header['type']
+
             if msg_type == 'json':
-                content_type = msg['content_type']
-                data = msg['data']
-                if content_type == 'midis_list':
-                    edited = data['edited']
-                    available = data['available']
-                    self.win.update_midis(edited_midis=edited,
-                                          available_midis=available)
-                elif content_type == 'connected_in_room':
-                    pass
-                elif content_type == 'chat_initial':
-                    pass
-                elif content_type == 'chat_message':
-                    pass
+                self.handle_json_response(msg, header)
+
+                # Handle midi data
             elif msg_type == 'midi':  # msg is midi as bytes
-                title = header['descr']  # Song title
-                with open(title, 'wb') as f:
-                    f.write(msg)
+                self.handle_midi_response(msg, header)
 
+    def handle_json_response(self, msg, header):
+        content_type = msg['content_type']
+        data = msg['data']
+        if content_type == 'midis_list':
+            edited = data['edited']
+            available = data['available']
+            self.win.update_midis(edited_midis=edited,
+                                  available_midis=available)
+        elif content_type == 'connected_in_room':
+            pass
+        elif content_type == 'chat_initial':
+            pass
+        elif content_type == 'chat_message':
+            pass
 
+    def handle_midi_response(self, msg, header):
+        title = header['descr']  # Song title
+        with open(title, 'wb') as f:
+            f.write(msg)
+        
 if __name__ == '__main__':
     import sys
     from PyQt5.QtWidgets import QApplication

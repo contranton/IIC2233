@@ -85,7 +85,7 @@ class MessageHandler():
         header = {"size": len(msg),
                   "type": msg_type,
                   "descr": descr}
-        print(header)
+        print(f"Sending header {header}")
         header = json.dumps(header).encode(ENCODING)
         if len(header) > self.max_size:
             raise Exception("Header too large")
@@ -108,4 +108,4 @@ class MessageHandler():
         """
         query_msg = json.dumps({"action": action, "data": data})\
                         .encode(ENCODING)
-        self.send_message(query_msg)
+        self.send_message(query_msg, descr=action)

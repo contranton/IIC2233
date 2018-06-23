@@ -151,20 +151,27 @@ JSON messages.
 *** Header
 JSON field containing attributes of interest:
 - Size of message
-- Descriptor of the content
+- Message type
+- (Optional) description of content
 
 #+BEGIN_SRC python
-  {'header': {'size': int,
-              'description': str}}
+  {'size': int,
+   'msg_type': str,
+   'descr': str=""}
 #+END_SRC
+
+The description of the content is useful when the msg type doesn't allow for data types such as bytes. In the case of midi files, the description contains the title under which the file should be saved upon download.
+
 *** Query from client
-A query is sent from the client and immediately receives an associated response from the server. The format for the client-side request is:
+A query is sent from the client. The format for the client-side request is:
 #+BEGIN_SRC python
   {"action": str, "data": data}
 #+END_SRC
-Where /action/ encodes the function to be handled by the server and /data/ is an n-tuple containing the necessary arguments. An additional argument, =raw_bytes= is used by the query method to specify whether or not the response should be gotten as raw bytes instead of first being decoded by JSON. TODO: Do this server side
+Where /action/ encodes the function to be handled by the server and /data/ is an n-tuple containing the necessary arguments.
 
-Responses not in bytes have the format:
+The response type from the server will be specified in the header.
+
+Responses with 'json' msg_type have the format:
 #+BEGIN_SRC python
   {'content_type': str, 'data': Any}
 #+END_SRC
@@ -172,15 +179,15 @@ Responses not in bytes have the format:
 Implemented queries are:
 **** Download song
 Request:
-| Action     | Data       | Raw_Bytes |
-| 'download' | title: str | True      |
+| Action     | Data       |
+| 'download' | title: str |
 
 Response:
-MIDI file as bytes object
+MIDI file as bytes object. MIDI title is in the header description.
 **** Edit song
 Request:
-| Action | Data                | Raw_Bytes |
-| edit   | username, midi-name | False     |
+| Action | Data                |
+| edit   | username, midi-name |
 
 Response:
 | Content Type | Data |
@@ -199,8 +206,8 @@ After this, server sends three messages:
 (Note class has fields =pitch=, =velocity=, =duration=)
 **** Disconnect
 Request:
-| Action     | Data | Raw_Bytes |
-| disconnect | NA   | NA        | 
+| Action     | Data |
+| disconnect | NA   |
 
 Response:
 NA  
