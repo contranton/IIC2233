@@ -75,7 +75,8 @@ class MainWindow(QWidget):
         pass
 
     def download(self):
-        pass
+        title = self.ready.selectedItems()[0].data(0)
+        self.query("download", title)
 
     def new_song(self):
         pass

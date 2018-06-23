@@ -101,6 +101,7 @@ A byte with MSB=0 (only 128 notes allowed) mapped according to:
 Client-Server system.
 Max 1024 byte message size
 JSON messages.
+
 ** Diagram
 #+BEGIN_SRC plantuml :file seqdiagram.png
 
@@ -146,7 +147,7 @@ JSON messages.
 
 #+RESULTS:
 [[file:seqdiagram.png]]
-** Message Standard
+** Message Standard NEED TO UPDATE THIS
 *** Header
 JSON field containing attributes of interest:
 - Size of message
@@ -232,4 +233,15 @@ After chat_initial is sent, all new messages, besides also being added to the me
 Where, as before, Message has fields =time=, =username=, =content=
 **** Update Notes (not to be implemented in this version)
      Would contain a =NoteDiff= to synchronize changes made by other users on the same song.
-     
+
+* TODOS:
+
+** Note diff sending
+
+** Updating GUI from server pushes
+
+** Chat and chat history storage for each song (apply serialization to store them!)
+
+** Catch exceptions on server threads that might prevent them listening to their respective clients
+
+** IFF there's time, make the song edition all cool like :D

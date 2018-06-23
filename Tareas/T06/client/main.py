@@ -28,9 +28,10 @@ class Client():
 
     def __del__(self):
         try:
-            self.socket_handler.query("disconnect", ("",))
+            self.socket_handler.query("disconnect", "")
         except AttributeError:  # Only in case connection has failed
             return
+        self.socket_handler.socket.shutdown()
 
     def listen(self):
         """
@@ -56,14 +57,9 @@ class Client():
                 elif content_type == 'chat_message':
                     pass
             elif msg_type == 'midi':  # msg is midi as bytes
-                title = header['description']  # Song title
+                title = header['descr']  # Song title
                 with open(title, 'wb') as f:
                     f.write(msg)
-
-    def download_midi(self, title):
-        """Requests the midi file. Response is 'bytes' midi
-        """
-        self.socket_handler.query("download", (title,))
 
 
 if __name__ == '__main__':

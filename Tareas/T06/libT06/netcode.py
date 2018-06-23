@@ -63,7 +63,7 @@ class MessageHandler():
         # Decode message
         if msg_type == 'json':
             msg = json.loads(msg.decode(ENCODING))
-        elif msg_type == 'bytes':
+        elif msg_type == 'midi':
             pass
         else:
             raise Exception(f"Server can't handle message type '{msg_type}'")
@@ -101,7 +101,7 @@ class MessageHandler():
             msg_ptr = msg_ptr[self.max_size:]
             self.socket.send(chunk)
 
-    def query(self, action, data):
+    def query(self, action, *data):
         """
         Standarized request from client. Doesn't return anything as recvs
         must be handled in a unified place in the client code
