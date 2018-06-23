@@ -17,8 +17,12 @@ PORT = 3338
 class Client(QObject):
     counter = 0
 
+    # Signals for GUI updates
     signal_song_menu = pyqtSignal(bool)
     signal_midis_list = pyqtSignal(list, list)
+    signal_midi_notes = pyqtSignal(list)
+    signal_connected_people = pyqtSignal(list)
+    signal_new_messages = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
@@ -27,9 +31,13 @@ class Client(QObject):
         sock.connect((HOST, PORT))
         self.socket_handler = MessageHandler(Client.counter, sock)
 
+        # Create GUI and connect signals to its functions
         self.win = MainWindow(self.socket_handler.query)
         self.signal_midis_list.connect(self.win.update_midis)
         self.signal_song_menu.connect(self.win.song_menu)
+        self.signal_midi_notes.connect(self.win.load_notes)
+        self.signal_connected_people.connect(self.win.update_connected)
+        self.signal_new_messages.connect(self.win.new_messages)
 
         Thread(target=self.listen_wrapper, daemon=True).start()
 
@@ -77,6 +85,8 @@ class Client(QObject):
                 print(data["reason"])
             else:
                 self.signal_song_menu.emit(data["can_edit"])
+        elif content_type == 'midi_notes':
+            self.signal_midi_notes.emit(data)
         elif content_type == 'connected_in_room':
             pass
         elif content_type == 'chat_initial':

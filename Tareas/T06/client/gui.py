@@ -15,6 +15,7 @@ class MainWindow(QWidget):
         self.query = query
 
         self.song_titles = []
+        self._edit_window = None
 
         self.init_gui()
 
@@ -135,9 +136,24 @@ class MainWindow(QWidget):
         self.edited.addItems(edited_midis)
         self.ready.addItems(available_midis)
 
+    def load_notes(self, notes):
+        if not self._edit_window:
+            raise Exception("Client shouldn't have received notes")
+        self._edit_window.load_notes(notes)
+
+    def update_connected(self, people):
+        if not self._edit_window:
+            raise Exception("Client shouldn't have received people")
+        self._edit_window.load_people(people)
+
+    def new_messages(self, messages):
+        if not self._edit_window:
+            raise Exception("Client shouldn't have received messages")
+        self._edit_window.load_new_messages(messages)
+
     def song_menu(self, can_edit):
-        self.__edit_window = EditingWindow(can_edit, self.query)
-        self.__edit_window.closeEvent = self._return_here
+        self._edit_window = EditingWindow(can_edit, self.query)
+        self._edit_window.closeEvent = self._return_here
         self.hide()
 
     def _return_here(self, event):
@@ -163,7 +179,8 @@ class EditingWindow(QWidget):
             note_menu = QVBoxLayout()
 
             self.pitch = QComboBox()
-            self.pitch.insertItems(0, "do re mi fa sol la si".split(" "))
+            self.pitch.insertItems(0, "do do# re re# mi fa fa#"
+                                   "  sol sol# la la# si".split(" "))
             note_menu.addWidget(self.pitch)
             self.scale = QSpinBox()
             self.scale.setRange(0, 10)
@@ -227,11 +244,33 @@ class EditingWindow(QWidget):
         self.setLayout(hdiv)
         self.show()
 
-    def load_chat(self):
-        pass
+    def load_notes(self, notes):
+        self.note_list.clear()
+        self.note_list.insertItems(notes)
+        self.note_list.scrollToTop()
+
+    def load_people(self, people):
+        self.connected.clear()
+        self.connected.insertItems(people)
+        self.connected.scrollToBottom()
+
+    def load_new_messages(self, messages):
+        self.chat.insertItems(messages)
+        self.chat.scrollToBottom()
 
     def add_note(self):
-        pass
+        if not self.note_list.currentIndex():
+            index = 0
+        else:
+            index = self.note_list.currentIndex() + 1
+
+        pitch = self.pitch.currentText()
+        track = 1
+        scale = self.scale.value()
+        velocity = self.velocity.currentText()
+        duration = self.duration.currentText()
+
+        self.query("add_note", index, track, pitch, scale, velocity, duration)
 
     def delete_note(self):
         pass

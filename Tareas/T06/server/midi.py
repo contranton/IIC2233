@@ -69,9 +69,15 @@ class MIDITrack():
     def __repr__(self):
         return f"Track({len(self.events)} notes)"
 
-    def add_event(self, event):
-        self.events.append(event)
+    def add_event(self, event, index=-1):
+        self.events.append(event, index=index)
         self.as_bytes = self.to_bytes()
+
+    def add_note(self, index, pitch, scale, velocity, duration):
+        index *= 2  # There are twice as many events as there are notes
+        pitch = scale*12 + pitch
+        self.add_event(MIDINoteEvent(0, 9, 0, pitch, velocity))
+        self.add_event(MIDINoteEvent(duration, 8, 0, pitch, velocity))
 
     def to_bytes(self):
         b_hdr = self.hdr

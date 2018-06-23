@@ -18,37 +18,58 @@ class MidiDatabase():
     """
     Stores midi in tuple (midi: MIDIFile, available: bool)
     """
-    _midis = {name: [midi, None] for (midi, name, _) in get_midis()}
+    _midis = {name: {'file': midi,
+                     'editor': None,
+                     'spectators': []}
+              for (midi, name, _) in get_midis()}
 
     @property
     def midis(self):
-        return {name: midi for (name, (midi, _)) in self._midis.items()}
+        return {name: d['file'] for (name, d) in self._midis.items()}
 
     @property
     def availables(self):
-        return {name: midi for (name, (midi, editor)) in self._midis.items()
-                if not editor}
+        return {name: d['file'] for (name, d) in self._midis.items()
+                if not d['editor']}
 
     @property
     def edited(self):
-        return {name: midi for (name, (midi, editor)) in self._midis.items()
-                if editor}
+        return {name: d['file'] for (name, d) in self._midis.items()
+                if d['editor']}
 
     @property
     def names(self):
         return list(self.midis.keys())
 
+    def get_midi_from_editor(self, editor):
+        for name, d in self._midis.items():
+            if d['editor'] == editor:
+                return name
+
     def create_midi(self, title, editor):
         # False as the new midi is now being edited
-        self._midis[title] = [MIDIFile(), editor]
+        self._midis[title] = {'file': MIDIFile(),
+                              'editor': editor}
 
     def set_editor(self, title, editor):
-        self._midis[title][1] = editor
+        self._midis[title]['editor'] = editor
+
+    def get_editor(self, title):
+        return self._midis[title]['editor']
+
+    def get_spectators(self, title):
+        return self._midis[title]['spectators']
 
     def clear_editor(self, editor):
         for name in self._midis:
-            if self._midis[name][1] == editor:
-                self._midis[name][1] = None
+            if self._midis[name]['editor'] == editor:
+                self._midis[name]['editor'] = None
+
+    def add_spectator(self, client_socket):
+        pass
+
+    def get_notes_list(self, title):
+        pass
 
 
 class Server():
@@ -60,7 +81,8 @@ class Server():
         self.action_map = {"download": self.download_midi,
                            "create": self.create_midi,
                            "edit": self.edit_midi,
-                           "finished_editing": self.finish_edit}
+                           "finished_editing": self.finish_edit,
+                           "add_note": self.add_note}
         self.db = MidiDatabase()
         print(f"Available midis: {self.db.midis}")
 
@@ -115,9 +137,6 @@ class Server():
 
         self.all_clients.remove(client)
         print(f"Ended connection from {addr}")
-
-    def update_midis_status(self):
-        pass
 
     def send_midi_list(self, client_handler):
         msg = {"content_type": "midis_list",
@@ -178,6 +197,24 @@ class Server():
     def finish_edit(self, client_handler):
         self.db.clear_editor(client_handler.comm_id)
         self.push_to_all_clients(self.send_midi_list)
+
+    def add_note(self, client_handler, index, track, pitch, scale,
+                 velocity, duration):
+        title = self.db.get_midi_from_editor(client_handler.comm_id)
+        self.db.midis[title].tracks[track].add_note(index, pitch,
+                                                    scale, velocity, duration)
+        self.sync_notes(title)
+
+    def sync_notes(self, title):
+        notes = self.db.get_notes_list(title)
+        clients_viewing = [self.db.get_editor(title) +
+                           self.db.get_spectators(title)]
+        self.push_to_all_clients(self.send_notes, clients_viewing, notes)
+
+    def send_notes(self, client_handler, viewers, notes):
+        if client_handler.comm_id not in viewers:
+            return
+        client_handler.send_message("midi_notes", notes)
 
     def push_to_all_clients(self, foo, *data):
         for client_handler in self.all_clients:
