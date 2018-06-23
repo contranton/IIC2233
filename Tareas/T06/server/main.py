@@ -18,7 +18,7 @@ class MidiDatabase():
     """
     Stores midi in tuple (midi: MIDIFile, available: bool)
     """
-    _midis = {name: (midi, True) for (midi, name, _) in get_midis()}
+    _midis = {name: [midi, None] for (midi, name, _) in get_midis()}
 
     @property
     def midis(self):
@@ -26,21 +26,29 @@ class MidiDatabase():
 
     @property
     def availables(self):
-        return {name: midi for (name, (midi, available)) in self._midis.items()
-                if available}
+        return {name: midi for (name, (midi, editor)) in self._midis.items()
+                if not editor}
 
     @property
     def edited(self):
-        return {name: midi for (name, (midi, available)) in self._midis.items()
-                if not available}
+        return {name: midi for (name, (midi, editor)) in self._midis.items()
+                if editor}
 
     @property
     def names(self):
         return list(self.midis.keys())
 
-    def create_midi(self, title):
+    def create_midi(self, title, editor):
         # False as the new midi is now being edited
-        self._midis[title] = (MIDIFile(), False)
+        self._midis[title] = [MIDIFile(), editor]
+
+    def set_editor(self, title, editor):
+        self._midis[title][1] = editor
+
+    def clear_editor(self, editor):
+        for name in self._midis:
+            if self._midis[name][1] == editor:
+                self._midis[name][1] = None
 
 
 class Server():
@@ -51,7 +59,8 @@ class Server():
         """
         self.action_map = {"download": self.download_midi,
                            "create": self.create_midi,
-                           "edit": self.edit_midi}
+                           "edit": self.edit_midi,
+                           "finished_editing": self.finish_edit}
         self.db = MidiDatabase()
         print(f"Available midis: {self.db.midis}")
 
@@ -62,6 +71,7 @@ class Server():
         # console without having to shut down the entire console
         Thread(target=self.listen, daemon=True).start()
 
+        self.all_clients = []
         self.signed_in_users = []
 
     def __del__(self):
@@ -81,10 +91,14 @@ class Server():
     def handle_client(self, client, addr):
         print(f"New connection from {addr}")
         handler = MessageHandler(addr, client)
+        self.all_clients.append(handler)
         self.send_midi_list(handler)
         while True:
             # Get message
-            header, msg = handler.recv()
+            try:
+                header, msg = handler.recv()
+            except socket.exceptions.ConnectionError:
+                break
             print(f"Received '{msg}'")
             if not msg:  # Only in case of errors
                 continue
@@ -99,6 +113,7 @@ class Server():
             data = msg["data"]
             self.action_map[action](handler, *data)
 
+        self.all_clients.remove(client)
         print(f"Ended connection from {addr}")
 
     def update_midis_status(self):
@@ -120,29 +135,33 @@ class Server():
                                     descr=midi_name)
 
     def edit_midi(self, client_handler, username, title):
-        
+
         msg = {"content_type": "edit_response",
                "data": None}
-        print(title)
-        print(self.db.availables)
-        
+
+        can_edit = title in self.db.availables
+
         if username in self.signed_in_users:
             msg["data"] = {"status": False,
                            "reason": "Username taken"}
         else:
             msg["data"] = {"status": True,
-                           "can_edit": (title in self.db.availables)}
+                           "can_edit": can_edit}
 
+        if can_edit:
+            self.db.set_editor(title, client_handler.comm_id)
+
+        self.push_to_all_clients(self.send_midi_list)
         client_handler.send_message(msg, descr='edit_response')
-        
+
     def create_midi(self, client_handler, username, title):
         """
         """
-        self.db.create_midi(title)
+        self.db.create_midi(title, client_handler.comm_id)
 
         msg = {"content_type": "edit_response",
                "data": None}
-        
+
         if username in self.signed_in_users:
             msg["data"] = {"status": False,
                            "reason": "Username taken"}
@@ -153,8 +172,16 @@ class Server():
             msg["data"] = {"status": True,
                            "can_edit": True}
 
+        self.push_to_all_clients(self.send_midi_list)
         client_handler.send_message(msg, descr='create_response')
 
+    def finish_edit(self, client_handler):
+        self.db.clear_editor(client_handler.comm_id)
+        self.push_to_all_clients(self.send_midi_list)
+
+    def push_to_all_clients(self, foo, *data):
+        for client_handler in self.all_clients:
+            foo(client_handler, *data)
 
 
 if __name__ == '__main__':

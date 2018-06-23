@@ -112,7 +112,10 @@ class MainWindow(QWidget):
 
     def edit(self):
         username = self.user_text_input.text()
-        # TODO: GET THE SELECTED ITEM FROM BOTH LISTS
+        for field in {self.ready, self.edited}:
+            if not field.selectedItems():
+                continue
+            title = field.selectedItems()[0].data(0)
         self.query("edit", username, title)
 
     def download(self):
@@ -139,6 +142,7 @@ class MainWindow(QWidget):
 
     def _return_here(self, event):
         self.show()
+        self.query("finished_editing")
         super().closeEvent(event)
 
 
