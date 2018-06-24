@@ -328,7 +328,7 @@ def debug(type, value, tb):
 
             
 if __name__ == '__main__':
-
+    import sys
     sys.excepthook = debug
     
     # Run server
