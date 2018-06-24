@@ -20,9 +20,11 @@ class Client(QObject):
     # Signals for GUI updates
     signal_song_menu = pyqtSignal(bool)
     signal_midis_list = pyqtSignal(list, list)
-    signal_midi_notes = pyqtSignal(list)
+    signal_midi_notes = pyqtSignal(dict)
     signal_connected_people = pyqtSignal(list)
     signal_new_messages = pyqtSignal(list)
+    signal_username_response = pyqtSignal(dict)
+    signal_server_crash = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -38,6 +40,8 @@ class Client(QObject):
         self.signal_midi_notes.connect(self.win.load_notes)
         self.signal_connected_people.connect(self.win.update_connected)
         self.signal_new_messages.connect(self.win.new_messages)
+        self.signal_username_response.connect(self.win.username_response)
+        self.signal_server_crash.connect(self.win.server_crash_notice)
 
         Thread(target=self.listen_wrapper, daemon=True).start()
 
@@ -51,7 +55,7 @@ class Client(QObject):
     def listen_wrapper(self):
         try:
             self.listen()
-        except Exception:
+        except AttributeError:
             import traceback as tb; tb.print_exc()
             print(f"ERROR: CLIENT HAS RESTARTED DUE TO EXCEPTION")
             Thread(target=self.listen_wrapper, daemon=True).start()
@@ -62,7 +66,11 @@ class Client(QObject):
         """
         while True:
             # Blocks until next server update is sent
-            header, msg = self.socket_handler.recv()
+            try:
+                header, msg = self.socket_handler.recv()
+            except ConnectionResetError:
+                self.signal_server_crash.emit()
+                break
             # Call the appropiate method based on the data
             msg_type = header['type']
 
@@ -86,17 +94,20 @@ class Client(QObject):
             else:
                 self.signal_song_menu.emit(data["can_edit"])
         elif content_type == 'midi_notes':
+            print(data)
             self.signal_midi_notes.emit(data)
+        elif content_type == 'username_response':
+            self.signal_username_response.emit(data)
         elif content_type == 'connected_in_room':
-            pass
+            self.signal_connected_people.emit(data)
         elif content_type == 'chat_initial':
             pass
         elif content_type == 'chat_message':
-            pass
+            self.signal_new_messages.emit(data)
 
     def handle_midi_response(self, msg, header):
         title = header['descr']  # Song title
-        with open(title, 'wb') as f:
+        with open(title + ".mid", 'wb') as f:
             f.write(msg)
         
 if __name__ == '__main__':

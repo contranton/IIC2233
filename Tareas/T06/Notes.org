@@ -259,9 +259,9 @@ Where, as before, Message has fields =time=, =username=, =content=
 
 * TODOS:
 
-** Note diff sending
+** DONE Note diff sending
 
-** Updating GUI from server pushes
+** DONE Updating GUI from server pushes
 
 ** Chat and chat history storage for each song (apply serialization to store them!)
 

@@ -15,6 +15,39 @@ class MIDIReaderInvalidFile(Exception):
     pass
 
 
+class RawNote():
+
+    note_names = "do do# re mib mi fa fa# sol sol# la sib si".split(" ")
+
+    velocities = [8, 20, 31, 42, 53, 64, 80, 96, 112, 127]
+    velocity_names = "pppp ppp pp p mp mf f ff fff ffff".split(" ")
+
+    durations = [4, 2, 1, 1/2, 1/4, 1/8, 1/16]
+    duration_names = "4 2 1 1/2 1/4 1/8 1/16".split(" ")
+    
+    def __init__(self, track, pitch, velocity, duration):
+        """
+
+        """
+
+        self.track = track
+        self.pitch = pitch
+        self.velocity = velocity
+        self.duration = duration
+
+    def __str__(self):
+        if self.velocity == 0:
+            return f"Silence {self.duration}"
+        note = self.note_names[self.pitch % 12]
+        scale = self.pitch // 12
+
+        # Quantize the velocity
+        velocity = min(self.velocities,
+                       key=lambda x: abs(x - self.velocity))
+        velocity = self.velocity_names[self.velocities.index(velocity)]
+        return f"{note} {scale} {velocity} {self.duration}"
+
+
 class MIDIFile():
     def __init__(self, midi_format=1, time_div=160):
         """
@@ -48,6 +81,14 @@ class MIDIFile():
 
         return b_type + b_length + b_format + b_ntrks + b_time_div + b_tracks
 
+    def get_notes(self):
+        """
+        Returns list of note strings by track
+        """
+        return {i: [str(note) for note in track.notes]
+                for i, track in enumerate(self.tracks)}
+
+
     @property
     def length(self):
         return b'\x00\x00\x00\x06'
@@ -57,27 +98,51 @@ class MIDIFile():
 
 
 class MIDITrack():
-    def __init__(self):
+    def __init__(self, number, time_div):
         """
 
         """
+        self.time_div = time_div
+        self.number = number
         self.hdr = "MTrk".encode('ascii')
-        self.events = deque()
+        self.events = []
 
         self.as_bytes = self.to_bytes()
 
     def __repr__(self):
         return f"Track({len(self.events)} notes)"
 
+    @property
+    def notes(self):
+        # Assuming EVERY NoteON has a NoteOFF
+        notes = []
+        for noteon, noteoff in zip(self.events[::2], self.events[1::2]):
+            if noteon.time_delta != 0:
+                # Silence
+                notes.append(RawNote(self.number, 0, 0, noteon.time_delta))
+            duration = noteoff.time_delta - noteon.time_delta
+            notes.append(RawNote(self.number, noteon.pitch,
+                                 noteon.velocity, duration))
+        return notes
+
     def add_event(self, event, index=-1):
-        self.events.append(event, index=index)
+        self.events.insert(index, event)
         self.as_bytes = self.to_bytes()
 
     def add_note(self, index, pitch, scale, velocity, duration):
-        index *= 2  # There are twice as many events as there are notes
-        pitch = scale*12 + pitch
-        self.add_event(MIDINoteEvent(0, 9, 0, pitch, velocity))
-        self.add_event(MIDINoteEvent(duration, 8, 0, pitch, velocity))
+
+        scale = int(scale)
+        pitch = RawNote.note_names.index(pitch)
+        velocity = RawNote.velocities[RawNote.velocity_names.index(velocity)]
+        duration = RawNote.durations[RawNote.duration_names.index(duration)]
+        duration *= self.time_div
+        duration = int(duration)
+
+        index = int(index)*2  # There are twice as many events as notes
+        pitch = int(scale*12 + pitch)
+                
+        self.add_event(MIDINoteEvent(0, 9, 0, pitch, int(velocity)), index)
+        self.add_event(MIDINoteEvent(duration, 8, 0, pitch, int(velocity)), index+1)
 
     def to_bytes(self):
         b_hdr = self.hdr
@@ -168,6 +233,7 @@ def load_midi(file_path):
 
         midi_file = MIDIFile(formt, divsn)
 
+        track_number = 0
         while True:
             # Read tracks until EOF
 
@@ -180,7 +246,8 @@ def load_midi(file_path):
 
             tr_length = get_int(file.read(4))
 
-            midi_track = MIDITrack()
+            midi_track = MIDITrack(track_number, divsn)
+            track_number += 1
             midi_file.add_track(midi_track)
 
             # Delta is variable length. According to the convention, only
@@ -253,7 +320,7 @@ def get_midis():
         for name in files:
             path = root + "\\" + name
             midi = load_midi(path)
-            print(f"Loaded {name}")
+            name = name.split('.')[0]
             yield midi, name, path
 
 

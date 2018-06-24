@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QWidget,
                              QGridLayout, QLineEdit, QListWidget,
-                             QComboBox, QSpinBox)
+                             QComboBox, QSpinBox, QMessageBox,
+                             QTextEdit)
 from PyQt5.QtCore import Qt
 
 
@@ -17,6 +18,9 @@ class MainWindow(QWidget):
         self.song_titles = []
         self._edit_window = None
 
+        # Has username been accepted by server
+        self.validated = False
+        
         self.init_gui()
 
     def init_gui(self):
@@ -36,6 +40,9 @@ class MainWindow(QWidget):
         self.user_text_input.setPlaceholderText("Enter your username here...")
         self.user_text_input.setMaximumHeight(30)
         user_input.addWidget(self.user_text_input)
+        self.validate_btn = QPushButton("Validate Username")
+        self.validate_btn.pressed.connect(self.validate_username)
+        user_input.addWidget(self.validate_btn)
         vdiv.addLayout(user_input)
 
         # 3: Song lists
@@ -86,7 +93,38 @@ class MainWindow(QWidget):
         self.setLayout(vdiv)
         self.show()
 
+    def validate_username(self):
+        self.query("validate", self.username)
+
+    def username_response(self, resp_dict):
+        if not resp_dict['valid']:
+            reason = resp_dict['reason']
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("<b>Invalid username</b>")
+            msg.setInformativeText(reason)
+            msg.exec_()
+            return
+        else:
+            msg = QMessageBox()
+            msg.setWindowTitle("Success")
+            msg.setText("<b>Success!</b>")
+            msg.setInformativeText("You can now edit, download, and create new songs")
+            msg.exec_()
+        self.user_text_input.setEnabled(False)
+        self.validate_btn.setEnabled(False)
+        self.validated = True
+
+        self.enable_song_create()
+        
+    @property
+    def username(self):
+        return self.user_text_input.text()
+        
     def enable_song_create(self):
+        if not self.validated:
+            return
         title = self.new_song_input.text()
         if len(title) < 6 or title in self.song_titles:
            self.new_song_button.setEnabled(False)
@@ -97,6 +135,8 @@ class MainWindow(QWidget):
         """
         Updates buttons when focus is on songs being edited
         """
+        if not self.validated:
+            return
         self.ready.clearSelection()
         self.edit_button.setEnabled(True)
         self.download_button.setEnabled(True)
@@ -106,6 +146,8 @@ class MainWindow(QWidget):
         """
         Updates buttons when focus is on songs not being edited
         """
+        if not self.validated:
+            return
         self.edited.clearSelection()
         self.edit_button.setText("Edit")
         self.edit_button.setEnabled(True)
@@ -113,10 +155,14 @@ class MainWindow(QWidget):
 
     def edit(self):
         username = self.user_text_input.text()
+        title = None
         for field in {self.ready, self.edited}:
             if not field.selectedItems():
                 continue
             title = field.selectedItems()[0].data(0)
+        if not title:
+            raise Exception("What the hell you shouldn't have been"
+                            "able to press the button")
         self.query("edit", username, title)
 
     def download(self):
@@ -152,19 +198,28 @@ class MainWindow(QWidget):
         self._edit_window.load_new_messages(messages)
 
     def song_menu(self, can_edit):
-        self._edit_window = EditingWindow(can_edit, self.query)
+        self._edit_window = EditingWindow(can_edit, self.username, self.query)
         self._edit_window.closeEvent = self._return_here
         self.hide()
 
     def _return_here(self, event):
         self.show()
-        self.query("finished_editing")
+        self.query("finished_editing", self.username)
         super().closeEvent(event)
+
+    def server_crash_notice(self):
+        import sys
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Critical)
+        msg.setText("<b>The server has crashed and the program must close</b>")
+        msg.setInformativeText("All your changes are (hopefully) fine")
+        sys.exit(msg.exec_())
 
 
 class EditingWindow(QWidget):
-    def __init__(self, is_editor, query):
+    def __init__(self, is_editor, username, query):
         self.query = query
+        self.username = username
 
         self.init_gui(is_editor)
 
@@ -179,8 +234,8 @@ class EditingWindow(QWidget):
             note_menu = QVBoxLayout()
 
             self.pitch = QComboBox()
-            self.pitch.insertItems(0, "do do# re re# mi fa fa#"
-                                   "  sol sol# la la# si".split(" "))
+            self.pitch.insertItems(0, "do do# re mib mi fa fa#"
+                                   " sol sol# la sib si".split(" "))
             note_menu.addWidget(self.pitch)
             self.scale = QSpinBox()
             self.scale.setRange(0, 10)
@@ -223,7 +278,8 @@ class EditingWindow(QWidget):
         # 3: Chat & user list
         vdiv_chat = QVBoxLayout()
 
-        self.chat = QListWidget()
+        self.chat = QTextEdit()
+        self.chat.setReadOnly(True)
         vdiv_chat.addWidget(self.chat)
 
         type_div = QHBoxLayout()
@@ -245,41 +301,51 @@ class EditingWindow(QWidget):
         self.show()
 
     def load_notes(self, notes):
+        # TODO: SEpARATE BY TRACK
+        notes = notes['0']
         self.note_list.clear()
-        self.note_list.insertItems(notes)
-        self.note_list.scrollToTop()
+        self.note_list.insertItems(0, notes)
+        self.note_list.scrollToBottom()
 
     def load_people(self, people):
         self.connected.clear()
-        self.connected.insertItems(people)
+        self.connected.insertItems(0, people)
         self.connected.scrollToBottom()
 
     def load_new_messages(self, messages):
-        self.chat.insertItems(messages)
-        self.chat.scrollToBottom()
+        text = "\n".join(messages)
+        self.chat.setText(text)
+
+        # Scroll to bottom
+        # https://stackoverflow.com/questions/4939151/how-to-program-scrollbar-to-jump-to-bottom-top-in-case-of-change-in-qplaintexted
+        self.chat.verticalScrollBar().setValue(
+            self.chat.verticalScrollBar().maximum())
 
     def add_note(self):
-        if not self.note_list.currentIndex():
+        if not self.note_list.currentIndex().row():
             index = 0
         else:
-            index = self.note_list.currentIndex() + 1
+            index = self.note_list.currentIndex().row() + 1
 
         pitch = self.pitch.currentText()
-        track = 1
+        track = 0
         scale = self.scale.value()
         velocity = self.velocity.currentText()
         duration = self.duration.currentText()
 
-        self.query("add_note", index, track, pitch, scale, velocity, duration)
+        self.query("add_note", self.username, index, track, pitch,
+                   scale, velocity, duration)
 
     def delete_note(self):
         pass
 
     def finished(self):
-        pass
+        self.closeEvent.emit()
 
     def send_message(self):
-        pass
+        msg = self.chat_field.text()
+        self.chat_field.clear()
+        self.query("chat_send", self.username, msg)
 
 
 if __name__ == '__main__':
