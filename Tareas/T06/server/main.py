@@ -1,16 +1,13 @@
 # Server
-import sys
-sys.path.append("..")
-
 import socket
 import time
 
 from threading import Thread
 
-from libT06.netcode import MessageHandler
-from server.midi import get_midis, MIDIFile, MIDITrack
+from netcode import MessageHandler
+from midi import get_midis, MIDIFile, MIDITrack
 
-HOST = socket.gethostbyname('0.0.0.0')
+HOST = socket.gethostbyname("localhost")
 PORT = 3338
 print(HOST, PORT)
 
@@ -98,6 +95,7 @@ class Server():
                            "edit": self.edit_midi,
                            "finished_editing": self.finish_edit,
                            "add_note": self.add_note,
+                           "delete_note": self.delete_note,
                            "validate": self.validate_username,
                            "chat_send": self.new_message}
         self.db = MidiDatabase()
@@ -140,6 +138,7 @@ class Server():
             try:
                 header, msg = handler.recv()
             except ConnectionError:
+                print("Connection has vanished")
                 break
             print(f"Received '{msg}'")
             if not msg:  # Only in case of errors
@@ -154,7 +153,7 @@ class Server():
                 break
             data = msg["data"]
             self.action_map[action](handler, *data)
-
+        
         self.all_clients.remove(handler)
         self.sign_out(handler.comm_id)
         print(f"Ended connection from {addr}")
@@ -184,8 +183,9 @@ class Server():
 
     def sign_out(self, comm_id):
         for user, vals in self.signed_in_users.items():
-            if comm_id in vals['comm_id']:
-                self.signed_in_users.remove(user)
+            if comm_id == vals['comm_id']:
+                self.signed_in_users.pop(user)
+                break
 
     def send_midi_list(self, client_handler):
         msg = {"content_type": "midis_list",
@@ -252,7 +252,7 @@ class Server():
         client_handler.send_message(msg, descr='create_response')
 
     def new_message(self, client_handler, username, message):
-        time_ = time.strftime("%Y/%M/%d - %H:%M:%S", time.gmtime())
+        time_ = time.strftime("%y/%m/%d - %H:%M:%S", time.localtime())
         msg = f"{time_} - {username}: {message}"
         title = self.db.get_midi_from_viewer(username)
         self.chat[title].append(msg)
@@ -263,11 +263,18 @@ class Server():
         self.push_to_all_clients(self.send_midi_list)
 
     def add_note(self, client_handler, username, index, track, pitch,
-                 scale, velocity, duration):
+                 scale, velocity, duration, dotted):
         title = self.db.get_midi_from_viewer(username)
         midi = self.db.midis[title]
-        midi.tracks[track].add_note(index, pitch,
-                                    scale, velocity, duration)
+        midi.tracks[track].add_note(index, pitch, scale, velocity,
+                                    duration, dotted)
+        self.sync_notes(title)
+
+    def delete_note(self, client_handler, username, index, track):
+        title = self.db.get_midi_from_viewer(username)
+        midi = self.db.midis[title]
+        midi.tracks[track].delete_note(index)
+
         self.sync_notes(title)
 
     def sync_notes(self, title):

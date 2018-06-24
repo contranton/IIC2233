@@ -1,14 +1,11 @@
 # Client
-import sys
-sys.path.append("..")
-
 import socket
 
-from threading import Thread, Event
+from threading import Thread
 from PyQt5.QtCore import pyqtSignal, QObject
 
-from libT06.netcode import MessageHandler
-from client.gui import MainWindow
+from netcode import MessageHandler
+from gui import MainWindow
 
 HOST = "localhost"
 PORT = 3338

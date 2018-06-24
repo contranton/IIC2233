@@ -19,21 +19,30 @@ class RawNote():
 
     note_names = "do do# re mib mi fa fa# sol sol# la sib si".split(" ")
 
-    velocities = [8, 20, 31, 42, 53, 64, 80, 96, 112, 127]
-    velocity_names = "pppp ppp pp p mp mf f ff fff ffff".split(" ")
+    velocities = [0, 8, 20, 31, 42, 53, 64, 80, 96, 112, 127]
+    velocity_names = "rest pppp ppp pp p mp mf f ff fff ffff".split(" ")
 
-    durations = [4, 2, 1, 1/2, 1/4, 1/8, 1/16]
-    duration_names = "4 2 1 1/2 1/4 1/8 1/16".split(" ")
-    
-    def __init__(self, track, pitch, velocity, duration):
+    durations = [4, 2, 1, 1/2, 1/4, 1/8, 1/16, 1/32, 1/64]
+    duration_names = ("whole note, half note, quarter note, eighth"
+                      "note, sixteenth note, thirty-second note, sixty-fourth"
+                      "note").split(",")
+
+    def __init__(self, track, event_id, pitch, velocity, duration):
         """
 
         """
+
+        self.eid = event_id
 
         self.track = track
         self.pitch = pitch
         self.velocity = velocity
-        self.duration = duration
+
+        self.duration = duration / 160
+        self.dotted = False
+        if self.duration not in self.durations:
+            self.duration *= 2/3
+            self.dotted = True
 
     def __str__(self):
         if self.velocity == 0:
@@ -41,11 +50,17 @@ class RawNote():
         note = self.note_names[self.pitch % 12]
         scale = self.pitch // 12
 
+        dotted = ""
+
         # Quantize the velocity
         velocity = min(self.velocities,
                        key=lambda x: abs(x - self.velocity))
         velocity = self.velocity_names[self.velocities.index(velocity)]
-        return f"{note} {scale} {velocity} {self.duration}"
+
+        dotted = "dotted" if self.dotted else ""
+        duration = self.duration_names[self.durations.index(self.duration)]
+
+        return f"{note:3} {scale} {velocity:6} {dotted} {duration}"
 
 
 class MIDIFile():
@@ -116,33 +131,76 @@ class MIDITrack():
     def notes(self):
         # Assuming EVERY NoteON has a NoteOFF
         notes = []
-        for noteon, noteoff in zip(self.events[::2], self.events[1::2]):
-            if noteon.time_delta != 0:
-                # Silence
-                notes.append(RawNote(self.number, 0, 0, noteon.time_delta))
-            duration = noteoff.time_delta - noteon.time_delta
-            notes.append(RawNote(self.number, noteon.pitch,
-                                 noteon.velocity, duration))
+        #import pdb; pdb.set_trace()
+        events = [i for i in self.events]
+        eid = 0
+        while events:
+            e1 = events.pop(0)
+            eid += 1
+            if _event_names[e1.event_type] == "NoteOFF":
+                # Silence AT BEGINNING
+                notes.append(RawNote(self.number, eid, 0, 0, e1.time_delta))
+                continue
+            e2 = events.pop(0)
+            eid += 1
+            if _event_names[e2.event_type] == "NoteON":
+                raise Exception("There can't be two consecutive NoteON events")
+
+            duration = e2.time_delta - e1.time_delta
+            notes.append(RawNote(self.number, eid, e1.pitch,
+                                 e1.velocity, duration))
+
         return notes
 
     def add_event(self, event, index=-1):
+        if index < 0:
+            index = len(self.events)
         self.events.insert(index, event)
+
+    def finish_adding(self):
         self.as_bytes = self.to_bytes()
 
-    def add_note(self, index, pitch, scale, velocity, duration):
+    def add_note(self, index, pitch, scale, velocity, duration, dotted):
+        """
+        All values are indices of the lists in RawNote
+        """
 
         scale = int(scale)
-        pitch = RawNote.note_names.index(pitch)
-        velocity = RawNote.velocities[RawNote.velocity_names.index(velocity)]
-        duration = RawNote.durations[RawNote.duration_names.index(duration)]
-        duration *= self.time_div
+        pitch = int(pitch)
+        velocity = RawNote.velocities[velocity]
+        duration = RawNote.durations[duration]
+        duration *= self.time_div * (3/2 if dotted else 1)
         duration = int(duration)
 
-        index = int(index)*2  # There are twice as many events as notes
+        index = int(index)
         pitch = int(scale*12 + pitch)
-                
-        self.add_event(MIDINoteEvent(0, 9, 0, pitch, int(velocity)), index)
-        self.add_event(MIDINoteEvent(duration, 8, 0, pitch, int(velocity)), index+1)
+
+        index = self.get_event_index_from_note_index(index)
+
+        self.add_event(MIDINoteEvent(0, 9, 0, pitch, int(velocity)),
+                       index)
+        self.add_event(MIDINoteEvent(duration, 8, 0, pitch, int(velocity)),
+                       index+1)
+
+        self.finish_adding()
+
+    def delete_note(self, index):
+        if index == 0 and _event_names[self.events[0].event_type] == "NoteOFF":
+            self.events.pop(0)
+
+        index = max(index, 0)
+        
+        index = self.get_event_index_from_note_index(index)
+
+        print(str(index) + "\n\n")
+
+        self.events.pop(index)
+        self.events.pop(index - 1)
+
+        self.finish_adding()
+
+    def get_event_index_from_note_index(self, index):
+        return self.notes[index].eid
 
     def to_bytes(self):
         b_hdr = self.hdr
@@ -257,6 +315,8 @@ def load_midi(file_path):
 
             # Decode the MIDI events
             while True:
+                #import pdb; pdb.set_trace()
+
 
                 # We have to do bit manipulation, which bytearray isn't good at
                 time = []
@@ -289,7 +349,7 @@ def load_midi(file_path):
                             "Only meta code FF 2F suuported")
                     continue
 
-                event_type = (type_and_channel & 0xF0) >> 4
+                event_type = type_and_channel >> 4
                 channel = type_and_channel & 0x0F  # Should always be 0
                 if channel != 0:
                     raise MIDIReaderFormatNotImplemented(
@@ -301,6 +361,7 @@ def load_midi(file_path):
                                      velocity)
 
                 midi_track.add_event(note)
+            midi_track.finish_adding()
 
     return midi_file
 

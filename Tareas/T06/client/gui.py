@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QWidget,
                              QGridLayout, QLineEdit, QListWidget,
                              QComboBox, QSpinBox, QMessageBox,
-                             QTextEdit)
+                             QTextEdit, QCheckBox)
 from PyQt5.QtCore import Qt
 
 
@@ -20,7 +20,7 @@ class MainWindow(QWidget):
 
         # Has username been accepted by server
         self.validated = False
-        
+
         self.init_gui()
 
     def init_gui(self):
@@ -42,6 +42,7 @@ class MainWindow(QWidget):
         user_input.addWidget(self.user_text_input)
         self.validate_btn = QPushButton("Validate Username")
         self.validate_btn.pressed.connect(self.validate_username)
+        self.user_text_input.returnPressed.connect(self.validate_btn.pressed)
         user_input.addWidget(self.validate_btn)
         vdiv.addLayout(user_input)
 
@@ -86,6 +87,7 @@ class MainWindow(QWidget):
         self.new_song_button = QPushButton("Create song")
         self.new_song_button.setEnabled(False)
         self.new_song_button.pressed.connect(self.create_new_song)
+        self.new_song_input.returnPressed.connect(self.new_song_button.pressed)
         new_song.addWidget(self.new_song_button)
         vdiv.addLayout(new_song)
 
@@ -117,11 +119,11 @@ class MainWindow(QWidget):
         self.validated = True
 
         self.enable_song_create()
-        
+
     @property
     def username(self):
         return self.user_text_input.text()
-        
+
     def enable_song_create(self):
         if not self.validated:
             return
@@ -233,25 +235,55 @@ class EditingWindow(QWidget):
         if is_editor:
             note_menu = QVBoxLayout()
 
+            # a) Pitch
+            pitch_layout = QHBoxLayout()
+            pitch_layout.addWidget(QLabel("Note"))
             self.pitch = QComboBox()
-            self.pitch.insertItems(0, "do do# re mib mi fa fa#"
-                                   " sol sol# la sib si".split(" "))
-            note_menu.addWidget(self.pitch)
+            notes = ("do - C - 1,do# - C# - 2,re - D - 3,mib - Eb - 4,"
+                     "mi - E - 5,fa - F - 6,fa# - F# - 7,sol - G - 8,"
+                     "sol# - G# - 9,la - A - 10,sib  - Bb - 11,"
+                     "si - B - 12".split(","))
+            self.pitch.insertItems(0, notes)
+            pitch_layout.addWidget(self.pitch)
+            note_menu.addLayout(pitch_layout)
+
+            # b) Scale
+            scale_layout = QHBoxLayout()
             self.scale = QSpinBox()
+            self.scale.setValue(4)
             self.scale.setRange(0, 10)
-            note_menu.addWidget(self.scale)
+            scale_layout.addWidget(QLabel("Scale"))
+            scale_layout.addWidget(self.scale)
+            note_menu.addLayout(scale_layout)
+
+            # c) Velocity
+            vel_layout = QHBoxLayout()
             self.velocity = QComboBox()
-            self.velocity.insertItems(0, "pppp ppp pp p mp "
-                                      "mf f ff fff ffff".split(" "))
+            intensities = ("Rest - 0,pppp - 1,ppp - 2,pp - 3,p - 4,mp - 5,"
+                           "mf - 6,f - 7,ff - 8,fff - 9,ffff - 10").split(",")
+            self.velocity.insertItems(0, intensities)
             self.velocity.setCurrentIndex(5)
-            note_menu.addWidget(self.velocity)
+            vel_layout.addWidget(QLabel("Note\nVelocity"))
+            vel_layout.addWidget(self.velocity)
+            note_menu.addLayout(vel_layout)
+
+            # d) Duration
+            dur_layout = QHBoxLayout()
             self.duration = QComboBox()
-            self.duration.insertItems(0, "4 2 1 1/2 1/4 1/8 1/16".split(" "))
+            durations = "4 2 1 1/2 1/4 1/8 1/16".split(" ")
+            self.duration.insertItems(0, durations)
             self.duration.setCurrentIndex(4)
-            note_menu.addWidget(self.duration)
+            dur_layout.addWidget(QLabel("Note\nLength"))
+            dur_layout.addWidget(self.duration)
+            note_menu.addLayout(dur_layout)
+
+            # e) Is dotted
+            self.is_dotted = QCheckBox("Dotted?")
+            note_menu.addWidget(self.is_dotted)
 
             note_menu.addStretch()
 
+            # f) Buttons
             hdiv_buttons = QHBoxLayout()
             btn_add = QPushButton("Add Note")
             btn_add.pressed.connect(self.add_note)
@@ -287,6 +319,7 @@ class EditingWindow(QWidget):
         self.chat_field.setPlaceholderText("Type your message here...")
         chat_send = QPushButton("Send")
         chat_send.pressed.connect(self.send_message)
+        self.chat_field.returnPressed.connect(chat_send.pressed)
         type_div.addWidget(self.chat_field)
         type_div.addWidget(chat_send)
         vdiv_chat.addLayout(type_div)
@@ -305,7 +338,7 @@ class EditingWindow(QWidget):
         notes = notes['0']
         self.note_list.clear()
         self.note_list.insertItems(0, notes)
-        self.note_list.scrollToBottom()
+        #self.note_list.scrollToBottom()
 
     def load_people(self, people):
         self.connected.clear()
@@ -322,25 +355,30 @@ class EditingWindow(QWidget):
             self.chat.verticalScrollBar().maximum())
 
     def add_note(self):
-        if not self.note_list.currentIndex().row():
+        if not self.note_list.currentRow():
             index = 0
         else:
-            index = self.note_list.currentIndex().row() + 1
-
-        pitch = self.pitch.currentText()
+            index = self.note_list.currentRow()
+            
+        pitch = self.pitch.currentIndex()
         track = 0
         scale = self.scale.value()
-        velocity = self.velocity.currentText()
-        duration = self.duration.currentText()
+        velocity = self.velocity.currentIndex() - 1
+        duration = self.duration.currentIndex() + 1
+        dotted = self.is_dotted.isChecked()
 
         self.query("add_note", self.username, index, track, pitch,
-                   scale, velocity, duration)
+                   scale, velocity, duration, dotted)
 
     def delete_note(self):
-        pass
+        index = self.note_list.currentRow() - 1
+        if not index:
+            index = 0
+        track = 0
+        self.query("delete_note", self.username, index, track)
 
     def finished(self):
-        self.closeEvent.emit()
+        self.destroyed.emit()
 
     def send_message(self):
         msg = self.chat_field.text()
