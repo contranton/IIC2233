@@ -54,7 +54,7 @@ class Client(QObject):
             self.listen()
         except AttributeError:
             import traceback as tb; tb.print_exc()
-            print(f"ERROR: CLIENT HAS RESTARTED DUE TO EXCEPTION")
+            #print(f"ERROR: CLIENT HAS RESTARTED DUE TO EXCEPTION")
             Thread(target=self.listen_wrapper, daemon=True).start()
         
     def listen(self):
@@ -87,11 +87,12 @@ class Client(QObject):
             self.signal_midis_list.emit(edited, available)
         elif content_type == 'edit_response':
             if not data["status"]:
-                print(data["reason"])
+                #print(data["reason"])
+                pass
             else:
                 self.signal_song_menu.emit(data["can_edit"])
         elif content_type == 'midi_notes':
-            print(data)
+            #print(data)
             self.signal_midi_notes.emit(data)
         elif content_type == 'username_response':
             self.signal_username_response.emit(data)

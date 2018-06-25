@@ -45,8 +45,6 @@ class RawNote():
             self.dotted = True
 
     def __str__(self):
-        if self.velocity == 0:
-            return f"Silence {self.duration}"
         note = self.note_names[self.pitch % 12]
         scale = self.pitch // 12
 
@@ -60,7 +58,10 @@ class RawNote():
         dotted = "dotted" if self.dotted else ""
         duration = self.duration_names[self.durations.index(self.duration)]
 
-        return f"{note:3} {scale} {velocity:6} {dotted} {duration}"
+        if self.velocity == 0:
+            return f"Silence {duration}"
+
+        return f"{note:4} {scale} {velocity:6} {dotted} {duration}"
 
 
 class MIDIFile():
@@ -189,17 +190,26 @@ class MIDITrack():
             self.events.pop(0)
 
         index = max(index, 0)
-        
+
         index = self.get_event_index_from_note_index(index)
 
-        print(str(index) + "\n\n")
+        remove_second = True
+
+        if _event_names[self.events[index].event_type] == "NoteOFF":
+            remove_second = False
+        elif self.events[index].time_delta != 0:
+            remove_second = False
 
         self.events.pop(index)
-        self.events.pop(index - 1)
+
+        if remove_second:
+            self.events.pop(index - 1)
 
         self.finish_adding()
 
     def get_event_index_from_note_index(self, index):
+        if index < 0:
+            return 0
         return self.notes[index].eid
 
     def to_bytes(self):

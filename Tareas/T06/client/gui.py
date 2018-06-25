@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QWidget,
                              QGridLayout, QLineEdit, QListWidget,
                              QComboBox, QSpinBox, QMessageBox,
-                             QTextEdit, QCheckBox)
+                             QTextEdit, QCheckBox, QTabWidget)
 from PyQt5.QtCore import Qt
 
 
@@ -168,7 +168,10 @@ class MainWindow(QWidget):
         self.query("edit", username, title)
 
     def download(self):
-        title = self.ready.selectedItems()[0].data(0)
+        if self.ready.selectedItems():
+            title = self.ready.selectedItems()[0].data(0)
+        elif self.edited.selectedItems():
+            title = self.edited.selectedItems()[0].data(0)
         self.query("download", title)
 
     def create_new_song(self):
@@ -270,7 +273,7 @@ class EditingWindow(QWidget):
             # d) Duration
             dur_layout = QHBoxLayout()
             self.duration = QComboBox()
-            durations = "4 2 1 1/2 1/4 1/8 1/16".split(" ")
+            durations = "4 2 1 1/2 1/4 1/8 1/16 1/32 1/64".split(" ")
             self.duration.insertItems(0, durations)
             self.duration.setCurrentIndex(4)
             dur_layout.addWidget(QLabel("Note\nLength"))
@@ -283,7 +286,7 @@ class EditingWindow(QWidget):
 
             note_menu.addStretch()
 
-            # f) Buttons
+            # f) Add note Buttons
             hdiv_buttons = QHBoxLayout()
             btn_add = QPushButton("Add Note")
             btn_add.pressed.connect(self.add_note)
@@ -296,16 +299,29 @@ class EditingWindow(QWidget):
 
             note_menu.addStretch()
 
+            # g) Add track button
+
+            track_btn = QPushButton("Add Track")
+            track_btn.pressed.connect(self.track_add)
+            note_menu.addWidget(track_btn)
+
+            note_menu.addStretch()
+
+            # h) Finish button
+
             done_btn = QPushButton("Finish")
             done_btn.pressed.connect(self.finished)
             note_menu.addWidget(done_btn)
 
             hdiv.addLayout(note_menu)
 
-        # 2: Note display list
-        self.note_list = QListWidget()
+        # 2: Note display lists
+        self.note_tabs = QTabWidget()
+        self.note_tabs.setTabPosition(QTabWidget.West)
+        self.note_lists = [QListWidget()]
+        self.note_tabs.addTab(self.note_lists[0], "Track 1")
 
-        hdiv.addWidget(self.note_list)
+        hdiv.addWidget(self.note_tabs)
 
         # 3: Chat & user list
         vdiv_chat = QVBoxLayout()
@@ -334,11 +350,17 @@ class EditingWindow(QWidget):
         self.show()
 
     def load_notes(self, notes):
-        # TODO: SEpARATE BY TRACK
-        notes = notes['0']
-        self.note_list.clear()
-        self.note_list.insertItems(0, notes)
-        #self.note_list.scrollToBottom()
+        current_tab = self.note_tabs.currentIndex()
+        self.note_lists = []
+        self.note_tabs.clear()
+        for track, notes in enumerate(notes.values()):
+            note_list = QListWidget()
+            self.note_lists.append(note_list)
+            self.note_tabs.addTab(note_list, f"Track {track+1}")
+
+            self.note_lists[track].clear()
+            self.note_lists[track].insertItems(0, notes)
+        self.note_tabs.setCurrentIndex(current_tab)
 
     def load_people(self, people):
         self.connected.clear()
@@ -355,27 +377,32 @@ class EditingWindow(QWidget):
             self.chat.verticalScrollBar().maximum())
 
     def add_note(self):
-        if not self.note_list.currentRow():
+        track = self.note_tabs.currentIndex()
+
+        if not self.note_lists[track].currentRow():
             index = 0
         else:
-            index = self.note_list.currentRow()
-            
+            index = self.note_lists[track].currentRow()
+
         pitch = self.pitch.currentIndex()
-        track = 0
         scale = self.scale.value()
-        velocity = self.velocity.currentIndex() - 1
-        duration = self.duration.currentIndex() + 1
+        velocity = self.velocity.currentIndex()
+        duration = self.duration.currentIndex() - 2
         dotted = self.is_dotted.isChecked()
 
         self.query("add_note", self.username, index, track, pitch,
                    scale, velocity, duration, dotted)
 
     def delete_note(self):
-        index = self.note_list.currentRow() - 1
+        track = self.note_tabs.currentIndex()
+        index = self.note_lists[track].currentRow() - 1
         if not index:
             index = 0
         track = 0
         self.query("delete_note", self.username, index, track)
+
+    def track_add(self):
+        self.query("add_track", self.username)
 
     def finished(self):
         self.destroyed.emit()

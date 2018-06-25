@@ -1,22 +1,12 @@
 import json
+import time
+
 from math import ceil, log2
 from threading import Lock
 
 import sys
 
 ENCODING = "ascii"
-
-print_lock = Lock()
-def s_print(*args, **kwargs):
-    """
-    Thread-safe print
-
-    https://stackoverflow.com/questions/40356200/python-printing-in-multiple-threads
-    """
-    with print_lock:
-        print(*args, **kwargs)
-        sys.stdout.flush()
-
 
 def error_json(msg):
     return bytes(json.dumps({"error": msg}), encoding=ENCODING)
@@ -27,12 +17,22 @@ class MessageHandler():
     min_header_keys = {"size", "type", "description"}
     accepted_types = {'json', 'midi'}
 
-    def __init__(self, comm_id, socket):
+    def __init__(self, id_, socket):
         """
 
         """
-        self.comm_id = comm_id
+        self.id_ = id_
         self.socket = socket
+
+    @staticmethod
+    def t_print(time_, client, action, details):
+        print(f"{time_:^20} | {client:^10} | {action:^20} |   {details}")
+        
+    def log(self, action, details="-"):
+        self.t_print(time.strftime('%y/%m/%d - %H:%M:%S', time.localtime()),
+                     self.id_,
+                     action,
+                     details)
 
     def recv(self):
         """
@@ -48,7 +48,6 @@ class MessageHandler():
 
         # RECV header and ensure validity
         header = self.socket.recv(hdr_size)
-        print(f"Received header '{header}'")
         try:
             header = json.loads(header.decode(ENCODING))
         except json.JSONDecodeError:
@@ -67,8 +66,13 @@ class MessageHandler():
         # Decode message
         if msg_type == 'json':
             msg = json.loads(msg.decode(ENCODING))
+            vals = (i for i in msg.values())  # There should always be two
+            v1 = next(vals)
+            v2 = next(vals) if v1 not in {"midi_notes", "midi_list",
+                                          "chat_message"} else ""
+            self.log(v1, v2)
         elif msg_type == 'midi':
-            pass
+            self.log('midi_download', f"{len(msg)} bytes")
         else:
             raise Exception(f"Server can't handle message type '{msg_type}'")
 
@@ -89,11 +93,12 @@ class MessageHandler():
         header = {"size": len(msg),
                   "type": msg_type,
                   "descr": descr}
-        print(f"Sending header {header}")
         header = json.dumps(header).encode(ENCODING)
         if len(header) > self.max_size:
             raise Exception("Header too large")
 
+        self.log(f'send_{msg_type}', descr)
+        
         # SEND header size
         self.socket.send(int.to_bytes(len(header), ceil(log2(self.max_size)),
                                       'big'))

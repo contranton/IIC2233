@@ -47,7 +47,6 @@ class MidiDatabase():
                 return name
 
     def create_midi(self, title, editor):
-        # False as the new midi is now being edited
         midi = MIDIFile()
         midi.add_track(MIDITrack(0, midi.time_div))
         self._midis[title] = {'file': midi,
@@ -80,7 +79,7 @@ class MidiDatabase():
 
     def save_files(self):
         for name, midi in self.midis.items():
-            with open(f"midis/name.mid", 'wb') as file:
+            with open(f"midis/{name}.mid", 'wb') as file:
                 file.write(midi.to_bytes())
 
 
@@ -90,6 +89,8 @@ class Server():
         """
 
         """
+        self.n = 0
+
         self.action_map = {"download": self.download_midi,
                            "create": self.create_midi,
                            "edit": self.edit_midi,
@@ -97,10 +98,10 @@ class Server():
                            "add_note": self.add_note,
                            "delete_note": self.delete_note,
                            "validate": self.validate_username,
-                           "chat_send": self.new_message}
+                           "chat_send": self.new_message,
+                           "add_track": self.add_track}
         self.db = MidiDatabase()
         self.chat = {title: [] for title in self.db.midis.keys()}
-        print(f"Available midis: {self.db.midis}")
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind((HOST, PORT))
@@ -111,14 +112,16 @@ class Server():
 
         self.all_clients = []
 
-        # Comm-id: {'username': str, 'midi': str, 'socket': socket}
+        # Username: {'comm_id': str, 'midi': str, 'socket': socket}
         self.signed_in_users = {}
 
     def __del__(self):
+        self.db.save_files()
         self.sock.close()
 
     def listen(self):
         self.sock.listen()
+        MessageHandler.t_print("Time", "Client", "Action", "Details")
         while True:
             # Block until connection is received
             client, addr = self.sock.accept()
@@ -129,8 +132,9 @@ class Server():
                    daemon=True).start()
 
     def handle_client(self, client, addr):
-        print(f"New connection from {addr}")
-        handler = MessageHandler(addr, client)
+        self.n += 1
+        handler = MessageHandler(self.n, client)
+        handler.log("connected", addr)
         self.all_clients.append(handler)
         self.send_midi_list(handler)
         while True:
@@ -138,9 +142,7 @@ class Server():
             try:
                 header, msg = handler.recv()
             except ConnectionError:
-                print("Connection has vanished")
                 break
-            print(f"Received '{msg}'")
             if not msg:  # Only in case of errors
                 continue
 
@@ -153,10 +155,17 @@ class Server():
                 break
             data = msg["data"]
             self.action_map[action](handler, *data)
-        
+
+        # We must remove client as an editor if he crashes so
+        # that others may edit
+        username = self.username_from_comm(handler.id_)
+        if username:
+            # User was editing at the time of crash
+            self.finish_edit(handler, username)
+
         self.all_clients.remove(handler)
-        self.sign_out(handler.comm_id)
-        print(f"Ended connection from {addr}")
+        self.sign_out(handler.id_)
+        handler.log("disconnect", addr)
 
     def validate_username(self, client_handler, username):
         valid = True
@@ -174,10 +183,16 @@ class Server():
         else:
             self.sign_in(client_handler, username)
 
-        client_handler.send_message(msg, descr='user_validate')
+        client_handler.send_message(msg, descr=username)
+
+    def username_from_comm(self, comm_id):
+        for user, (c_id, _, _) in self.signed_in_users.items():
+            if c_id == comm_id:
+                return user
+        return None
 
     def sign_in(self, handler, username):
-        self.signed_in_users[username] = {'comm_id': handler.comm_id,
+        self.signed_in_users[username] = {'comm_id': handler.id_,
                                           'midi': None,
                                           'socket': handler}
 
@@ -193,7 +208,7 @@ class Server():
                                    self.db.edited.keys()],
                         "available": [name for name in
                                       self.db.availables.keys()]}
-               }
+        }
         client_handler.send_message(msg, descr='midi_list')
 
     def download_midi(self, client_handler, midi_name):
@@ -233,7 +248,6 @@ class Server():
     def create_midi(self, client_handler, username, title):
         """
         """
-        self.db.create_midi(title, client_handler.comm_id)
 
         msg = {"content_type": "edit_response",
                "data": None}
@@ -242,14 +256,18 @@ class Server():
             msg["data"] = {"status": False,
                            "reason": "Title too short"}
         else:
+            self.db.create_midi(title, client_handler.id_)
+            self.db.set_editor(title, username)
+            self.chat[title] = []
+            self.signed_in_users[username]['midi'] = title
             msg["data"] = {"status": True,
                            "can_edit": True}
 
-        self.signed_in_users[username]['midi'] = title
+        client_handler.send_message(msg, descr='create_response')
+
         self.sync_users(title)
 
         self.push_to_all_clients(self.send_midi_list)
-        client_handler.send_message(msg, descr='create_response')
 
     def new_message(self, client_handler, username, message):
         time_ = time.strftime("%y/%m/%d - %H:%M:%S", time.localtime())
@@ -257,10 +275,13 @@ class Server():
         title = self.db.get_midi_from_viewer(username)
         self.chat[title].append(msg)
         self.sync_chat(title)
-                    
+
     def finish_edit(self, client_handler, username):
         self.db.clear_viewer(username)
         self.push_to_all_clients(self.send_midi_list)
+
+        title = self.db.get_midi_from_viewer(username)
+        self.sync_users(title)
 
     def add_note(self, client_handler, username, index, track, pitch,
                  scale, velocity, duration, dotted):
@@ -277,6 +298,14 @@ class Server():
 
         self.sync_notes(title)
 
+    def add_track(self, client_handler, username):
+        title = self.db.get_midi_from_viewer(username)
+        midi = self.db.midis[title]
+        N = midi.tracks[-1].number + 1
+        midi.add_track(MIDITrack(N, midi.time_div))
+
+        self.sync_notes(title)
+        
     def sync_notes(self, title):
         notes = self.db.get_notes_list(title)
         self.push_to_viewers(title, self.send_notes, notes)
@@ -293,17 +322,17 @@ class Server():
     def send_chat(self, client_handler, chat):
         msg = {'content_type': 'chat_message',
                'data': chat}
-        client_handler.send_message(msg)
+        client_handler.send_message(msg, descr='chat')
 
     def send_users(self, client_handler, viewers):
         msg = {'content_type': "connected_in_room",
                'data': viewers}
-        client_handler.send_message(msg)
+        client_handler.send_message(msg, descr='connected_users')
 
     def send_notes(self, client_handler, notes):
         msg = {'content_type': "midi_notes",
                'data': notes}
-        client_handler.send_message(msg)
+        client_handler.send_message(msg, descr='song_notes')
 
     def push_to_viewers(self, title, foo, *data):
         viewers = [dat['socket'] for dat in self.signed_in_users.values()
@@ -326,11 +355,11 @@ def debug(type, value, tb):
     # pdb.pm() # deprecated
     pdb.post_mortem(tb) # more "modern"
 
-            
+
 if __name__ == '__main__':
     import sys
     sys.excepthook = debug
-    
+
     # Run server
     server = Server()
 
@@ -340,4 +369,5 @@ if __name__ == '__main__':
             continue
     except KeyboardInterrupt:
         pass
-    
+    finally:
+        server.db.save_files()
