@@ -139,7 +139,7 @@ class MIDITrack():
         #import pdb; pdb.set_trace()
         events = [i for i in self.events]
         eid = 0
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         
         while events:
             e1 = events.pop(0)
