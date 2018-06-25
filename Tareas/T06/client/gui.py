@@ -175,6 +175,8 @@ class MainWindow(QWidget):
         self.query("download", title)
 
     def create_new_song(self):
+        if not self.new_song_button.isEnabled():
+            return
         username = self.user_text_input.text()
         title = self.new_song_input.text()
         self.query("create", username, title)

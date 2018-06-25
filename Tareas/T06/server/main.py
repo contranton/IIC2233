@@ -1,6 +1,8 @@
 # Server
 import socket
 import time
+import os
+import json
 
 from threading import Thread
 
@@ -101,11 +103,12 @@ class Server():
                            "chat_send": self.new_message,
                            "add_track": self.add_track}
         self.db = MidiDatabase()
-        self.chat = {title: [] for title in self.db.midis.keys()}
+        self.load_chat()
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind((HOST, PORT))
 
+        
         # Running server as a thread lets us kill the program in
         # console without having to shut down the entire console
         Thread(target=self.listen, daemon=True).start()
@@ -346,6 +349,20 @@ class Server():
         for client_handler in self.all_clients:
             foo(client_handler, *data)
 
+    def load_chat(self):
+        if not os.path.exists("chats.json"):
+            self.chat = {title: [] for title in self.db.midis.keys()}
+            return
+        with open("chats.json", 'rb') as file:
+            data = json.loads(file.read().decode("utf-8"))
+            self.chat = data
+            
+    def save(self):
+        self.db.save_files()
+        with open("chats.json", 'wb') as file:
+            data = json.dumps(self.chat).encode("utf-8")
+            file.write(data)
+
 
 def debug(type, value, tb):
     import traceback, pdb
@@ -370,4 +387,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     finally:
-        server.db.save_files()
+        server.save()
