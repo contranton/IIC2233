@@ -381,8 +381,8 @@ class EditingWindow(QWidget):
     def add_note(self):
         track = self.note_tabs.currentIndex()
 
-        if not self.note_lists[track].currentRow():
-            index = 0
+        if not self.note_lists[track].selectedItems():
+            index = self.note_lists[track].count() - 1
         else:
             index = self.note_lists[track].currentRow()
 
@@ -397,9 +397,9 @@ class EditingWindow(QWidget):
 
     def delete_note(self):
         track = self.note_tabs.currentIndex()
-        index = self.note_lists[track].currentRow() - 1
-        if not index:
-            index = 0
+        index = self.note_lists[track].currentRow()
+        if not self.note_lists[track].selectedItems():
+            index = self.note_lists[track].count() - 1
         track = 0
         self.query("delete_note", self.username, index, track)
 

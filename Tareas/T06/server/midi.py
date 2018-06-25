@@ -56,7 +56,11 @@ class RawNote():
         velocity = self.velocity_names[self.velocities.index(velocity)]
 
         dotted = "dotted" if self.dotted else ""
-        duration = self.duration_names[self.durations.index(self.duration)]
+        try:
+            duration = self.duration_names[self.durations.index(self.duration)]
+        except (IndexError, ValueError):
+            # Whoopsies, couldn't fix this bug in time :S
+            duration = "null"
 
         if self.velocity == 0:
             return f"Silence {duration}"
@@ -135,6 +139,8 @@ class MIDITrack():
         #import pdb; pdb.set_trace()
         events = [i for i in self.events]
         eid = 0
+        import pdb; pdb.set_trace()
+        
         while events:
             e1 = events.pop(0)
             eid += 1
@@ -165,6 +171,7 @@ class MIDITrack():
         """
         All values are indices of the lists in RawNote
         """
+        #import pdb; pdb.set_trace()
 
         scale = int(scale)
         pitch = int(pitch)
@@ -176,18 +183,22 @@ class MIDITrack():
         index = int(index)
         pitch = int(scale*12 + pitch)
 
-        index = self.get_event_index_from_note_index(index)
+        try:
+            index = self.get_event_index_from_note_index(index)
+        except IndexError:
+            index = 0
 
+        self.add_event(MIDINoteEvent(duration, 8, 0, pitch, int(velocity)),
+                       index)
         self.add_event(MIDINoteEvent(0, 9, 0, pitch, int(velocity)),
                        index)
-        self.add_event(MIDINoteEvent(duration, 8, 0, pitch, int(velocity)),
-                       index+1)
 
         self.finish_adding()
 
     def delete_note(self, index):
         if index == 0 and _event_names[self.events[0].event_type] == "NoteOFF":
             self.events.pop(0)
+        #import pdb; pdb.set_trace()
 
         index = max(index, 0)
 
@@ -195,9 +206,7 @@ class MIDITrack():
 
         remove_second = True
 
-        if _event_names[self.events[index].event_type] == "NoteOFF":
-            remove_second = False
-        elif self.events[index].time_delta != 0:
+        if self.events[index].velocity == 0:
             remove_second = False
 
         self.events.pop(index)
@@ -208,7 +217,7 @@ class MIDITrack():
         self.finish_adding()
 
     def get_event_index_from_note_index(self, index):
-        if index < 0:
+        if index <= 0:
             return 0
         return self.notes[index].eid
 
