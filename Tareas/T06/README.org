@@ -1,30 +1,30 @@
 * Tarea 6 - Javier Contreras
 No me lo esperaba pero estuvo demasiado entretenida esta tarea :O
 
-** Comentarios Generales
+** Comentarios Generales y pifias del programa
 
-Implemento ambos bonuses.
+- Implemento ambos bonuses.
 
-Para borrar notas exigo que el usuario haga click en "Delete Note" y no solo que pulse en la nota. Esto le permite (cuando el programa no se cae) añadir o borrar notas en lugares arbitrarios de la cancion.
+- Para borrar notas exigo que el usuario haga click en "Delete Note" y no solo que pulse en la nota. Esto le permite (cuando el programa no se cae) añadir o borrar notas en lugares arbitrarios de la cancion.
 
-Creo que no coloqué bien las variables HOST y PORT como fue especificado. Lo siento si arruiné su script, se me fue de largo :c
+- Creo que no coloqué bien las variables HOST y PORT como fue especificado. Lo siento si arruiné su script, se me fue de largo :c
 
-Si el servidor o cliente se caen al ejecutarlos desde consola, conviene matarlos con un KeyboardInterrupt.
+- Si el servidor o cliente se caen al ejecutarlos desde consola, conviene matarlos con un KeyboardInterrupt.
    
-Por un par de errores tipo /off-by-one/, en el commit entregado será muy probable que intentar borrar notas o incluso agregarlas en algunos casos haga caer al servidor. Esto debiera poder arreglarse con los siguientes cambios:
+- Por un par de errores tipo /off-by-one/, en el commit entregado será muy probable que intentar borrar notas o incluso agregarlas en algunos casos haga caer al servidor. Esto debiera poder arreglarse con los siguientes cambios:
 #+BEGIN_SRC python
-  # server/midy.py::205 (MIDITrack.delete_note)
+  # server/midi.py::205 (MIDITrack.delete_note)
   index = max(self.get_event_index_from_note_index(index) - 1, 1)
 #+END_SRC
 Parece ser un embarro con los índices de la nota de listas cuando hay pocos, porque esto no causa problemas cuando hay varias notas. Ojalá no cause demasiados problemas :/
 
-De vez en cuando puede que el cliente se cuelgue por un JSONDecodeError debido a que no implementé un /message queue/ que se hiciera cargo de manejar múltiples mensajes entrantes. Usualmente no debería pasar; no he logrado reproducir el error confiablemente.
+- De vez en cuando puede que el cliente se cuelgue por un JSONDecodeError debido a que no implementé un /message queue/ que se hiciera cargo de manejar múltiples mensajes entrantes. Usualmente no debería pasar; no he logrado reproducir el error confiablemente.
 
-Si en algún momento el servidor tira el error "There can't be two consecutive NoteON events", habrá que reiniciar el servidor y /nunca mas/ abrir esa canción xd. Tuve un pequeño embarro con los índices usados en =list.insert= y cosas por el estilo justo cuando empezó a faltar tiempo. Esto pasa en general cuando intentas borrar silencios. Prometo que antes funcionaba todo nice :'c
+- Si en algún momento el servidor tira el error "There can't be two consecutive NoteON events", habrá que reiniciar el servidor y /nunca mas/ abrir esa canción xd. Tuve un pequeño embarro con los índices usados en =list.insert= y cosas por el estilo justo cuando empezó a faltar tiempo. Esto pasa en general cuando intentas borrar silencios. Prometo que antes funcionaba todo nice :'c
 
-El botón "Finished" de la ventana de edición no hace nada. Debes cerrarla desde el botón X de la esquina.
+- El botón "Finished" de la ventana de edición no hace nada. Debes cerrarla desde el botón X de la esquina.
 
-Creo que se me pasó de largo una línea para actualizar el listado de gente conectada cuando un espectador se va.
+- Creo que se me pasó de largo una línea para actualizar el listado de gente conectada cuando un espectador se va.
 
 ** Como usar el programa
 
