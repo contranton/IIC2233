@@ -1,0 +1,78 @@
+* Tarea 6 - Javier Contreras
+No me lo esperaba pero estuvo demasiado entretenida esta tarea :O
+
+** Comentarios Generales
+
+Implemento ambos bonuses.
+
+Para borrar notas exigo que el usuario haga click en "Delete Note" y no solo que pulse en la nota. Esto le permite (cuando el programa no se cae) añadir o borrar notas en lugares arbitrarios de la cancion.
+
+Creo que no coloqué bien las variables HOST y PORT como fue especificado. Lo siento si arruiné su script, se me fue de largo :c
+
+Si el servidor o cliente se caen al ejecutarlos desde consola, conviene matarlos con un KeyboardInterrupt.
+   
+Por un par de errores tipo /off-by-one/, en el commit entregado será muy probable que intentar borrar notas o incluso agregarlas en algunos casos haga caer al servidor. Esto debiera poder arreglarse con los siguientes cambios:
+#+BEGIN_SRC python
+  # server/midy.py::205 (MIDITrack.delete_note)
+  index = max(self.get_event_index_from_note_index(index) - 1, 1)
+#+END_SRC
+Parece ser un embarro con los índices de la nota de listas cuando hay pocos, porque esto no causa problemas cuando hay varias notas. Ojalá no cause demasiados problemas :/
+
+De vez en cuando puede que el cliente se cuelgue por un JSONDecodeError debido a que no implementé un /message queue/ que se hiciera cargo de manejar múltiples mensajes entrantes. Usualmente no debería pasar; no he logrado reproducir el error confiablemente.
+
+Si en algún momento el servidor tira el error "There can't be two consecutive NoteON events", habrá que reiniciar el servidor y /nunca mas/ abrir esa canción xd. Tuve un pequeño embarro con los índices usados en =list.insert= y cosas por el estilo justo cuando empezó a faltar tiempo. Esto pasa en general cuando intentas borrar silencios. Prometo que antes funcionaba todo nice :'c
+
+El botón "Finished" de la ventana de edición no hace nada. Debes cerrarla desde el botón X de la esquina.
+
+Creo que se me pasó de largo una línea para actualizar el listado de gente conectada cuando un espectador se va.
+
+** Como usar el programa
+
+Una vez ejecutado el servidor, correr cada nuevo cliente abrirá una ventana igual a la especificada en el enunciado, con la diferencia de que varios botones estarán desactivados hasta que el cliente ingrese un nombre de usuario.
+Ya verificado el usuario, se podrá seleccionar cualquier canción de los listados "available" o "being edited". Seleccionar de la segunda lista cambiará al boton de edición de "Edit" a "Spectate", indicando lo que ocurrirá.
+La única diferencia entre la ventana de edición y la de visitar es que la segunda no tiene disponible el menú de adición de notas. Ambos poseen el visor de notas y la ventana de chat.
+
+Si pulsas "Download", se descargará la canción seleccionada (en edición o no) al directorio donde se encuentra =client/main.py=.
+
+*** Edición
+
+Para añadir una nota, selecciona desde los ítemes a la izquierda los valores de /pitch/, /scale/, /duration/, y /velocity/ (intensidad) y pulsa "Add Note". Hay también un checkbox que indica si la nota lleva punto o no. 
+
+Si no tienes ninguna nota del listado seleccionada, por defecto la nota nueva irá al final del listado (excepto por la segunda o tercera añadida, no sé que onda). Si tienes seleccionada una nota, la nueva nota se insertará justo después de ella.
+
+Para agregar silencios, cambia la intensidad (/Note Velocity/) a 0 (Rest).
+
+Al pulsar "Delete Note" sin ninguna nota seleccionada, se borrará (ojalá sin errores) la última nota del listado, mientras que si tienes una seleccionada, se borrará esa.
+
+Puedes agregar más Tracks (según la especificación MIDI, track /= canal ;) ) pulsando "Add Track". Para cambiar entre tracks simplemente seleccionas la pestaña apropiada y agregas notas como usual.
+    
+** Implementacion de Requisitos
+
+*** Silencios
+
+Considero como un 'objeto' silencio cada vez que entre un evento NoteOFF y un NoteON hay un time_delta distinto de 0. El manejo de notas y silencios como tales es sólo pertinente para la GUI, ya que en otras partes del programa se trabaja directamente a nivel de eventos (lo que causa algo de -ahem- diversión en lidiar con silencios que no están asociados a un NoteON, e.g. al inicio del tema)
+
+*** Bonus
+
+**** Múltiples Tracks
+
+Agregar un nuevo track según la especificación MIDI para un archivo de formato 1 (i.e. que permite reproducción simultanea) es simplemente cosa de añadir un nuevo chunk de tipo 'MTrk' con las notas definidas de igual forma que antes. Para permitir la edicion de esto, utilizo un QTabWidget que contiene la lista de notas de cada track.
+
+**** Chat
+
+En el servidor hay un diccionario con cada nombre de canción asociado a una lista de mensajes. Por temas de tiempo hago que se envíe toda la lista cada vez que se actualiza (estúpidamente ineficiente, lo sé...), pero hey, funciona :D
+
+Los mensajes se guardan cuando el servidor se apaga y se vuelven a cargar al reiniciarse.
+
+** Librerias
+
+- PyQt5
+- socket
+- threading.Thread
+- sys
+- json
+- time
+- math
+- os
+- functools.reduce
+- collections.deque
