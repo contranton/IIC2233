@@ -11,8 +11,7 @@ No me lo esperaba pero estuvo demasiado entretenida esta tarea :O
 
 - Si el servidor o cliente se caen al ejecutarlos desde consola, conviene matarlos con un KeyboardInterrupt (CTRL/CMD + C).
    
-- Por un par de errores tipo /off-by-one/, en el commit entregado será muy probable que intentar borrar notas o incluso agregarlas en algunos casos haga caer al servidor. Esto debiera arreglarse en parte con este cambio:
-(Parece ser un embarro con los índices de la nota de listas cuando hay pocos, porque esto no causa problemas cuando hay varias notas. Ojalá no cause demasiados problemas :/)
+- Por un par de errores tipo /off-by-one/, en el commit entregado será muy probable que intentar borrar notas o incluso agregarlas en algunos casos haga caer al servidor. Parece ser un embarro con los índices de la nota de listas cuando hay pocos, porque esto no causa problemas cuando hay varias notas. Ojalá no cause demasiados problemas :/. Podría arreglarse un poco con este cambio:
 #+BEGIN_SRC python
   # server/midi.py::205 (MIDITrack.delete_note)
   index = max(self.get_event_index_from_note_index(index) - 1, 1)
